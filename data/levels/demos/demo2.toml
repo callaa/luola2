@@ -1,0 +1,27 @@
+title = "Bullet Hell Demo"
+thumbnail = "demo2-thumb.png"
+terrain = "demo2-level.png"
+artwork = "demo2-level.png"
+
+# custom script to load
+# override function luola_level_init(options) to customize level environment
+script = "bullet-hell.lua"
+
+starfield = true
+
+[terrain-palette]
+space = [0, "48-60"]
+ground = "1-15"
+ground-i = "16-31"
+water = 32
+ground-uw = "33-47"
+paint-uw = 61
+paint = [62, 63] # space whose pixels can be cleared by explosions
+base = [64, 65]
+base-i = [66, 67]
+base-uw = [68, 69] # underwater bases re-orient the ship downwards
+base-uw-i = [70, 71]
+
+# Script settings will be passed as-is to the level initialization script
+[script-settings]
+bullets_per_second = 10000

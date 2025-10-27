@@ -1,0 +1,7 @@
+[menu]
+file = "PressStart2P-Regular.ttf"
+size = 24
+
+[menu_big]
+file = "PressStart2P-Regular.ttf"
+size = 64

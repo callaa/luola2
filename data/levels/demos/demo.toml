@@ -1,0 +1,33 @@
+# Name and thumbnail shown in level selection screen
+title = "Level Feature Demo"
+thumbnail = "demo-thumb.png"
+
+# Terrain map must be an 8-bit indexed image.
+# See [terrain-palette] section below for palette mapping
+terrain = "demo-level.png"
+
+# The artwork visible to players.
+# If the same file is used for both terrain and art, the earliest palette index
+# mapped to "space" will be used as the transparency key.
+artwork = "demo-level.png"
+
+# Parallax background (optional)
+background = "grid.jpeg"
+
+# A starfield background can be drawn behind the parallax background
+starfield = false
+
+# Mapping of terrain types to palette indices
+# All unmapped colors will be mapped to "ground"
+[terrain-palette]
+space = [0, "48-60"]
+ground = "1-15"
+ground-i = "16-31"
+water = 32
+ground-uw = "33-47"
+paint-uw = 61
+paint = [62, 63] # space whose pixels can be cleared by explosions
+base = [64, 65]
+base-i = [66, 67]
+base-uw = [68, 69] # underwater bases re-orient the ship downwards
+base-uw-i = [70, 71]

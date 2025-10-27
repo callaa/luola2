@@ -1,0 +1,26 @@
+# Sample quick-launch configuration
+# This is mainly used for testing and development
+# Typical usage: cargo r -- --launch launch.toml
+
+level = "demo"
+rounds = 10
+
+#gameover = true # skip straight to game-over screen
+
+# prefill history for past rounds
+winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
+
+[[player]]
+controller = 1
+ship = "vwing"
+weapon = "mine"
+
+[[player]]
+controller = 2
+ship = "vwing"
+weapon = "rocket"
+
+[[player]]
+controller = 3
+ship = "vwing"
+weapon = "grenade"

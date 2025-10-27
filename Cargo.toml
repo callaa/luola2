@@ -1,0 +1,26 @@
+[package]
+name = "luola2"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[profile.release]
+#debug = true
+
+[dependencies]
+anyhow = "1.0.100"
+argh = "0.1.13"
+either = "1.15.0"
+env_logger = { version = "0.11.8", default-features = false }
+fastrand = "2.3.0"
+log = { version = "0.4.28", features = ["std"] }
+mlua = { version = "0.11.4", features = ["serde", "lua54", "anyhow"] }
+sdl3-image-sys = { version = "0.2.0" }
+sdl3-main = "0.5.4"
+sdl3-sys = "0.5.7"
+sdl3-ttf-sys = "0.2.0"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = { version = "0.9.8", default-features=false, features = ["std", "serde", "parse", "display"] }
+
+[dev-dependencies]
+itertools = "0.14.0"

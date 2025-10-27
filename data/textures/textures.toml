@@ -1,0 +1,69 @@
+[vwing]
+file = "vwing.png"
+subrect = [0, 0, 960, 80]
+angles = 12
+width = 80
+height = 80
+
+[vwing.alts.Decal]
+file = "vwing.png"
+subrect = [0, 80, 960, 80]
+
+[vwing.alts.Damage]
+file = "vwing.png"
+subrect = [0, 160, 960, 80]
+
+[pewpew]
+file = "pewpew.png"
+needs_rotation = true
+
+[megabomb]
+file = "megabomb.png"
+width = 32
+height = 32
+angles = 64
+needs_rotation = true
+
+[mine]
+file = "mine.png"
+subrect = [0, 0, 32, 32]
+
+[mine_active]
+file = "mine.png"
+subrect = [32, 0, 256, 32]
+frames = 8
+duration = 0.6
+width = 32
+height = 32
+
+[boom]
+file = "boom.png"
+frames = 7
+duration = 0.1
+width = 16
+height = 16
+
+[bigboom]
+# Copyright Joshua Robertson (via OpenGameArt.org) (CC-BY 3.0)
+file = "bigboom.png"
+frames = 12
+width = 96
+height = 96
+duration = 0.15
+
+[noise]
+file = "noise.png"
+width = 32
+height = 32
+frames = 4
+duration = 0.6
+scale = "Nearest"
+
+[gamelogo]
+file = "logo.png"
+
+[menubackground]
+file = "menubg.png"
+scale = "Nearest"
+[dot]
+file = "dot.png"
