@@ -75,6 +75,18 @@ impl Color {
             Self::WHITE
         }
     }
+
+    pub fn r_u8(&self) -> u8 {
+        (self.r * 255.0).clamp(0.0, 255.0) as u8
+    }
+
+    pub fn g_u8(&self) -> u8 {
+        (self.g * 255.0).clamp(0.0, 255.0) as u8
+    }
+
+    pub fn b_u8(&self) -> u8 {
+        (self.b * 255.0).clamp(0.0, 255.0) as u8
+    }
 }
 
 impl Sub for Color {

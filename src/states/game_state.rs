@@ -202,6 +202,7 @@ impl StackableState for GameState {
                         self.round_winners.len() as i32 + 1,
                         self.starfield.clone(),
                         self.renderer.clone(),
+                        &self.controllers.borrow(),
                     ) {
                         Ok(s) => s,
                         Err(err) => {
@@ -228,6 +229,7 @@ impl StackableState for GameState {
                 ));
             }
             GameSubState::GameResults => {
+                self.controllers.borrow().clear_player_leds();
                 return StackableStateResult::Replace(Box::new(
                     match GameResultsState::new(
                         take(&mut self.players),

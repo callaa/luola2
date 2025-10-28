@@ -67,3 +67,9 @@ file = "menubg.png"
 scale = "Nearest"
 [dot]
 file = "dot.png"
+
+[input_devices]
+file = "input-devices.png"
+
+[gamepad_buttons]
+file = "gamepad-buttons.png"

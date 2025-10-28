@@ -20,10 +20,12 @@ use argh::FromArgs;
 use log::error;
 use sdl3_main::{AppResult, AppResultWithState, app_impl};
 use sdl3_sys::events::{
-    SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP, SDL_EVENT_QUIT, SDL_EVENT_USER, SDL_EVENT_WINDOW_RESIZED,
-    SDL_Event, SDL_EventType,
+    SDL_EVENT_GAMEPAD_ADDED, SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EVENT_GAMEPAD_BUTTON_DOWN,
+    SDL_EVENT_GAMEPAD_BUTTON_UP, SDL_EVENT_GAMEPAD_REMOVED, SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP,
+    SDL_EVENT_QUIT, SDL_EVENT_USER, SDL_EVENT_WINDOW_RESIZED, SDL_Event, SDL_EventType,
 };
-use sdl3_sys::init::{SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata};
+use sdl3_sys::gamepad::SDL_GamepadButton;
+use sdl3_sys::init::{SDL_INIT_GAMEPAD, SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata};
 use sdl3_sys::keycode::{SDL_KMOD_ALT, SDLK_RETURN};
 use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
 
@@ -85,7 +87,7 @@ impl AppState {
                 return AppResultWithState::Failure(None);
             }
 
-            if !SDL_Init(SDL_INIT_VIDEO) {
+            if !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) {
                 SdlError::log("Couldn't init SDL");
                 return AppResultWithState::Failure(None);
             }
@@ -156,6 +158,30 @@ impl AppState {
                 } else {
                     self.controllers.borrow_mut().handle_sdl_key_event(key);
                 }
+            }
+            SDL_EVENT_GAMEPAD_AXIS_MOTION => {
+                let event = unsafe { &event.gaxis };
+                self.controllers.borrow_mut().handle_gamepad_axis(
+                    event.which,
+                    event.axis,
+                    event.value,
+                );
+            }
+            SDL_EVENT_GAMEPAD_BUTTON_DOWN | SDL_EVENT_GAMEPAD_BUTTON_UP => {
+                let event = unsafe { &event.gbutton };
+                self.controllers.borrow_mut().handle_gamepad_button(
+                    event.which,
+                    SDL_GamepadButton(event.button as i32),
+                    event.down,
+                );
+            }
+            SDL_EVENT_GAMEPAD_ADDED => {
+                let event = unsafe { &event.gdevice };
+                self.controllers.borrow_mut().add_gamepad(event.which);
+            }
+            SDL_EVENT_GAMEPAD_REMOVED => {
+                let event = unsafe { &event.gdevice };
+                self.controllers.borrow_mut().remove_gamepad(event.which);
             }
             t if t >= SDL_EVENT_USER => {
                 let custom = &CUSTOM_EVENTS;

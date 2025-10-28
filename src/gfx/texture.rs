@@ -134,6 +134,22 @@ impl Drop for Texture {
     }
 }
 
+impl Clone for Texture {
+    fn clone(&self) -> Self {
+        unsafe { self.tex.as_mut() }.unwrap().refcount += 1;
+        Self {
+            tex: self.tex,
+            width: self.width,
+            height: self.height,
+            subrect: self.subrect,
+            angles: self.angles,
+            frames: self.frames,
+            frame_duration: self.frame_duration,
+            needs_rotation: self.needs_rotation,
+        }
+    }
+}
+
 impl Texture {
     pub fn from_config(
         renderer: &Renderer,
@@ -241,6 +257,14 @@ impl Texture {
             frame_duration: 1.0,
             needs_rotation: false,
         })
+    }
+
+    pub fn clone_subrect(&self, subrect: RectF) -> Self {
+        let mut t = self.clone();
+        t.subrect = subrect;
+        t.width = subrect.w();
+        t.height = subrect.h();
+        t
     }
 
     pub fn set_scalemode(&mut self, mode: TextureScaleMode) {

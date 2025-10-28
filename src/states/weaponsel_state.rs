@@ -20,7 +20,7 @@ use anyhow::{Result, anyhow};
 
 use super::{StackableState, StackableStateResult};
 use crate::{
-    game::{MenuButton, Player, PlayerId},
+    game::{GameControllerSet, MenuButton, Player, PlayerId},
     gfx::{Color, Renderer, Text, Texture, make_button_icon},
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
@@ -56,6 +56,7 @@ impl PlayerWeaponChoice {
         player_id: PlayerId,
         weapon_list: &[(String, String)],
         renderer: &Renderer,
+        controllers: &GameControllerSet,
     ) -> Result<Self> {
         let selection = weapon_list
             .iter()
@@ -76,16 +77,19 @@ impl PlayerWeaponChoice {
                 player.controller,
                 crate::game::MappedKey::Left,
                 renderer,
+                controllers,
             )?,
             right_button_icon: make_button_icon(
                 player.controller,
                 crate::game::MappedKey::Right,
                 renderer,
+                controllers,
             )?,
             select_button_icon: make_button_icon(
                 player.controller,
                 crate::game::MappedKey::Fire1,
                 renderer,
+                controllers,
             )?,
             decided: false,
         })
@@ -98,6 +102,7 @@ impl WeaponSelection {
         round: i32,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
+        controllers: &GameControllerSet,
     ) -> Result<Self> {
         let round_text = renderer
             .borrow()
@@ -131,6 +136,7 @@ impl WeaponSelection {
                     idx as PlayerId + 1,
                     &assets.weapons,
                     &renderer.borrow(),
+                    controllers,
                 )
             })
             .collect();

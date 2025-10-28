@@ -293,11 +293,8 @@ impl Ship {
         if !self.is_wrecked()
             && let Some(controller) = controller
         {
-            if controller.left {
-                ship.angle += 180.0 * timestep;
-            } else if controller.right {
-                ship.angle -= 180.0 * timestep;
-            }
+            // TODO turn speed should be a ship parameter
+            ship.angle += 260.0 * controller.turn * timestep;
 
             if controller.thrust {
                 ship.phys.vel = ship.phys.vel

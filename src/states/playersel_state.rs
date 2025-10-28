@@ -279,7 +279,11 @@ impl StackableState for PlayerSelection {
                             )
                             .unwrap()
                             .with_color(Color::player_color(self.players.len() as i32 + 1)),
-                        icon: match make_controller_icon(controller, &self.renderer.borrow()) {
+                        icon: match make_controller_icon(
+                            controller,
+                            &self.renderer.borrow(),
+                            &self.controllers.borrow(),
+                        ) {
                             Ok(icon) => icon,
                             Err(err) => return StackableStateResult::Error(err),
                         },
@@ -311,11 +315,17 @@ impl StackableState for PlayerSelection {
             start -= timestep;
             if start <= 0.0 {
                 self.start_timer = None;
-                let players = self
+                let players: Vec<Player> = self
                     .players
                     .iter()
                     .map(|p| Player::new(p.controller))
                     .collect();
+
+                for (idx, plr) in players.iter().enumerate() {
+                    self.controllers
+                        .borrow()
+                        .set_player_leds(plr.controller, idx as i32 + 1);
+                }
 
                 return StackableStateResult::Replace(Box::new(GameState::new(
                     self.assets.clone(),

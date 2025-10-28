@@ -15,14 +15,20 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::Result;
-use sdl3_sys::keycode::*;
+use sdl3_sys::{
+    gamepad::{
+        SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO, SDL_GAMEPAD_TYPE_PS3, SDL_GAMEPAD_TYPE_PS4,
+        SDL_GAMEPAD_TYPE_PS5, SDL_GAMEPAD_TYPE_UNKNOWN, SDL_GAMEPAD_TYPE_XBOX360,
+        SDL_GAMEPAD_TYPE_XBOXONE,
+    },
+    keycode::*,
+};
 
 use crate::{
-    configfile::GAME_CONFIG,
     fs::find_datafile_path,
-    game::{GameControllerSet, MappedKey},
+    game::{GameControllerSet, KEYBOARDS, MappedKey},
     gfx::Renderer,
-    math::Rect,
+    math::{Rect, RectF},
 };
 
 use super::{Image, Texture};
@@ -122,7 +128,7 @@ fn make_keymap_icon(k1: u32, k2: u32, k3: u32, renderer: &Renderer) -> Result<Te
 }
 
 fn make_single_key_icon(key: u32, renderer: &Renderer) -> Result<Texture> {
-    let mut base = Image::from_file(find_datafile_path(&["images/input-buttons.png"])?)?;
+    let mut base = Image::from_file(find_datafile_path(&["images/key-base.png"])?)?;
     let letters = Image::from_file(find_datafile_path(&["images/keys.png"])?)?;
 
     letters.blit(keymap(key), &mut base, (5, 1));
@@ -130,54 +136,72 @@ fn make_single_key_icon(key: u32, renderer: &Renderer) -> Result<Texture> {
     Texture::from_image(renderer, &base)
 }
 
-pub fn make_controller_icon(controller: i32, renderer: &Renderer) -> Result<Texture> {
+pub fn make_controller_icon(
+    controller: i32,
+    renderer: &Renderer,
+    controllers: &GameControllerSet,
+) -> Result<Texture> {
     assert!(controller > 0);
-    if controller > 4 {
-        todo!("Gamepad icons");
-    }
 
-    let config = GAME_CONFIG.read().unwrap();
-    let keymap = match controller {
-        1 => &config.keymap1,
-        2 => &config.keymap2,
-        3 => &config.keymap3,
-        4 => &config.keymap4,
-        _ => todo!(),
-    }
-    .as_ref()
-    .unwrap_or(&GameControllerSet::DEFAULT_KEYMAP[controller as usize - 1]);
+    if controller <= KEYBOARDS as i32 {
+        let keymap = controllers.get_keymap(controller as usize - 1);
+        make_keymap_icon(keymap.thrust, keymap.left, keymap.right, renderer)
+    } else {
+        let icon = match controllers.get_gamepad_type(controller) {
+            SDL_GAMEPAD_TYPE_UNKNOWN => 1,
+            SDL_GAMEPAD_TYPE_XBOX360 => 3,
+            SDL_GAMEPAD_TYPE_XBOXONE => 4,
+            SDL_GAMEPAD_TYPE_PS3 => 5,
+            SDL_GAMEPAD_TYPE_PS4 => 6,
+            SDL_GAMEPAD_TYPE_PS5 => 7,
+            SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO => 8,
+            _ => 2, // generic gamepad
+        };
 
-    make_keymap_icon(keymap.thrust, keymap.left, keymap.right, renderer)
+        let tex = renderer
+            .texture_store()
+            .get_texture(renderer.texture_store().find_texture("input_devices")?);
+
+        let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
+        Ok(tex.clone_subrect(subrect))
+    }
 }
 
 pub fn make_button_icon(
     controller: i32,
     button: MappedKey,
     renderer: &Renderer,
+    controllers: &GameControllerSet,
 ) -> Result<Texture> {
     assert!(controller > 0);
-    if controller > 4 {
-        todo!("Gamepad icons");
+
+    if controller <= KEYBOARDS as i32 {
+        let keymap = controllers.get_keymap(controller as usize - 1);
+
+        let key = match button {
+            MappedKey::Up => keymap.thrust,
+            MappedKey::Right => keymap.right,
+            MappedKey::Left => keymap.left,
+            MappedKey::Fire1 => keymap.fire_primary,
+            MappedKey::Fire2 => keymap.fire_secondary,
+        };
+
+        make_single_key_icon(key, renderer)
+    } else {
+        // TODO use right ABXY images for the controller type
+        let icon = match button {
+            MappedKey::Up => 0,
+            MappedKey::Right => 1,
+            MappedKey::Left => 3,
+            MappedKey::Fire1 => 6,
+            MappedKey::Fire2 => 7,
+        };
+
+        let tex = renderer
+            .texture_store()
+            .get_texture(renderer.texture_store().find_texture("gamepad_buttons")?);
+
+        let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
+        Ok(tex.clone_subrect(subrect))
     }
-
-    let config = GAME_CONFIG.read().unwrap();
-    let keymap = match controller {
-        1 => &config.keymap1,
-        2 => &config.keymap2,
-        3 => &config.keymap3,
-        4 => &config.keymap4,
-        _ => todo!(),
-    }
-    .as_ref()
-    .unwrap_or(&GameControllerSet::DEFAULT_KEYMAP[controller as usize - 1]);
-
-    let key = match button {
-        MappedKey::Up => keymap.thrust,
-        MappedKey::Right => keymap.right,
-        MappedKey::Left => keymap.left,
-        MappedKey::Fire1 => keymap.fire_primary,
-        MappedKey::Fire2 => keymap.fire_secondary,
-    };
-
-    make_single_key_icon(key, renderer)
 }
