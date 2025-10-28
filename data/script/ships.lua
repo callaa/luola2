@@ -11,7 +11,7 @@ local function ship_thrust_effect(ship, uw)
 				color = 0x66aaaaff,
 				target_color = 0x00aaaaff,
 				lifetime = 0.30,
-				texture = textures.get("dot"),
+				texture = textures.get("dot3x3"),
 			})
 		end
 	else
@@ -21,7 +21,7 @@ local function ship_thrust_effect(ship, uw)
 			color = 0xffffffff,
 			target_color = 0x00ff0000,
 			lifetime = 0.15,
-			texture = textures.get("dot"),
+			texture = textures.get("dot8x8"),
 		})
 	end
 end

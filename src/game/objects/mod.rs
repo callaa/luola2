@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
+mod critter;
 mod objarray;
 mod particle;
 mod physicalobj;
 mod projectile;
 mod ship;
 
+pub use critter::*;
 pub use objarray::*;
 pub use particle::*;
 pub use physicalobj::*;

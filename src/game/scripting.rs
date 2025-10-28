@@ -14,20 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
+use core::ops::Deref;
 use std::fs::read_to_string;
 use std::{cell::RefCell, path::Path, rc::Rc};
-use core::ops::Deref;
 
 use anyhow::{Result, anyhow};
 use log::error;
-use mlua::{FromLua, Function, Lua, Result as LuaResult, Table, Value, String as LuaString};
+use mlua::{
+    Either, FromLua, Function, Lua, Result as LuaResult, String as LuaString, Table, Value,
+};
 
 use crate::fs::find_datafile_path;
 use crate::game::level::Level;
-use crate::game::objects::{GameObjectArray, Particle, Projectile, Ship};
+use crate::game::objects::{Critter, GameObject, GameObjectArray, Particle, Projectile, Ship};
 use crate::game::world::WorldEffect;
 use crate::gfx::Renderer;
-use crate::math::Vec2;
+use crate::math::{LineF, RectF, Vec2};
 
 pub struct ScriptEnvironment {
     lua: Lua,
@@ -94,6 +96,7 @@ impl ScriptEnvironment {
         &mut self,
         level: Rc<RefCell<Level>>,
         ship_list: Rc<RefCell<GameObjectArray<Ship>>>,
+        critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
     ) -> LuaResult<()> {
         let api = self.lua.create_table().unwrap();
 
@@ -102,17 +105,42 @@ impl ScriptEnvironment {
             let level = level.clone();
             api.set(
                 "find_spawnpoint",
-                self.lua
-                    .create_function(move |_, _: ()| Ok(level.borrow().find_spawnpoint()?))?,
+                self.lua.create_function(
+                    move |_, (rect, allow_water): (Option<RectF>, Option<bool>)| {
+                        Ok(level
+                            .borrow()
+                            .find_spawnpoint(rect, allow_water.unwrap_or(false))?)
+                    },
+                )?,
             )?;
         }
 
         // Check terrain type
-        api.set(
-            "terrain_at",
-            self.lua
-                .create_function(move |_, pos: Vec2| Ok(level.borrow().terrain_at(pos)))?,
-        )?;
+        // function terrain_at(pos) -> Terrain
+        {
+            let level = level.clone();
+            api.set(
+                "terrain_at",
+                self.lua
+                    .create_function(move |_, pos: Vec2| Ok(level.borrow().terrain_at(pos)))?,
+            )?;
+        }
+
+        // Terrain line intersection check
+        // function terrain_line(start, end) -> (Vec2, Terrain, bool), where bool is true if intersected with solid terrain
+        {
+            let level = level.clone();
+            api.set(
+                "terrain_line",
+                self.lua
+                    .create_function(move |_, (start, end): (Vec2, Vec2)| {
+                        match level.borrow().terrain_line(LineF(start, end)) {
+                            Either::Left((t, pos)) => Ok((pos, t, true)),
+                            Either::Right(t) => Ok((end, t, false)),
+                        }
+                    })?,
+            )?;
+        }
 
         // Wrap TextureStore::find_texture
 
@@ -133,6 +161,30 @@ impl ScriptEnvironment {
                     Ok(())
                 })
             })?,
+        )?;
+
+        // Iterate through a read-only list of critters within the given position and radius
+        // function critters_iter(callback, pos, except_this_id, radius)
+        api.set(
+            "critters_iter",
+            self.lua.create_function(
+                move |lua, (pos, rad, except_this, callback): (Vec2, f32, u32, Function)| {
+                    let critters = critter_list.borrow();
+                    let rr = rad * rad;
+                    lua.scope(|scope| {
+                        for critter in critters.range_slice(pos.0 - rad, pos.0 + rad) {
+                            if critter.id() != except_this && critter.pos().dist_squared(pos) < rr {
+                                let res = callback
+                                    .call::<Option<bool>>(scope.create_userdata_ref(critter))?;
+                                if let Some(false) = res {
+                                    break;
+                                }
+                            }
+                        }
+                        Ok(())
+                    })
+                },
+            )?,
         )?;
 
         // Change the world.
@@ -159,6 +211,7 @@ impl ScriptEnvironment {
                         }
                         b"AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
+                        b"AddCritter" => WorldEffect::AddCritter(Critter::from_lua(props, lua)?),
                         b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
                         unknown => return Err(anyhow!("Unknown effect type: {:?}", unknown).into()),
                     };
@@ -195,6 +248,14 @@ impl ScriptEnvironment {
             "Vec2_for_angle",
             self.lua
                 .create_function(|_, (a, m): (f32, f32)| Ok(Vec2::for_angle(a, m)))?,
+        )?;
+
+        globals.set(
+            "RectF",
+            self.lua
+                .create_function(|_, (x, y, w, h): (f32, f32, f32, f32)| {
+                    Ok(RectF::new(x, y, w, h))
+                })?,
         )?;
 
         // Load main entrypoint file

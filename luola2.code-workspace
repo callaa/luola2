@@ -7,6 +7,10 @@
 	"settings": {
 		"files.exclude": {
 			"**/target/": true,
+		},
+		"[lua]": {
+			"editor.insertSpaces": false,
+			"editor.detectIndentation": false
 		}
 	}
 }

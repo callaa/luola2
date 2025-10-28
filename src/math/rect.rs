@@ -149,6 +149,28 @@ impl From<Rect> for RectF {
     }
 }
 
+impl mlua::UserData for RectF {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("x", |_, this| Ok(this.x()));
+        fields.add_field_method_get("y", |_, this| Ok(this.y()));
+        fields.add_field_method_get("w", |_, this| Ok(this.w()));
+        fields.add_field_method_get("h", |_, this| Ok(this.h()));
+    }
+}
+
+impl mlua::FromLua for RectF {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "RectF".to_owned(),
+                message: Some("expected RectF".to_string()),
+            }),
+        }
+    }
+}
+
 impl Default for Rect {
     fn default() -> Self {
         Self(SDL_Rect {

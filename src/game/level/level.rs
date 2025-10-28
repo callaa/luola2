@@ -391,14 +391,24 @@ impl Level {
     }
 
     /**
-     * Find a spawn point within the level.
+     * Find a spawn point within the level, optionally constrained to the given area.
      *
      * If no spawnpoint is found after a reasonable number of tries, Error is returned.
      */
-    pub fn find_spawnpoint(&self) -> Result<Vec2> {
+    pub fn find_spawnpoint(&self, in_area: Option<RectF>, allow_water: bool) -> Result<Vec2> {
+        let in_area = match in_area {
+            Some(r) => r,
+            None => RectF::new(0.0, 0.0, self.width, self.height),
+        };
+
         for _ in 0..100 {
-            let pos = Vec2(fastrand::f32() * self.width, fastrand::f32() * self.height);
-            if !terrain::is_solid(self.terrain_at(pos)) {
+            let pos = Vec2(
+                in_area.x() + fastrand::f32() * in_area.w(),
+                in_area.y() + fastrand::f32() * in_area.h(),
+            );
+
+            let ter = self.terrain_at(pos);
+            if !terrain::is_solid(ter) && (allow_water || !terrain::is_underwater(ter)) {
                 return Ok(pos);
             }
         }

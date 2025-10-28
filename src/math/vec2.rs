@@ -127,11 +127,17 @@ impl mlua::UserData for Vec2 {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_method("normalized", |_, this, _: ()| Ok(this.normalized()));
         methods.add_method("dist", |_, this, other: Vec2| Ok(this.dist(other)));
+        methods.add_method("dist_squared", |_, this, other: Vec2| {
+            Ok(this.dist_squared(other))
+        });
         methods.add_method("angle", |_, this, _: ()| Ok(this.angle()));
 
         methods.add_meta_function(MetaMethod::Add, |_, (v1, v2): (Vec2, Vec2)| Ok(v1 + v2));
         methods.add_meta_function(MetaMethod::Sub, |_, (v1, v2): (Vec2, Vec2)| Ok(v1 - v2));
+        methods.add_meta_function(MetaMethod::Mul, |_, (v1, f): (Vec2, f32)| Ok(v1 * f));
+        methods.add_meta_function(MetaMethod::Div, |_, (v1, f): (Vec2, f32)| Ok(v1 / f));
         methods.add_meta_function(MetaMethod::ToString, |_, v: Vec2| Ok(v.to_string()));
     }
 }

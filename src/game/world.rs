@@ -24,7 +24,7 @@ use crate::{
         PlayerId,
         hud::draw_hud,
         level::{LEVEL_SCALE, LevelInfo, Starfield},
-        objects::GameObjectArray,
+        objects::{Critter, GameObjectArray},
     },
     gfx::{AnimatedTexture, RenderMode, RenderOptions, Renderer},
     math::{Rect, Vec2},
@@ -45,6 +45,7 @@ pub enum WorldEffect {
     AddParticle(Particle),
     MakeBulletHole(Vec2),
     MakeBigHole(Vec2, i32),
+    AddCritter(Critter),
     EndRound(PlayerId),
 }
 
@@ -80,6 +81,11 @@ pub struct World {
     mines: Rc<RefCell<GameObjectArray<Projectile>>>,
     mines_work: RefCell<GameObjectArray<Projectile>>,
 
+    /// Critters are creatures that fly, swim, or walk around the game world.
+    /// They can be hostile or neutral.
+    critters: Rc<RefCell<GameObjectArray<Critter>>>,
+    critters_work: Rc<RefCell<GameObjectArray<Critter>>>,
+
     // particles that interact with terrain only
     /// Decorative particles with no interactions with anything.
     /// No need to double buffer these, since they don't do anything except get drawn on screen.
@@ -113,8 +119,9 @@ impl World {
         let mut scripting = ScriptEnvironment::new(renderer.clone())?;
 
         let ships = Rc::new(RefCell::new(GameObjectArray::new()));
+        let critters = Rc::new(RefCell::new(GameObjectArray::new()));
 
-        scripting.init_game(level.clone(), ships.clone())?;
+        scripting.init_game(level.clone(), ships.clone(), critters.clone())?;
 
         if let Some(levelscript) = levelinfo.script_path() {
             scripting.load_level_specific_script(&levelscript)?;
@@ -130,6 +137,8 @@ impl World {
             bullets: GameObjectArray::new(),
             mines: Rc::new(RefCell::new(GameObjectArray::new())),
             mines_work: RefCell::new(GameObjectArray::new()),
+            critters,
+            critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
             particles: GameObjectArray::new(),
             noise_texture: AnimatedTexture::new(
                 renderer.borrow().texture_store().find_texture("noise")?,
@@ -176,6 +185,9 @@ impl World {
                 }
                 WorldEffect::MakeBigHole(pos, r) => {
                     level_editor.make_hole(pos, r, &mut self.scripting)
+                }
+                WorldEffect::AddCritter(critter) => {
+                    self.critters.borrow_mut().push(critter);
                 }
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
@@ -240,6 +252,17 @@ impl World {
             work.sort();
         }
 
+        // Critter simulation step
+        {
+            let mut work = self.critters_work.borrow_mut();
+            for critter in self.critters.borrow().iter() {
+                if !critter.is_destroyed() {
+                    work.push(critter.step(&level, lua, timestep));
+                }
+            }
+            work.sort();
+        }
+
         // Decorative particle simulation step
         for p in self.particles.iter_mut() {
             p.step_mut(timestep);
@@ -257,6 +280,7 @@ impl World {
         {
             let mut work = self.ships_work.borrow_mut();
             let mut minework = self.mines_work.borrow_mut();
+            let mut critterwork = self.critters_work.borrow_mut();
             for (ship, rest) in work.self_collision_iter_mut() {
                 // Ship self collisions
                 for other in rest {
@@ -286,6 +310,14 @@ impl World {
                         mine.impact(terrain, Some(ship), lua);
                     }
                 }
+
+                // Ship to critter checks
+                for critter in critterwork.collider_slice_mut(ship).iter_mut() {
+                    if let Some(impulse) = ship.physics().check_collision(critter.physics()) {
+                        ship.physics_mut().add_impulse(impulse);
+                        critter.physics_mut().add_impulse(impulse * -1.0);
+                    }
+                }
             }
         }
 
@@ -313,12 +345,44 @@ impl World {
             }
         }
 
+        // Critters can be hit by bullets and mines
+        {
+            let mut work = self.critters_work.borrow_mut();
+            for critter in work.iter_mut() {
+                for bullet in self.bullets.collider_slice_mut(critter).iter_mut() {
+                    if critter.physics().check_overlap(bullet.physics()) {
+                        // Critters may have special processing for bullets
+                        // If bullet_hit returns false, it means the critter's script
+                        // has already performed the special impact routine for the
+                        // bullet (or wants it ignored otherwise.)
+                        if critter.bullet_hit(bullet, self.scripting.lua()) {
+                            let terrain = self.level.borrow().terrain_at(bullet.pos());
+                            bullet.impact(terrain, None, self.scripting.lua());
+                        }
+                    }
+                }
+
+                let mut minework = self.mines_work.borrow_mut();
+                for mine in minework.collider_slice_mut(critter).iter_mut() {
+                    if critter.physics().check_overlap(mine.physics()) {
+                        if critter.bullet_hit(mine, self.scripting.lua()) {
+                            let terrain = self.level.borrow().terrain_at(mine.pos());
+                            mine.impact(terrain, None, self.scripting.lua());
+                        }
+                    }
+                }
+            }
+        }
+
         // Rotate working sets
         self.ships.swap(&self.ships_work);
         self.ships_work.borrow_mut().clear();
 
         self.mines.swap(&self.mines_work);
         self.mines_work.borrow_mut().clear();
+
+        self.critters.swap(&self.critters_work);
+        self.critters_work.borrow_mut().clear();
 
         // Global timers
         self.noise_texture.step(timestep);
@@ -389,6 +453,10 @@ impl World {
 
             for ship in self.ships.borrow().range_slice(left, right) {
                 ship.render(renderer, camera_pos);
+            }
+
+            for critter in self.critters.borrow().range_slice(left, right) {
+                critter.render(renderer, camera_pos);
             }
 
             // Player HUD
