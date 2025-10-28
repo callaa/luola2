@@ -12,6 +12,24 @@ function make_shrapnell(count, pos, template)
     end
 end
 
+function luola_explosive_terrain(x, y)
+    local tex = textures.get("pewpew")
+    local pos = Vec2(x, y)
+
+    for a = 0, 360, (360 / 5) do
+        game.effect("AddBullet", {
+            pos = pos,
+            vel = Vec2_for_angle(a + math.random(-30, 30), 1000.0),
+            color = 0xffffa672,
+            mass = 30,
+            radius = 1,
+            drag = 0.0025,
+            texture = tex,
+            on_impact = bullet_impact,
+        })
+    end
+end
+
 function bullet_impact(this, terrain, ship)
 	this:destroy()
 	game.effect("MakeBulletHole", this.pos)

@@ -50,6 +50,16 @@ pub fn is_solid(t: Terrain) -> bool {
     t & TER_MASK_SOLID != 0
 }
 
+/// Is this (normal) explosive terrain?
+pub fn is_explosive(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_EXPLOSIVE
+}
+
+/// Is this (highly) explosive terrain?
+pub fn is_high_explosive(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_HIGH_EXPLOSIVE
+}
+
 /// Is this a base?
 /// Note: bases orient the ship to point upwards. Underwater bases point the ship downward
 pub fn is_base(t: Terrain) -> bool {

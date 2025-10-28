@@ -17,8 +17,9 @@
 use std::collections::HashSet;
 
 use crate::{
-    game::level::{
-        LEVEL_SCALE, TILE_SIZE, TileContentHint, rectiter::MutableRectIterator, terrain,
+    game::{
+        level::{LEVEL_SCALE, TILE_SIZE, TileContentHint, rectiter::MutableRectIterator, terrain},
+        scripting::ScriptEnvironment,
     },
     math::{Rect, Vec2},
 };
@@ -41,14 +42,14 @@ impl<'a> LevelEditor<'a> {
     /**
      * Make a regular bullet hole
      */
-    pub fn make_standard_bullet_hole(&mut self, pos: Vec2) {
-        self.make_hole(pos, 3);
+    pub fn make_standard_bullet_hole(&mut self, pos: Vec2, scripting: &mut ScriptEnvironment) {
+        self.make_hole(pos, 3, scripting);
     }
 
     /**
      * Make an arbitrarily sized hole
      */
-    pub fn make_hole(&mut self, pos: Vec2, r: i32) {
+    pub fn make_hole(&mut self, pos: Vec2, r: i32, scripting: &mut ScriptEnvironment) {
         if r <= 0 {
             return;
         }
@@ -86,7 +87,9 @@ impl<'a> LevelEditor<'a> {
                     let dy = (tile_rect.y() + y as i32) - center_y;
                     let mut dx = (tile_rect.x() + rect_in_tile.x()) - center_x;
 
-                    for (ter, art) in terrain_row.into_iter().zip(art_row.into_iter()) {
+                    for (row_x, (ter, art)) in
+                        terrain_row.into_iter().zip(art_row.into_iter()).enumerate()
+                    {
                         let dd = dy * dy + dx * dx;
                         if dd <= rr && terrain::is_destructible(*ter) {
                             if terrain::is_underwater(*ter) {
@@ -95,6 +98,29 @@ impl<'a> LevelEditor<'a> {
                                 *art = 0;
                             }
 
+                            if (terrain::is_high_explosive(*ter) && fastrand::f32() < 0.3)
+                                || (terrain::is_explosive(*ter) && fastrand::f32() < 0.05)
+                            {
+                                match scripting.get_function("luola_explosive_terrain") {
+                                    Ok(f) => {
+                                        if let Err(err) = f.call::<()>((
+                                            (tile_rect.x() + rect_in_tile.x() + row_x as i32)
+                                                as f32
+                                                * LEVEL_SCALE,
+                                            (tile_rect.y() + y as i32) as f32 * LEVEL_SCALE,
+                                        )) {
+                                            log::error!(
+                                                "Call to luola_explosive_terrain failed: {err}"
+                                            );
+                                        }
+                                    }
+                                    Err(err) => {
+                                        log::error!(
+                                            "Couldn't get luola_explosive_terrain function: {err}"
+                                        );
+                                    }
+                                }
+                            }
                             *ter &= !terrain::TER_MASK_SOLID;
                             dirty = true;
                         }

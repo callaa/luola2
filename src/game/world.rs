@@ -171,8 +171,12 @@ impl World {
                 WorldEffect::AddBullet(b) => self.bullets.push(b),
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
-                WorldEffect::MakeBulletHole(pos) => level_editor.make_standard_bullet_hole(pos),
-                WorldEffect::MakeBigHole(pos, r) => level_editor.make_hole(pos, r),
+                WorldEffect::MakeBulletHole(pos) => {
+                    level_editor.make_standard_bullet_hole(pos, &mut self.scripting)
+                }
+                WorldEffect::MakeBigHole(pos, r) => {
+                    level_editor.make_hole(pos, r, &mut self.scripting)
+                }
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }

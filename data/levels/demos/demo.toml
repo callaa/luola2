@@ -31,3 +31,5 @@ base = [64, 65]
 base-i = [66, 67]
 base-uw = [68, 69] # underwater bases re-orient the ship downwards
 base-uw-i = [70, 71]
+explosive = [72, 73]
+highexplosive = [74, 75]
