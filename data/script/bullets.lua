@@ -1,36 +1,26 @@
-require "utils.table"
+-- This file contains code for bullet impact functions.
+local tableutils = require("utils.table")
 
-function make_shrapnell(count, pos, template)
-    for a = 0, 360, (360 / count) do
-        game.effect("AddBullet", combined_tables(
-            template,
-            {
-                pos = pos + Vec2_for_angle(a, 3.0),
-                vel = Vec2_for_angle(a, 1000.0),
-            }
-        ))
-    end
+local impacts = {}
+
+-- generic function for explosions
+-- count is the number of bullets generated
+-- pos is the center of the explosion
+-- template is the bullet template to which pos and vel properties are added
+function impacts.make_shrapnell(count, pos, template)
+	for a = 0, 360, (360 / count) do
+		game.effect(
+			"AddBullet",
+			tableutils.combined(template, {
+				pos = pos + Vec2_for_angle(a, 3.0),
+				vel = Vec2_for_angle(a, 1000.0),
+			})
+		)
+	end
 end
 
-function luola_explosive_terrain(x, y)
-    local tex = textures.get("pewpew")
-    local pos = Vec2(x, y)
-
-    for a = 0, 360, (360 / 5) do
-        game.effect("AddBullet", {
-            pos = pos,
-            vel = Vec2_for_angle(a + math.random(-30, 30), 1000.0),
-            color = 0xffffa672,
-            mass = 30,
-            radius = 1,
-            drag = 0.0025,
-            texture = tex,
-            on_impact = bullet_impact,
-        })
-    end
-end
-
-function bullet_impact(this, terrain, ship)
+-- Standard bullet
+function impacts.bullet(this, terrain, ship)
 	this:destroy()
 	game.effect("MakeBulletHole", this.pos)
 	game.effect("AddParticle", {
@@ -38,12 +28,13 @@ function bullet_impact(this, terrain, ship)
 		texture = textures.get("boom"),
 	})
 
-    if ship ~= nil then
-        ship:damage(3)
-    end
+	if ship ~= nil then
+		ship:damage(3)
+	end
 end
 
-function grenade_impact(this, terrain, ship)
+-- Special weapon grenade
+function impacts.grenade(this, terrain, ship)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {
@@ -51,80 +42,75 @@ function grenade_impact(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-    if ship ~= nil then
-        ship:damage(1)
-    end
+	if ship ~= nil then
+		ship:damage(1)
+	end
 
-    make_shrapnell(36, this.pos, {
-        color = 0xffff6666,
-        mass = 30,
-        radius = 1,
-        drag = 0.0025,
-        texture = textures.get("pewpew"),
-        on_impact = bullet_impact,
-    })
+	impacts.make_shrapnell(36, this.pos, {
+		color = 0xffff6666,
+		texture = textures.get("pewpew"),
+		on_impact = impacts.bullet,
+	})
 end
 
-function megabomb_impact(this, terrain, ship)
-    this:destroy()
-    game.effect("MakeBigHole", { pos = this.pos, r = 16 })
+-- Special weapon Megabomb
+function impacts.megabomb(this, terrain, ship)
+	this:destroy()
+	game.effect("MakeBigHole", { pos = this.pos, r = 16 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
 
-    if ship ~= nil then
-        ship:damage(20)
-    end
+	if ship ~= nil then
+		ship:damage(20)
+	end
 
-    make_shrapnell(10, this.pos, {
-        mass = 300,
-        radius = 5,
-        drag = 0.0025,
-        texture = textures.get("pewpew"),
-        on_impact = grenade_impact,
-    })
+	impacts.make_shrapnell(10, this.pos, {
+		mass = 300,
+		radius = 5,
+		texture = textures.get("pewpew"),
+		on_impact = impacts.grenade,
+	})
 end
 
-function rocket_impact(this, terrain, ship)
-    this:destroy()
-    game.effect("MakeBigHole", { pos = this.pos, r = 12 })
+-- Special weapon Rocket (should be slightly less powerful than a megabomb)
+function impacts.rocket(this, terrain, ship)
+	this:destroy()
+	game.effect("MakeBigHole", { pos = this.pos, r = 12 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
 
-    if ship ~= nil then
-        ship:damage(15)
-    end
+	if ship ~= nil then
+		ship:damage(15)
+	end
 
-    make_shrapnell(4, this.pos, {
-        mass = 300,
-        radius = 5,
-        drag = 0.0025,
-        texture = textures.get("pewpew"),
-        on_impact = grenade_impact,
-    })
+	impacts.make_shrapnell(4, this.pos, {
+		texture = textures.get("pewpew"),
+		on_impact = impacts.grenade,
+	})
 end
 
-function missile_impact(this, terrain, ship)
-    this:destroy()
-    game.effect("MakeBigHole", { pos = this.pos, r = 8 })
+-- Special weapon Homing Missile (should be less powerful than a rocket)
+function impacts.missile(this, terrain, ship)
+	this:destroy()
+	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
 
-    if ship ~= nil then
-        ship:damage(10)
-    end
+	if ship ~= nil then
+		ship:damage(10)
+	end
 
-    make_shrapnell(20, this.pos, {
-        color = 0xffff6666,
-        mass = 30,
-        radius = 1,
-        drag = 0.0025,
-        texture = textures.get("pewpew"),
-        on_impact = bullet_impact,
-    })
+	impacts.make_shrapnell(20, this.pos, {
+		color = 0xffff6666,
+		texture = textures.get("pewpew"),
+		on_impact = impacts.bullet,
+	})
 end
+
+return impacts

@@ -16,10 +16,11 @@
 
 use std::fs::read_to_string;
 use std::{cell::RefCell, path::Path, rc::Rc};
+use core::ops::Deref;
 
 use anyhow::{Result, anyhow};
 use log::error;
-use mlua::{FromLua, Function, Lua, Result as LuaResult, Table, Value};
+use mlua::{FromLua, Function, Lua, Result as LuaResult, Table, Value, String as LuaString};
 
 use crate::fs::find_datafile_path;
 use crate::game::level::Level;
@@ -140,14 +141,14 @@ impl ScriptEnvironment {
         api.set(
             "effect",
             self.lua
-                .create_function(move |lua, (effect_type, props): (String, Value)| {
-                    let effect = match effect_type.as_str() {
-                        "AddBullet" => WorldEffect::AddBullet(Projectile::from_lua(props, lua)?),
-                        "AddMine" => WorldEffect::AddMine(Projectile::from_lua(props, lua)?),
-                        "MakeBulletHole" => {
+                .create_function(move |lua, (effect_type, props): (LuaString, Value)| {
+                    let effect = match effect_type.as_bytes().deref() {
+                        b"AddBullet" => WorldEffect::AddBullet(Projectile::from_lua(props, lua)?),
+                        b"AddMine" => WorldEffect::AddMine(Projectile::from_lua(props, lua)?),
+                        b"MakeBulletHole" => {
                             WorldEffect::MakeBulletHole(Vec2::from_lua(props, lua)?)
                         }
-                        "MakeBigHole" => {
+                        b"MakeBigHole" => {
                             if let mlua::Value::Table(t) = props {
                                 let pos = t.get("pos")?;
                                 let r: i32 = t.get("r")?;
@@ -156,10 +157,10 @@ impl ScriptEnvironment {
                                 return Err(anyhow!("expected {{pos, r}}").into());
                             }
                         }
-                        "AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
-                        "AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
-                        "EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
-                        unknown => return Err(anyhow!("Unknown effect type: {}", unknown).into()),
+                        b"AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
+                        b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
+                        b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
+                        unknown => return Err(anyhow!("Unknown effect type: {:?}", unknown).into()),
                     };
 
                     efacc.borrow_mut().push(effect);
