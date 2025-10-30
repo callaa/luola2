@@ -94,6 +94,7 @@ local ships = {
 			drag = 0.04,
 			radius = 16,
 			thrust = 40,
+			turn_speed = 260,
 			hitpoints = 100,
 			on_fire_primary = weapons.cannon,
 			on_destroyed = on_ship_destroyed,

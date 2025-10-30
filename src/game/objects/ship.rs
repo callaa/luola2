@@ -45,6 +45,9 @@ pub struct Ship {
     /// Engine thrust force
     thrust: f32,
 
+    /// Maximum turning speed in degrees per second
+    turn_speed: f32,
+
     /// The controller used to control this ship.
     /// Zero or negative if no controller is attached
     controller: i32,
@@ -184,6 +187,7 @@ impl mlua::FromLua for Ship {
                 },
                 angle: table.get::<Option<f32>>("angle")?.unwrap_or(0.0),
                 thrust: table.get::<Option<f32>>("thrust")?.unwrap_or(50.0),
+                turn_speed: table.get::<Option<f32>>("turn_speed")?.unwrap_or(260.0),
                 player_id: table.get::<Option<i32>>("player")?.unwrap_or(0),
                 controller: table.get::<Option<i32>>("controller")?.unwrap_or(0),
                 hitpoints,
@@ -294,8 +298,7 @@ impl Ship {
         if !self.is_wrecked()
             && let Some(controller) = controller
         {
-            // TODO turn speed should be a ship parameter
-            ship.angle += 260.0 * controller.turn * timestep;
+            ship.angle += ship.turn_speed * controller.turn * timestep;
 
             if controller.thrust {
                 ship.phys.vel = ship.phys.vel
