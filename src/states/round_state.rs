@@ -209,15 +209,29 @@ impl StackableState for GameRoundState {
     }
 }
 
-fn assign_viewports(screen: Rect, max_width: i32, max_height: i32, player_count: usize) -> (Vec<Rect>, Option<RectF>) {
+fn assign_viewports(
+    screen: Rect,
+    max_width: i32,
+    max_height: i32,
+    player_count: usize,
+) -> (Vec<Rect>, Option<RectF>) {
     if player_count < 2 {
-        (vec![Rect::new(screen.x(), screen.y(), screen.w().min(max_width), screen.h().min(max_height))], None)
+        (
+            vec![Rect::new(
+                screen.x(),
+                screen.y(),
+                screen.w().min(max_width),
+                screen.h().min(max_height),
+            )],
+            None,
+        )
     } else if player_count < 3 {
-        let h = screen.h() / 2;
+        let w2 = screen.w() / 2;
+        let hmax = screen.h().min(max_height);
         (
             vec![
-                Rect::new(screen.x(), screen.y(), screen.w().min(max_width), h.min(max_height)),
-                Rect::new(screen.x(), screen.y() + h, screen.w().min(max_width), h.min(max_height)),
+                Rect::new(screen.x(), screen.y(), w2.min(max_width), hmax),
+                Rect::new(screen.x() + w2, screen.y(), w2.min(max_width), hmax),
             ],
             None,
         )
@@ -228,10 +242,20 @@ fn assign_viewports(screen: Rect, max_width: i32, max_height: i32, player_count:
         let bottom = player_count / 2;
         let top = player_count - bottom;
         for i in 0..top {
-            viewports.push(Rect::new(screen.x() + w * i as i32, screen.y(), w.min(max_width), h.min(max_height)));
+            viewports.push(Rect::new(
+                screen.x() + w * i as i32,
+                screen.y(),
+                w.min(max_width),
+                h.min(max_height),
+            ));
         }
         for i in 0..bottom {
-            viewports.push(Rect::new(screen.x() + w * i as i32, screen.y() + h, w.min(max_width), h.min(max_height)));
+            viewports.push(Rect::new(
+                screen.x() + w * i as i32,
+                screen.y() + h,
+                w.min(max_width),
+                h.min(max_height),
+            ));
         }
 
         let filler = if player_count % 2 == 1 {
