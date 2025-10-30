@@ -30,6 +30,7 @@ pub struct Particle {
     pos: Vec2,
     vel: Vec2,
     a: Vec2,
+    reveal_in: f32,
     lifetime: Option<f32>,
     texture: AnimatedTexture,
     color: Color,
@@ -39,6 +40,11 @@ pub struct Particle {
 
 impl Particle {
     pub fn step_mut(&mut self, timestep: f32) {
+        if self.reveal_in > 0.0 {
+            self.reveal_in -= timestep;
+            return;
+        }
+
         self.vel = self.vel + self.a * timestep;
         self.pos = self.pos + self.vel * timestep;
 
@@ -58,14 +64,16 @@ impl Particle {
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
-        self.texture.render(
-            renderer,
-            &RenderOptions {
-                dest: RenderDest::Centered(self.pos - camera_pos),
-                color: self.color,
-                ..Default::default()
-            },
-        )
+        if self.reveal_in <= 0.0 {
+            self.texture.render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::Centered(self.pos - camera_pos),
+                    color: self.color,
+                    ..Default::default()
+                },
+            );
+        }
     }
 }
 
@@ -92,6 +100,7 @@ impl mlua::FromLua for Particle {
                 vel: table.get::<Option<Vec2>>("vel")?.unwrap_or_default(),
                 a: table.get::<Option<Vec2>>("a")?.unwrap_or_default(),
                 lifetime,
+                reveal_in: table.get::<Option<f32>>("reveal_in")?.unwrap_or(0.0),
                 texture: AnimatedTexture::new(table.get("texture")?),
                 color,
                 target_color,

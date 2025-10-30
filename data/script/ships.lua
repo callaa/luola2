@@ -73,10 +73,13 @@ local function on_ship_destroyed(ship)
 	Scheduler.add_global(1, check_round_end_condition)
 
 	game.effect("MakeBigHole", { pos = ship.pos, r = 16 })
-	game.effect("AddParticle", {
-		pos = ship.pos,
-		texture = textures.get("bigboom"),
-	})
+	for i = 0, 2 do
+		game.effect("AddParticle", {
+			pos = ship.pos + Vec2(math.random(-30, 30), math.random(-30, 30)),
+			texture = textures.get("bigboom"),
+			reveal_in = i / 6,
+		})
+	end
 
 	bullets.make_shrapnell(36, ship.pos, {
 		color = 0xffff6666,
