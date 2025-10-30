@@ -134,6 +134,7 @@ impl UserData for Ship {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
+        fields.add_field_method_get("radius", |_, this| Ok(this.phys.radius));
         fields.add_field_method_get("angle", |_, this| Ok(this.angle));
         fields.add_field_method_get("player", |_, this| Ok(this.player_id));
         fields.add_field_method_get("health", |_, this| Ok(this.hitpoints));
