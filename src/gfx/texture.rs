@@ -60,6 +60,8 @@ pub struct TextureConfig {
     scale: Option<TextureScaleMode>,
     #[serde(default)]
     needs_rotation: bool, // Hint to the renderer that this sprite should be rotated in the direction of the motion
+    #[serde(default)]
+    flippable: bool, // Hint to the renderer that this sprite should be flipped when moving to the left
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -85,6 +87,7 @@ pub struct Texture {
     pub(super) frames: i32,
     pub(super) frame_duration: f32,
     needs_rotation: bool,
+    flippable: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Copy)]
@@ -96,6 +99,7 @@ pub enum TextureScaleMode {
 #[derive(Clone, Copy)]
 pub enum RenderMode {
     Normal,
+    Mirrored,
     Rotated(f32, bool), // angle, mirror
     Tiled(f32),         // scale
 }
@@ -146,6 +150,7 @@ impl Clone for Texture {
             frames: self.frames,
             frame_duration: self.frame_duration,
             needs_rotation: self.needs_rotation,
+            flippable: self.flippable,
         }
     }
 }
@@ -197,6 +202,7 @@ impl Texture {
         }
 
         tex.needs_rotation = config.needs_rotation;
+        tex.flippable = config.flippable;
 
         if let Some(scale) = config.scale.as_ref() {
             tex.set_scalemode(*scale);
@@ -256,6 +262,7 @@ impl Texture {
             frames: 0,
             frame_duration: 1.0,
             needs_rotation: false,
+            flippable: false,
         })
     }
 
@@ -296,6 +303,10 @@ impl Texture {
      */
     pub fn needs_rotation(&self) -> bool {
         self.needs_rotation
+    }
+
+    pub fn flippable(&self) -> bool {
+        self.flippable
     }
 
     pub fn subframe_rect(&self, frame: i32) -> RectF {
@@ -389,6 +400,33 @@ impl Texture {
                             Some(ref r) => &r.0,
                             None => null(),
                         },
+                    )
+                }
+            }
+            RenderMode::Mirrored => {
+                let source = if let Some(s) = options.source {
+                    RectF::new(
+                        self.subrect.x() + s.x(),
+                        self.subrect.y() + s.y(),
+                        s.w(),
+                        s.h(),
+                    )
+                } else {
+                    self.subrect
+                };
+
+                unsafe {
+                    SDL_RenderTextureRotated(
+                        renderer.renderer,
+                        self.tex,
+                        &source.0,
+                        match dest {
+                            Some(ref r) => &r.0,
+                            None => null(),
+                        },
+                        0.0,
+                        null(),
+                        SDL_FLIP_HORIZONTAL,
                     )
                 }
             }

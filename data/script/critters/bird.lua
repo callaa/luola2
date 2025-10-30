@@ -8,6 +8,9 @@ function Bird._timer_flock(critter)
 	local avoid = Vec2(0, 0)
 	local vel_match = Vec2(0, 0)
 	game.critters_iter(critter.pos, 300, critter.id, function(other)
+		if not other.state.is_bird then
+			return
+		end
 		boid_count = boid_count + 1
 		center = center + other.pos
 		local dd = critter.pos:dist_squared(other.pos)
@@ -72,6 +75,7 @@ end
 
 function Bird:new(pos)
 	local bird = {
+		is_bird = true,
 		scheduler = Scheduler:new():add(0, Bird._timer_flock),
 	}
 	setmetatable(bird, self)

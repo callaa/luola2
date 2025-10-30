@@ -41,6 +41,7 @@ struct TextureWithAlts {
 }
 
 const TEXTURE_FLAG_NEED_ROTATION: u16 = 0x1000; // sprite should be rotated to look natural
+const TEXTURE_FLAG_FLIPPABLE: u16 = 0x2000; // sprite should be flipped when moving to the left
 const TEXTURE_FLAG_FRAME_MASK: u16 = 0x0fff; // part of the flags that represents frame count
 
 #[derive(Clone, Copy, Debug)]
@@ -61,6 +62,11 @@ impl TextureId {
                     TEXTURE_FLAG_NEED_ROTATION
                 } else {
                     0
+                }
+                | if tex.flippable() {
+                    TEXTURE_FLAG_FLIPPABLE
+                } else {
+                    0
                 },
             frame_duration: tex.frame_duration,
         }
@@ -76,6 +82,10 @@ impl TextureId {
 
     pub fn needs_rotation(&self) -> bool {
         (self.flags & TEXTURE_FLAG_NEED_ROTATION) != 0
+    }
+
+    pub fn flippable(&self) -> bool {
+        (self.flags & TEXTURE_FLAG_FLIPPABLE) != 0
     }
 }
 impl mlua::UserData for TextureId {}

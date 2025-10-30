@@ -3,7 +3,7 @@ use crate::{
         level::{Level, terrain},
         objects::{GameObject, PhysicalObject, Projectile, TerrainCollisionMode},
     },
-    gfx::{AnimatedTexture, RenderDest, RenderOptions, Renderer},
+    gfx::{AnimatedTexture, RenderDest, RenderMode, RenderOptions, Renderer},
     math::Vec2,
 };
 
@@ -176,6 +176,11 @@ impl Critter {
             renderer,
             &RenderOptions {
                 dest: RenderDest::Centered(self.phys.pos - camera_pos),
+                mode: if self.texture.id().flippable() && self.phys.vel.0 < 0.0 {
+                    RenderMode::Mirrored
+                } else {
+                    RenderMode::Normal
+                },
                 ..Default::default()
             },
         );

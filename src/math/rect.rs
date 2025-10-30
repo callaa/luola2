@@ -162,6 +162,7 @@ impl mlua::FromLua for RectF {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+            mlua::Value::Table(t) => Ok(RectF::new(t.get(1)?, t.get(2)?, t.get(3)?, t.get(4)?)),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: "RectF".to_owned(),

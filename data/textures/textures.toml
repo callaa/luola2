@@ -58,6 +58,14 @@ width = 16
 height = 16
 duration = 0.3
 
+[shark]
+file = "shark.png"
+frames = 4
+width = 32
+height = 32
+duration = 0.6
+flippable = true
+
 [noise]
 file = "noise.png"
 width = 32

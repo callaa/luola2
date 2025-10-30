@@ -9,6 +9,7 @@ local ships = require("ships")
 local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
 local Bird = require("critters.bird")
+local Fish = require("critters.fish")
 
 -- Main entrypoint
 -- This is called when initializing the game for a new round.
@@ -40,6 +41,9 @@ function luola_init_level(settings)
 
 	if settings["random-birds"] ~= nil then
 		Bird.create_random(settings["random-birds"])
+	end
+	if settings["random-fish"] ~= nil then
+		Fish.create_random(settings["random-fish"])
 	end
 end
 

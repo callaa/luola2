@@ -37,3 +37,6 @@ highexplosive = [74, 75]
 # Script settings will be passed as-is to the level initialization script
 [script-settings]
 random-birds = 20
+random-fish = [
+	{ count = 10, area = [192, 960, 960, 192] }
+]
