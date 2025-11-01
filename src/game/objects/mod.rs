@@ -20,6 +20,7 @@ mod particle;
 mod physicalobj;
 mod projectile;
 mod ship;
+mod terpart;
 
 pub use critter::*;
 pub use objarray::*;
@@ -27,3 +28,4 @@ pub use particle::*;
 pub use physicalobj::*;
 pub use projectile::*;
 pub use ship::*;
+pub use terpart::*;

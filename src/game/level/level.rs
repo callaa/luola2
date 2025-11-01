@@ -16,7 +16,10 @@
 
 use super::{LevelInfo, terrain};
 use crate::{
-    game::level::tileiterator::{MutableTileIterator, TileIterator},
+    game::level::{
+        terrain::TER_BIT_WATER,
+        tileiterator::{MutableTileIterator, TileIterator},
+    },
     gfx::{Color, Image, Renderer, Texture, TextureScaleMode},
     math::{Line, LineF, Rect, RectF, Vec2},
 };
@@ -42,8 +45,9 @@ pub const TILE_LENGTH: usize = (TILE_SIZE * TILE_SIZE) as usize;
  */
 pub(super) enum TileContentHint {
     Destructible,   // may contain destructible terrain
-    FreeSpace,      // contains only free space
-    Indestructible, // may contain only free space and indestructable solids
+    FreeSpace,      // contains only empty space
+    Water,          // contains only water
+    Indestructible, // may contain a mixture of space, water and/or indestructable solids
 }
 
 pub(super) struct TerrainTile {
@@ -271,6 +275,8 @@ impl Level {
                 let tile = &self.tiles[(j * self.tiles_wide + i) as usize];
                 if let TileContentHint::FreeSpace = tile.content_hint {
                     last_non_solid = 0;
+                } else if let TileContentHint::Water = tile.content_hint {
+                    last_non_solid = TER_BIT_WATER;
                 } else {
                     match tile.terrain_line(isect.offset(-tile_rect.x(), -tile_rect.y())) {
                         Either::Left((t, x, y)) => {
@@ -390,6 +396,11 @@ impl Level {
         )
     }
 
+    pub(super) fn tile_mut(&mut self, tx: i32, ty: i32) -> &mut TerrainTile {
+        debug_assert!(tx >= 0 && ty >= 0);
+        &mut self.tiles[(ty * self.tiles_wide + tx) as usize]
+    }
+
     /**
      * Find a spawn point within the level, optionally constrained to the given area.
      *
@@ -458,6 +469,7 @@ impl Level {
             );
             let color = match t.content_hint {
                 TileContentHint::FreeSpace => Color::new_rgba(1.0, 1.0, 1.0, 0.1),
+                TileContentHint::Water => Color::new_rgba(1.0, 0.0, 1.0, 0.8),
                 TileContentHint::Destructible => Color::new_rgba(1.0, 0.0, 0.0, 0.4),
                 TileContentHint::Indestructible => Color::new_rgba(0.0, 1.0, 1.0, 0.4),
             };
@@ -467,19 +479,27 @@ impl Level {
 }
 
 impl TerrainTile {
-    fn reset_content_hint(&mut self) {
+    pub(super) fn reset_content_hint(&mut self) {
         let mut all_free_space = true;
+        let mut all_water = true;
         for t in self.terrain {
             if terrain::is_solid(t) {
                 all_free_space = false;
+                all_water = false;
                 if terrain::is_destructible(t) {
                     self.content_hint = TileContentHint::Destructible;
                     return;
                 }
+            } else if t != TER_BIT_WATER {
+                all_water = false;
+            } else if t != 0 {
+                all_free_space = false;
             }
         }
 
-        self.content_hint = if all_free_space {
+        self.content_hint = if all_water {
+            TileContentHint::Water
+        } else if all_free_space {
             TileContentHint::FreeSpace
         } else {
             // no destructable solids, no free space

@@ -27,7 +27,9 @@ use mlua::{
 use crate::fs::find_datafile_path;
 use crate::game::PlayerId;
 use crate::game::level::Level;
-use crate::game::objects::{Critter, GameObject, GameObjectArray, Particle, Projectile, Ship};
+use crate::game::objects::{
+    Critter, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
+};
 use crate::game::world::WorldEffect;
 use crate::gfx::Renderer;
 use crate::math::{LineF, RectF, Vec2};
@@ -117,6 +119,15 @@ impl ScriptEnvironment {
             )?;
         }
 
+        // Get level size
+        {
+            let level = level.clone();
+            api.set(
+                "level_width",
+                self.lua
+                    .create_function(move |_, _: ()| Ok(level.borrow().width()))?,
+            )?;
+        }
         // Check terrain type
         // function terrain_at(pos) -> Terrain
         {
@@ -240,6 +251,9 @@ impl ScriptEnvironment {
                             }
                         }
                         b"AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
+                        b"AddTerrainParticle" => {
+                            WorldEffect::AddTerrainParticle(TerrainParticle::from_lua(props, lua)?)
+                        }
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
                         b"AddCritter" => WorldEffect::AddCritter(Critter::from_lua(props, lua)?),
                         b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
@@ -300,6 +314,10 @@ impl ScriptEnvironment {
 
     pub fn get_function(&self, name: &str) -> LuaResult<Function> {
         self.lua.globals().get::<Function>(name)
+    }
+
+    pub fn add_effect(&mut self, effect: WorldEffect) {
+        self.effect_accumulator.borrow_mut().push(effect);
     }
 
     pub fn take_accumulated_effects(&mut self) -> Vec<WorldEffect> {

@@ -18,9 +18,14 @@ use std::collections::HashSet;
 
 use crate::{
     game::{
-        level::{LEVEL_SCALE, TILE_SIZE, TileContentHint, rectiter::MutableRectIterator, terrain},
+        level::{
+            LEVEL_SCALE, TILE_SIZE, TileContentHint,
+            rectiter::MutableRectIterator,
+            terrain::{self, TER_BIT_WATER, Terrain},
+        },
         scripting::ScriptEnvironment,
     },
+    gfx::Color,
     math::{Rect, Vec2},
 };
 
@@ -121,7 +126,7 @@ impl<'a> LevelEditor<'a> {
                                     }
                                 }
                             }
-                            *ter &= !terrain::TER_MASK_SOLID;
+                            *ter &= !(terrain::TER_MASK_SOLID | terrain::TER_BIT_DESTRUCTIBLE);
                             dirty = true;
                         }
 
@@ -137,11 +142,41 @@ impl<'a> LevelEditor<'a> {
     }
 
     /**
+     * Add a terrain point. Change is performed only if there is not
+     * already a solid pixel in the given position.
+     */
+    pub fn add_point(&mut self, pos: Vec2, ter: Terrain, color: Color) {
+        if pos.0 < 0.0 || pos.1 < 0.0 || pos.0 >= self.level.width() || pos.1 >= self.level.height()
+        {
+            return;
+        }
+
+        let x = (pos.0 / LEVEL_SCALE) as i32;
+        let y = (pos.1 / LEVEL_SCALE) as i32;
+
+        let i = x / TILE_SIZE;
+        let j = y / TILE_SIZE;
+        let tile = self.level.tile_mut(i, j);
+
+        let offset = ((y - j * TILE_SIZE) * TILE_SIZE + (x - i * TILE_SIZE)) as usize;
+
+        if !terrain::is_solid(tile.terrain[offset]) {
+            tile.terrain[offset] = if terrain::is_underwater(tile.terrain[offset]) {
+                ter | TER_BIT_WATER
+            } else {
+                ter
+            };
+            tile.artwork[offset] = color.as_argb_u32();
+            self.dirty_set.insert((i, j));
+        }
+    }
+
+    /**
      * Update dirtied texture tiles (if any)
      */
     pub fn apply_texture_changes(&mut self) {
         for (i, j) in self.dirty_set.drain() {
-            // TODO update content hint?
+            self.level.tile_mut(i, j).reset_content_hint();
             self.level.repaint_tile(i, j);
         }
     }

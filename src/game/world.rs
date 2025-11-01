@@ -23,10 +23,10 @@ use crate::{
     game::{
         PlayerId,
         hud::draw_hud,
-        level::{LEVEL_SCALE, LevelInfo, Starfield},
-        objects::{Critter, GameObjectArray},
+        level::{LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
+        objects::{Critter, GameObjectArray, TerrainParticle},
     },
-    gfx::{AnimatedTexture, RenderMode, RenderOptions, Renderer},
+    gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
     math::{Rect, Vec2},
 };
 
@@ -43,6 +43,8 @@ pub enum WorldEffect {
     AddBullet(Projectile),
     AddMine(Projectile),
     AddParticle(Particle),
+    AddTerrainParticle(TerrainParticle),
+    AddPixel(Vec2, Terrain, Color),
     MakeBulletHole(Vec2),
     MakeBigHole(Vec2, i32),
     AddCritter(Critter),
@@ -86,10 +88,22 @@ pub struct World {
     critters: Rc<RefCell<GameObjectArray<Critter>>>,
     critters_work: Rc<RefCell<GameObjectArray<Critter>>>,
 
+    /// Terrain particle (e.g. snow and dust)
+    terrainparticles: GameObjectArray<TerrainParticle>,
+
     // particles that interact with terrain only
     /// Decorative particles with no interactions with anything.
     /// No need to double buffer these, since they don't do anything except get drawn on screen.
     particles: GameObjectArray<Particle>, // decorative particles with no interactions at all
+
+    /// Actual windspeed
+    windspeed: f32,
+
+    /// What the windspeed should be
+    windspeed_target: f32,
+
+    /// Wind change timer
+    wind_timer: f32,
 
     /// Noise texture used for viewports of dead players
     noise_texture: AnimatedTexture,
@@ -144,7 +158,11 @@ impl World {
             mines,
             critters,
             critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
+            terrainparticles: GameObjectArray::new(),
             particles: GameObjectArray::new(),
+            windspeed: 0.0,
+            wind_timer: 0.0,
+            windspeed_target: 0.0,
             noise_texture: AnimatedTexture::new(
                 renderer.borrow().texture_store().find_texture("noise")?,
             ),
@@ -185,6 +203,10 @@ impl World {
                 WorldEffect::AddBullet(b) => self.bullets.push(b),
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
+                WorldEffect::AddTerrainParticle(p) => self.terrainparticles.push(p),
+                WorldEffect::AddPixel(pos, ter, color) => {
+                    level_editor.add_point(pos, ter, color);
+                }
                 WorldEffect::MakeBulletHole(pos) => {
                     level_editor.make_standard_bullet_hole(pos, &mut self.scripting)
                 }
@@ -214,7 +236,6 @@ impl World {
      */
     pub fn step(&mut self, controllers: &[GameController], timestep: f32) -> Option<PlayerId> {
         let level = self.level.borrow();
-        let lua = self.scripting.lua();
 
         //
         // Simulation step phase
@@ -231,7 +252,7 @@ impl World {
                         None
                     },
                     &level,
-                    lua,
+                    self.scripting.lua(),
                     timestep,
                 ));
             }
@@ -241,7 +262,7 @@ impl World {
 
         // Bullet simulation step
         for bullet in self.bullets.iter_mut() {
-            bullet.step_mut(&level, lua, timestep);
+            bullet.step_mut(&level, self.scripting.lua(), timestep);
         }
 
         self.bullets.sort();
@@ -250,7 +271,7 @@ impl World {
         {
             let mut mines = self.mines.borrow_mut();
             for mine in mines.iter_mut() {
-                mine.step_mut(&level, lua, timestep);
+                mine.step_mut(&level, self.scripting.lua(), timestep);
             }
             mines.sort();
         }
@@ -260,11 +281,21 @@ impl World {
             let mut work = self.critters_work.borrow_mut();
             for critter in self.critters.borrow().iter() {
                 if !critter.is_destroyed() {
-                    work.push(critter.step(&level, lua, timestep));
+                    work.push(critter.step(&level, self.scripting.lua(), timestep));
                 }
             }
             work.sort();
         }
+
+        // Terrain particle simulation step
+        for tp in self.terrainparticles.iter_mut() {
+            let e = tp.step_mut(&level, self.windspeed, timestep);
+            if let Some(e) = e {
+                self.scripting
+                    .add_effect(WorldEffect::AddPixel(e.0, e.1, e.2));
+            }
+        }
+        self.terrainparticles.sort();
 
         // Decorative particle simulation step
         for p in self.particles.iter_mut() {
@@ -294,31 +325,39 @@ impl World {
                 }
 
                 // Ship to bullet checks.
-                for bullet in self.bullets.collider_slice_mut(ship).iter_mut() {
+                for bullet in self.bullets.collider_slice_mut(ship) {
                     if bullet.owner() != ship.player_id()
                         && let Some(impulse) = ship.physics().check_collision(bullet.physics())
                     {
                         ship.physics_mut().add_impulse(impulse);
-                        bullet.impact(0, Some(ship), lua);
+                        bullet.impact(0, Some(ship), self.scripting.lua());
                     }
                 }
 
                 // Ship to mine checks
-                for mine in minework.collider_slice_mut(ship).iter_mut() {
+                for mine in minework.collider_slice_mut(ship) {
                     if mine.owner() != ship.player_id()
                         && let Some(impulse) = ship.physics().check_collision(mine.physics())
                     {
                         let terrain = self.level.borrow().terrain_at(mine.pos());
                         ship.physics_mut().add_impulse(impulse);
-                        mine.impact(terrain, Some(ship), lua);
+                        mine.impact(terrain, Some(ship), self.scripting.lua());
                     }
                 }
 
                 // Ship to critter checks
-                for critter in critterwork.collider_slice_mut(ship).iter_mut() {
+                for critter in critterwork.collider_slice_mut(ship) {
                     if let Some(impulse) = ship.physics().check_collision(critter.physics()) {
                         ship.physics_mut().add_impulse(impulse);
                         critter.physics_mut().add_impulse(impulse * -1.0);
+                    }
+                }
+
+                // Ship to terrain particles check. This is mainly so ship's don't get buried in snow
+                for tp in self.terrainparticles.collider_slice_mut(ship) {
+                    if let Some(impulse) = ship.physics().check_collision(tp.physics()) {
+                        ship.physics_mut().add_impulse(impulse);
+                        tp.physics_mut().add_impulse(impulse * -1.0);
                     }
                 }
             }
@@ -399,6 +438,25 @@ impl World {
         self.noise_texture.step(timestep);
         self.scripting.step_global_timer(timestep);
 
+        // Wind change
+        if self.wind_timer < 0.0 {
+            self.wind_timer = fastrand::f32() * 16.0;
+            let mut sign = if self.windspeed != 0.0 {
+                self.windspeed.signum()
+            } else {
+                1.0
+            };
+            if fastrand::f32() < 0.3 {
+                sign = -sign;
+            }
+
+            self.windspeed_target = fastrand::f32() * 1200.0 * sign;
+        } else {
+            self.wind_timer -= timestep;
+        }
+
+        self.windspeed += (self.windspeed_target - self.windspeed) * timestep;
+
         // Apply accumulated effects
         self.apply_accumulated_effects();
 
@@ -452,6 +510,10 @@ impl World {
 
             for particle in self.particles.range_slice(left, right) {
                 particle.render(renderer, camera_pos);
+            }
+
+            for tp in self.terrainparticles.range_slice(left, right) {
+                tp.render(renderer, camera_pos);
             }
 
             for mine in self.mines.borrow().range_slice(left, right) {

@@ -58,6 +58,7 @@ impl Color {
             a: ((c & 0xff000000) >> 24) as f32 / 255.0,
         }
     }
+
     pub fn with_alpha(&self, a: f32) -> Self {
         Self {
             r: self.r,
@@ -86,6 +87,12 @@ impl Color {
 
     pub fn b_u8(&self) -> u8 {
         (self.b * 255.0).clamp(0.0, 255.0) as u8
+    }
+
+    pub fn as_argb_u32(&self) -> u32 {
+        let a = (self.a * 255.0).clamp(0.0, 255.0) as u32;
+
+        a << 24 | (self.r_u8() as u32) << 16 | (self.g_u8() as u32) << 8 | self.b_u8() as u32
     }
 }
 

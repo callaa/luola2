@@ -38,6 +38,7 @@ ice-uw = [82, 83]
 
 # Script settings will be passed as-is to the level initialization script
 [script-settings]
+snowfall = false
 random-birds = 20
 random-fish = [
 	{ count = 10, area = [192, 960, 960, 192] }
