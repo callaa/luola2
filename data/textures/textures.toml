@@ -14,7 +14,8 @@ file = "vwing.png"
 subrect = [0, 160, 960, 80]
 
 [pewpew]
-file = "pewpew.png"
+file = "bullets.png"
+subrect = [32, 0, 8, 8]
 needs_rotation = true
 
 [megabomb]
@@ -23,6 +24,19 @@ width = 32
 height = 32
 angles = 64
 needs_rotation = true
+
+[rocket]
+file = "bullets.png"
+subrect = [16, 0, 16, 8]
+needs_rotation = true
+
+[dot3x3]
+file = "bullets.png"
+subrect = [0, 0, 3, 3]
+
+[dot8x8]
+file = "bullets.png"
+subrect = [8, 0, 8, 8]
 
 [mine]
 file = "mine.png"
@@ -104,14 +118,6 @@ file = "logo.png"
 [menubackground]
 file = "menubg.png"
 scale = "Nearest"
-
-[dot3x3]
-file = "dot.png"
-subrect = [0, 0, 3, 3]
-
-[dot8x8]
-subrect = [8, 0, 8, 8]
-file = "dot.png"
 
 [input_devices]
 file = "input-devices.png"

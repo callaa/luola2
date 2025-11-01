@@ -61,7 +61,7 @@ function weapons.rocket(ship)
 		radius = 5,
 		drag = 0.0025,
 		owner = ship.player,
-		texture = textures.get("megabomb"),
+		texture = textures.get("rocket"),
 		on_impact = bullets.rocket,
 		state = {
 			impulse = Vec2_for_angle(-ship.angle, 8000.0),
@@ -98,7 +98,7 @@ function weapons.missile(ship)
 		radius = 5,
 		drag = 0.0025,
 		owner = ship.player,
-		texture = textures.get("megabomb"),
+		texture = textures.get("rocket"),
 		on_impact = bullets.missile,
 		state = {
 			angle = -ship.angle,
@@ -130,7 +130,7 @@ function weapons.missile(ship)
 						color = 0xffffffff,
 						target_color = 0x00ff0000,
 						lifetime = 0.15,
-						texture = textures.get("dot"),
+						texture = textures.get("dot3x3"),
 					})
 				end
 
