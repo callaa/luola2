@@ -78,8 +78,8 @@ pub struct World {
     bullets: GameObjectArray<Projectile>,
 
     /// Mines are (typically) slow moving projectiles that may be collide with each other
+    /// No double buffering because mines do not need to reference each other in their callbacks
     mines: Rc<RefCell<GameObjectArray<Projectile>>>,
-    mines_work: RefCell<GameObjectArray<Projectile>>,
 
     /// Critters are creatures that fly, swim, or walk around the game world.
     /// They can be hostile or neutral.
@@ -142,7 +142,6 @@ impl World {
             ships_work: RefCell::new(GameObjectArray::new()),
             bullets: GameObjectArray::new(),
             mines,
-            mines_work: RefCell::new(GameObjectArray::new()),
             critters,
             critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
             particles: GameObjectArray::new(),
@@ -249,13 +248,11 @@ impl World {
 
         // Mine simulation step
         {
-            let mut work = self.mines_work.borrow_mut();
-            for mine in self.mines.borrow().iter() {
-                if !mine.is_destroyed() {
-                    work.push(mine.step(&level, lua, timestep));
-                }
+            let mut mines = self.mines.borrow_mut();
+            for mine in mines.iter_mut() {
+                mine.step_mut(&level, lua, timestep);
             }
-            work.sort();
+            mines.sort();
         }
 
         // Critter simulation step
@@ -285,7 +282,7 @@ impl World {
         // Ships can collide with other ships, bullets, and mines
         {
             let mut work = self.ships_work.borrow_mut();
-            let mut minework = self.mines_work.borrow_mut();
+            let mut minework = self.mines.borrow_mut();
             let mut critterwork = self.critters_work.borrow_mut();
             for (ship, rest) in work.self_collision_iter_mut() {
                 // Ship self collisions
@@ -329,7 +326,7 @@ impl World {
 
         // Mines can collide with bullets and other mines
         {
-            let mut work = self.mines_work.borrow_mut();
+            let mut work = self.mines.borrow_mut();
             // Mine self collisions
             for (mine, rest) in work.self_collision_iter_mut() {
                 for other in rest {
@@ -379,7 +376,7 @@ impl World {
                     }
                 }
 
-                let mut minework = self.mines_work.borrow_mut();
+                let mut minework = self.mines.borrow_mut();
                 for mine in minework.collider_slice_mut(critter).iter_mut() {
                     if critter.physics().check_overlap(mine.physics()) {
                         if critter.bullet_hit(mine, self.scripting.lua()) {
@@ -394,9 +391,6 @@ impl World {
         // Rotate working sets
         self.ships.swap(&self.ships_work);
         self.ships_work.borrow_mut().clear();
-
-        self.mines.swap(&self.mines_work);
-        self.mines_work.borrow_mut().clear();
 
         self.critters.swap(&self.critters_work);
         self.critters_work.borrow_mut().clear();
