@@ -13,7 +13,7 @@ winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
 [[player]]
 controller = 1
 ship = "vwing"
-weapon = "magmine"
+weapon = "landmine"
 
 [[player]]
 controller = 2

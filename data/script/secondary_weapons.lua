@@ -2,6 +2,7 @@ local bullets = require("bullets")
 local Scheduler = require("utils.scheduler")
 local trig = require("utils.trig")
 local Drone = require("critters.drone")
+local Mines = require("weapons.mines")
 
 local weapons = {}
 
@@ -148,28 +149,7 @@ function weapons.mine(ship)
 	ship.ammo = ammo
 	ship.secondary_weapon_cooldown = 0.4
 
-	local drag = 1 / 1.2
-	if game.terrain_at(ship.pos) == 0x80 then
-		drag = 1 / 60.0
-	end
-
-	game.effect("AddMine", {
-		pos = ship.pos,
-		vel = Vec2(0, 0),
-		mass = 300,
-		radius = 3,
-		drag = drag,
-		owner = ship.player,
-		texture = textures.get("mine"),
-		on_impact = bullets.grenade,
-		state = {
-			scheduler = Scheduler:new():add(1, function(this)
-				this.texture = textures.get("mine_armed")
-				this:disown()
-			end),
-		},
-		timer = 1,
-	})
+	Mines.create_mine(ship.pos, ship.player)
 end
 
 function weapons.magmine(ship)
@@ -180,51 +160,23 @@ function weapons.magmine(ship)
 	ship.ammo = ammo
 	ship.secondary_weapon_cooldown = 0.4
 
-	local drag = 1 / 1.2
-	if game.terrain_at(ship.pos) == 0x80 then
-		drag = 1 / 60.0
+	Mines.create_magmine(ship.pos, ship.player)
+end
+
+function weapons.landmine(ship)
+	if Mines.detonate_landmine(ship.player) then
+		ship.secondary_weapon_cooldown = 0.1
+		return
 	end
 
-	game.effect("AddMine", {
-		pos = ship.pos,
-		vel = Vec2(0, 0),
-		mass = 300,
-		radius = 8,
-		drag = drag,
-		owner = ship.player,
-		texture = textures.get("magmine"),
-		on_impact = bullets.grenade,
-		state = {
-			scheduler = Scheduler:new()
-				:add(1, function(this)
-					this.texture = textures.get("magmine_armed")
-					this:disown()
-				end)
-				:add(0.5, function(this)
-					local nearest_enemy_pos = nil
-					local nearest_enemy_dist2 = 300 * 300
+	local ammo = ship.ammo - 0.1
+	if ammo < 0 then
+		return
+	end
+	ship.ammo = ammo
+	ship.secondary_weapon_cooldown = 0.4
 
-					game.ships_iter(function(ship)
-						if ship.player ~= this.owner then
-							local dist2 = ship.pos:dist_squared(this.pos)
-							if dist2 < nearest_enemy_dist2 then
-								nearest_enemy_pos = ship.pos
-								nearest_enemy_dist2 = dist2
-							end
-						end
-					end)
-
-					if nearest_enemy_pos ~= nil then
-						local a = (nearest_enemy_pos - this.pos):normalized() * (50000 / math.sqrt(nearest_enemy_dist2))
-						this.vel = this.vel + a
-						return 0.1
-					end
-
-					return 0.6
-				end),
-		},
-		timer = 1,
-	})
+	Mines.create_landmine(ship.pos, ship.angle, ship.player)
 end
 
 function weapons.drone(ship)

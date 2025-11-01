@@ -69,28 +69,35 @@ impl PhysicalObject {
 
         let new_pos = self.pos + self.vel * timestep;
 
-        // Terrain collision detection treats the object as a point particle
-        // because that's good enough for this game.
-        match self.terrain_collision_mode {
-            TerrainCollisionMode::Exact => match level.terrain_line(LineF(self.pos, new_pos)) {
-                Either::Left((t, exact_pos)) => {
-                    self.vel = Vec2::ZERO;
-                    self.pos = exact_pos;
+        // Object already embedded in ground?
+        let embedded = level.terrain_at(self.pos);
+        if terrain::is_solid(embedded) {
+            self.vel = Vec2::ZERO;
+            embedded
+        } else {
+            // Terrain collision detection treats the object as a point particle
+            // because that's good enough for this game.
+            match self.terrain_collision_mode {
+                TerrainCollisionMode::Exact => match level.terrain_line(LineF(self.pos, new_pos)) {
+                    Either::Left((t, exact_pos)) => {
+                        self.vel = Vec2::ZERO;
+                        self.pos = exact_pos;
+                        t
+                    }
+                    Either::Right(t) => {
+                        self.pos = new_pos;
+                        t
+                    }
+                },
+                TerrainCollisionMode::Simple => {
+                    let t = level.terrain_at(new_pos);
+                    if terrain::is_solid(t) {
+                        self.vel = Vec2::ZERO;
+                    } else {
+                        self.pos = new_pos;
+                    }
                     t
                 }
-                Either::Right(t) => {
-                    self.pos = new_pos;
-                    t
-                }
-            },
-            TerrainCollisionMode::Simple => {
-                let t = level.terrain_at(new_pos);
-                if terrain::is_solid(t) {
-                    self.vel = Vec2::ZERO;
-                } else {
-                    self.pos = new_pos;
-                }
-                t
             }
         }
     }

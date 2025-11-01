@@ -102,6 +102,10 @@ luola_secondary_weapons = {
 		title = "Magnetic mine",
 		fire_func = sweapons.magmine,
 	},
+	landmine = {
+		title = "Landmine",
+		fire_func = sweapons.landmine,
+	},
 	drone = {
 		title = "Drones",
 		fire_func = sweapons.drone,

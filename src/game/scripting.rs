@@ -25,6 +25,7 @@ use mlua::{
 };
 
 use crate::fs::find_datafile_path;
+use crate::game::PlayerId;
 use crate::game::level::Level;
 use crate::game::objects::{Critter, GameObject, GameObjectArray, Particle, Projectile, Ship};
 use crate::game::world::WorldEffect;
@@ -96,6 +97,7 @@ impl ScriptEnvironment {
         &mut self,
         level: Rc<RefCell<Level>>,
         ship_list: Rc<RefCell<GameObjectArray<Ship>>>,
+        mine_list: Rc<RefCell<GameObjectArray<Projectile>>>,
         critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
     ) -> LuaResult<()> {
         let api = self.lua.create_table().unwrap();
@@ -179,6 +181,34 @@ impl ScriptEnvironment {
                                 if let Some(false) = res {
                                     break;
                                 }
+                            }
+                        }
+                        Ok(())
+                    })
+                },
+            )?,
+        )?;
+
+        // Iterate through a mutable list of mines
+        // function mines_iter(callback, player_id?)
+        // Callback can return false to stop iteration
+        // Note: this cannot be called inside any mine callback! (except for timer callbacks)
+        api.set(
+            "mines_iter_mut",
+            self.lua.create_function(
+                move |lua, (owner, callback): (Option<PlayerId>, Function)| {
+                    let mut mines = mine_list.borrow_mut();
+                    lua.scope(|scope| {
+                        for mine in mines.iter_mut() {
+                            if let Some(owner) = owner
+                                && mine.owner() != owner
+                            {
+                                continue;
+                            }
+                            let res = callback
+                                .call::<Option<bool>>(scope.create_userdata_ref_mut(mine))?;
+                            if let Some(false) = res {
+                                break;
                             }
                         }
                         Ok(())

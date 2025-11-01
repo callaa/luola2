@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
+use core::ops::Deref;
 use log::error;
 use mlua::{self, Table};
 
@@ -23,7 +24,7 @@ use crate::{
             Level,
             terrain::{self, Terrain},
         },
-        objects::{GameObject, Ship},
+        objects::{GameObject, Ship, TerrainCollisionMode},
     },
     gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
     math::Vec2,
@@ -64,6 +65,25 @@ pub struct Projectile {
 impl mlua::FromLua for Projectile {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
+            let terrain_collision_mode = {
+                let mode = table.get::<Option<mlua::String>>("terrain_collision")?;
+                if let Some(mode) = mode {
+                    match mode.as_bytes().deref() {
+                        b"exact" => TerrainCollisionMode::Exact,
+                        b"simple" => TerrainCollisionMode::Simple,
+                        _ => {
+                            return Err(mlua::Error::FromLuaConversionError {
+                                from: "string",
+                                to: "TerrainCollisionMode".to_owned(),
+                                message: None,
+                            });
+                        }
+                    }
+                } else {
+                    TerrainCollisionMode::Exact
+                }
+            };
+
             Ok(Projectile {
                 phys: PhysicalObject {
                     pos: table.get("pos")?,
@@ -72,7 +92,7 @@ impl mlua::FromLua for Projectile {
                     radius: table.get::<Option<f32>>("radius")?.unwrap_or(1.0),
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.0025),
                     impulse: Vec2::ZERO,
-                    terrain_collision_mode: super::physicalobj::TerrainCollisionMode::Exact,
+                    terrain_collision_mode,
                 },
                 texture: AnimatedTexture::new(table.get("texture")?),
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),

@@ -119,9 +119,15 @@ impl World {
         let mut scripting = ScriptEnvironment::new(renderer.clone())?;
 
         let ships = Rc::new(RefCell::new(GameObjectArray::new()));
+        let mines = Rc::new(RefCell::new(GameObjectArray::new()));
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
 
-        scripting.init_game(level.clone(), ships.clone(), critters.clone())?;
+        scripting.init_game(
+            level.clone(),
+            ships.clone(),
+            mines.clone(),
+            critters.clone(),
+        )?;
 
         if let Some(levelscript) = levelinfo.script_path() {
             scripting.load_level_specific_script(&levelscript)?;
@@ -135,7 +141,7 @@ impl World {
             ships,
             ships_work: RefCell::new(GameObjectArray::new()),
             bullets: GameObjectArray::new(),
-            mines: Rc::new(RefCell::new(GameObjectArray::new())),
+            mines,
             mines_work: RefCell::new(GameObjectArray::new()),
             critters,
             critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
