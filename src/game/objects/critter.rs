@@ -1,9 +1,10 @@
 use crate::{
     game::{
+        PlayerId,
         level::{Level, terrain},
         objects::{GameObject, PhysicalObject, Projectile, TerrainCollisionMode},
     },
-    gfx::{AnimatedTexture, RenderDest, RenderMode, RenderOptions, Renderer},
+    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt},
     math::Vec2,
 };
 
@@ -14,7 +15,7 @@ pub struct Critter {
     phys: PhysicalObject,
 
     /// Hostile critters will not attack their owners
-    owner: i32,
+    owner: PlayerId,
 
     /// Unique ID (useful for distinguishing self from others in a flock)
     id: u32,
@@ -126,6 +127,10 @@ impl Critter {
         &mut self.phys
     }
 
+    pub fn owner(&self) -> PlayerId {
+        self.owner
+    }
+
     /// Perform a simulation step and return a new copy of this critter
     pub fn step(&self, level: &Level, lua: &mlua::Lua, timestep: f32) -> Self {
         let mut critter = self.clone();
@@ -172,18 +177,21 @@ impl Critter {
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
-        self.texture.render(
-            renderer,
-            &RenderOptions {
-                dest: RenderDest::Centered(self.phys.pos - camera_pos),
-                mode: if self.texture.id().flippable() && self.phys.vel.0 < 0.0 {
-                    RenderMode::Mirrored
-                } else {
-                    RenderMode::Normal
-                },
-                ..Default::default()
+        let mut options = RenderOptions {
+            dest: RenderDest::Centered(self.phys.pos - camera_pos),
+            mode: if self.texture.id().flippable() && self.phys.vel.0 < 0.0 {
+                RenderMode::Mirrored
+            } else {
+                RenderMode::Normal
             },
-        );
+            ..Default::default()
+        };
+        self.texture.render(renderer, &options);
+
+        if self.owner != 0 {
+            options.color = Color::player_color(self.owner);
+            self.texture.render_alt(renderer, TexAlt::Decal, &options);
+        }
     }
 
     /// Execute bullet hit callback.

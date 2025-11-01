@@ -345,12 +345,23 @@ impl World {
             }
         }
 
-        // Critters can be hit by bullets and mines
+        // Critters can be hit by bullets and mines (and each other)
         {
             let mut work = self.critters_work.borrow_mut();
-            for critter in work.iter_mut() {
+            for (critter, rest) in work.self_collision_iter_mut() {
+                for other in rest {
+                    if let Some(impulse) = critter.physics().check_collision(other.physics()) {
+                        critter.physics_mut().add_impulse(impulse);
+                        other.physics_mut().add_impulse(impulse * -1.0);
+                    }
+                }
+
                 for bullet in self.bullets.collider_slice_mut(critter).iter_mut() {
-                    if critter.physics().check_overlap(bullet.physics()) {
+                    // Drones are liable to shoot each other much too easily, so
+                    // friendly fire is not checked
+                    if (critter.owner() == 0 || critter.owner() != bullet.owner())
+                        && critter.physics().check_overlap(bullet.physics())
+                    {
                         // Critters may have special processing for bullets
                         // If bullet_hit returns false, it means the critter's script
                         // has already performed the special impact routine for the

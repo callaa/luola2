@@ -35,7 +35,7 @@ local function ship_on_base(ship, timestep)
 		game.effect("AddParticle", {
 			pos = ship.pos + Vec2(math.random() * r * 2 - r, math.random() * r * 2 - r),
 			vel = Vec2(math.random(-60, 60), -160),
-			a = Vec2(0, 9.8*50),
+			a = Vec2(0, 9.8 * 50),
 			color = 0xffffaa00,
 			target_color = 0x00660000,
 			lifetime = 1,

@@ -91,7 +91,6 @@ function Bird.create(pos)
 		texture = textures.get("bird"),
 		state = Bird:new(pos),
 		on_bullet_hit = Bird._on_bullet_hit,
-		on_touch_ground = Bird._on_touch_ground,
 		timer = 0,
 	})
 end

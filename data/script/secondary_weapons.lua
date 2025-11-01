@@ -1,6 +1,7 @@
 local bullets = require("bullets")
 local Scheduler = require("utils.scheduler")
 local trig = require("utils.trig")
+local Drone = require("critters.drone")
 
 local weapons = {}
 
@@ -71,7 +72,7 @@ function weapons.rocket(ship)
 					color = 0xffffffff,
 					target_color = 0x00ff0000,
 					lifetime = 0.15,
-					texture = textures.get("dot"),
+					texture = textures.get("dot3x3"),
 				})
 
 				return 0
@@ -169,6 +170,17 @@ function weapons.mine(ship)
 		},
 		timer = 1,
 	})
+end
+
+function weapons.drone(ship)
+	local ammo = ship.ammo - 0.2
+	if ammo < 0 then
+		return
+	end
+	ship.ammo = ammo
+	ship.secondary_weapon_cooldown = 0.4
+
+	Drone.create(ship.pos, ship.player)
 end
 
 return weapons

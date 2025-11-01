@@ -24,7 +24,6 @@ use super::{Renderer, TextureId};
 #[derive(Clone, Debug)]
 pub struct AnimatedTexture {
     tex: TextureId,
-    alt: TexAlt,
     frame: i32,
     frames: i32,
     frame_duration: f32,
@@ -35,7 +34,6 @@ impl AnimatedTexture {
     pub fn new(tex: TextureId) -> Self {
         Self {
             tex,
-            alt: TexAlt::Main,
             frame: 0,
             frames: tex.frames(),
             frame_duration: tex.frame_duration(),
@@ -45,10 +43,6 @@ impl AnimatedTexture {
 
     pub fn id(&self) -> TextureId {
         self.tex
-    }
-
-    pub fn change_alt(&mut self, alt: TexAlt) {
-        self.alt = alt;
     }
 
     /// Progress animation. Returns true when animation wraps
@@ -68,9 +62,7 @@ impl AnimatedTexture {
     }
 
     pub fn render(&self, renderer: &Renderer, options: &RenderOptions) {
-        let tex = renderer
-            .texture_store()
-            .get_texture_alt_fallback(self.tex, self.alt);
+        let tex = renderer.texture_store().get_texture(self.tex);
 
         tex.render(
             renderer,
@@ -79,5 +71,17 @@ impl AnimatedTexture {
                 ..*options
             },
         );
+    }
+
+    pub fn render_alt(&self, renderer: &Renderer, alt: TexAlt, options: &RenderOptions) {
+        if let Some(tex) = renderer.texture_store().get_texture_alt(self.tex, alt) {
+            tex.render(
+                renderer,
+                &RenderOptions {
+                    source: Some(tex.subframe_rect(self.frame)),
+                    ..*options
+                },
+            );
+        }
     }
 }

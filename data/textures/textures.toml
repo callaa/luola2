@@ -66,6 +66,18 @@ height = 32
 duration = 0.6
 flippable = true
 
+[drone]
+file = "drone.png"
+subrect = [0, 0, 384, 32]
+frames = 12
+width = 32
+height = 32
+duration = 1
+
+[drone.alts.Decal]
+file = "drone.png"
+subrect = [0, 32, 384, 32]
+
 [noise]
 file = "noise.png"
 width = 32
