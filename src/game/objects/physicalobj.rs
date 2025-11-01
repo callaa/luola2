@@ -92,7 +92,23 @@ impl PhysicalObject {
                 TerrainCollisionMode::Simple => {
                     let t = level.terrain_at(new_pos);
                     if terrain::is_solid(t) {
-                        self.vel = Vec2::ZERO;
+                        if terrain::is_ice(t) {
+                            // TODO we could check the terrain slope at new_pos
+                            // and have the ship slide uphill depending on
+                            // its vector, but this simple horizontal sliding
+                            // works pretty well even on its own.
+                            let newvel = Vec2(self.vel.0, 0.0);
+                            let new_pos = self.pos + newvel * timestep;
+                            if !terrain::is_solid(level.terrain_at(new_pos)) {
+                                self.vel = newvel;
+                                self.pos = new_pos;
+                            } else {
+                                self.vel = Vec2::ZERO;
+                            }
+                        } else {
+                            // Regular non-slippery terrain
+                            self.vel = Vec2::ZERO;
+                        }
                     } else {
                         self.pos = new_pos;
                     }
