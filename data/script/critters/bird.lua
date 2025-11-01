@@ -59,7 +59,6 @@ function Bird._on_bullet_hit(critter, bullet)
 	end
 
 	-- puff of feathers
-	local tex = textures.get("dot1x1")
 	for a = 0, 360, (360 / 36) do
 		game.effect("AddParticle", {
 			pos = critter.pos,
@@ -68,7 +67,6 @@ function Bird._on_bullet_hit(critter, bullet)
 			a = Vec2(0, 9.81 * 50),
 			color = 0xffffffff,
 			target_color = 0x00ffffff,
-			texture = tex,
 		})
 	end
 end

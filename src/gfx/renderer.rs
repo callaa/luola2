@@ -18,8 +18,8 @@ use anyhow::{Result, anyhow};
 use sdl3_sys::blendmode::SDL_BLENDMODE_BLEND;
 use sdl3_sys::rect::SDL_FPoint;
 use sdl3_sys::render::{
-    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoints,
-    SDL_SetRenderDrawBlendMode, SDL_SetRenderDrawColorFloat,
+    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint,
+    SDL_RenderPoints, SDL_SetRenderDrawBlendMode, SDL_SetRenderDrawColorFloat,
 };
 use sdl3_sys::video::{SDL_SetWindowFullscreen, SDL_WINDOW_FULLSCREEN, SDL_WINDOW_RESIZABLE};
 use sdl3_ttf_sys::ttf::{
@@ -220,6 +220,13 @@ impl Renderer {
         unsafe {
             SDL_SetRenderDrawColorFloat(self.renderer, color.r, color.g, color.b, color.a);
             SDL_RenderFillRect(self.renderer, &rect.into());
+        }
+    }
+
+    pub fn draw_point(&self, point: Vec2, color: &Color) {
+        unsafe {
+            SDL_SetRenderDrawColorFloat(self.renderer, color.r, color.g, color.b, color.a);
+            SDL_RenderPoint(self.renderer, point.0, point.1);
         }
     }
 

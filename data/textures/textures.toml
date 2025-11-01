@@ -81,10 +81,6 @@ file = "logo.png"
 file = "menubg.png"
 scale = "Nearest"
 
-[dot1x1]
-file = "dot.png"
-subrect = [0, 0, 1, 1]
-
 [dot3x3]
 file = "dot.png"
 subrect = [0, 0, 3, 3]

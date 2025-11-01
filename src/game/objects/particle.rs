@@ -16,7 +16,7 @@
 
 use crate::{
     game::objects::GameObject,
-    gfx::{AnimatedTexture, Color, ColorDiff, RenderDest, RenderOptions, Renderer},
+    gfx::{AnimatedTexture, Color, ColorDiff, RenderDest, RenderOptions, Renderer, TextureId},
     math::Vec2,
 };
 
@@ -32,7 +32,7 @@ pub struct Particle {
     a: Vec2,
     reveal_in: f32,
     lifetime: Option<f32>,
-    texture: AnimatedTexture,
+    texture: Option<AnimatedTexture>,
     color: Color,
     target_color: Color,
     dcolor: ColorDiff,
@@ -51,11 +51,15 @@ impl Particle {
         match self.lifetime {
             Some(lt) => {
                 self.lifetime = Some(lt - timestep);
-                self.texture.step(timestep);
+                if let Some(tex) = self.texture.as_mut() {
+                    tex.step(timestep);
+                }
             }
             None => {
-                if self.texture.step(timestep) {
-                    self.lifetime = Some(0.0);
+                if let Some(tex) = self.texture.as_mut() {
+                    if tex.step(timestep) {
+                        self.lifetime = Some(0.0);
+                    }
                 }
             }
         }
@@ -65,14 +69,18 @@ impl Particle {
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
         if self.reveal_in <= 0.0 {
-            self.texture.render(
-                renderer,
-                &RenderOptions {
-                    dest: RenderDest::Centered(self.pos - camera_pos),
-                    color: self.color,
-                    ..Default::default()
-                },
-            );
+            if let Some(tex) = &self.texture {
+                tex.render(
+                    renderer,
+                    &RenderOptions {
+                        dest: RenderDest::Centered(self.pos - camera_pos),
+                        color: self.color,
+                        ..Default::default()
+                    },
+                );
+            } else {
+                renderer.draw_point(self.pos - camera_pos, &self.color);
+            }
         }
     }
 }
@@ -95,13 +103,15 @@ impl mlua::FromLua for Particle {
                 ColorDiff::new()
             };
 
+            let tex: Option<TextureId> = table.get("texture")?;
+
             Ok(Particle {
                 pos: table.get("pos")?,
                 vel: table.get::<Option<Vec2>>("vel")?.unwrap_or_default(),
                 a: table.get::<Option<Vec2>>("a")?.unwrap_or_default(),
                 lifetime,
                 reveal_in: table.get::<Option<f32>>("reveal_in")?.unwrap_or(0.0),
-                texture: AnimatedTexture::new(table.get("texture")?),
+                texture: tex.map(|t| AnimatedTexture::new(t)),
                 color,
                 target_color,
                 dcolor,
