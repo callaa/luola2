@@ -99,6 +99,10 @@ impl mlua::UserData for Projectile {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
+        fields.add_field_method_set("vel", |_, this, v: Vec2| {
+            this.phys.vel = v;
+            Ok(())
+        });
         fields.add_field_method_get("owner", |_, this| Ok(this.owner));
         fields.add_field_method_get("state", |_, this| Ok(this.state.clone()));
         fields.add_field_method_set("texture", |_, this, t: TextureId| {

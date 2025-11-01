@@ -164,9 +164,64 @@ function weapons.mine(ship)
 		on_impact = bullets.grenade,
 		state = {
 			scheduler = Scheduler:new():add(1, function(this)
-				this.texture = textures.get("mine_active")
+				this.texture = textures.get("mine_armed")
 				this:disown()
 			end),
+		},
+		timer = 1,
+	})
+end
+
+function weapons.magmine(ship)
+	local ammo = ship.ammo - 0.1
+	if ammo < 0 then
+		return
+	end
+	ship.ammo = ammo
+	ship.secondary_weapon_cooldown = 0.4
+
+	local drag = 1 / 1.2
+	if game.terrain_at(ship.pos) == 0x80 then
+		drag = 1 / 60.0
+	end
+
+	game.effect("AddMine", {
+		pos = ship.pos,
+		vel = Vec2(0, 0),
+		mass = 300,
+		radius = 8,
+		drag = drag,
+		owner = ship.player,
+		texture = textures.get("magmine"),
+		on_impact = bullets.grenade,
+		state = {
+			scheduler = Scheduler:new()
+				:add(1, function(this)
+					this.texture = textures.get("magmine_armed")
+					this:disown()
+				end)
+				:add(0.5, function(this)
+					local nearest_enemy_pos = nil
+					local nearest_enemy_dist2 = 300 * 300
+
+					game.ships_iter(function(ship)
+						if ship.player ~= this.owner then
+							local dist2 = ship.pos:dist_squared(this.pos)
+							if dist2 < nearest_enemy_dist2 then
+								nearest_enemy_pos = ship.pos
+								nearest_enemy_dist2 = dist2
+							end
+						end
+					end)
+
+					if nearest_enemy_pos ~= nil then
+						local a = (nearest_enemy_pos - this.pos):normalized() * (50000 / math.sqrt(nearest_enemy_dist2))
+						this.vel = this.vel + a
+						return 0.1
+					end
+
+					return 0.6
+				end),
 		},
 		timer = 1,
 	})

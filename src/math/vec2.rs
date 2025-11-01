@@ -133,6 +133,7 @@ impl mlua::UserData for Vec2 {
             Ok(this.dist_squared(other))
         });
         methods.add_method("angle", |_, this, _: ()| Ok(this.angle()));
+        methods.add_method("magnitude", |_, this, _: ()| Ok(this.magnitude()));
 
         methods.add_meta_function(MetaMethod::Add, |_, (v1, v2): (Vec2, Vec2)| Ok(v1 + v2));
         methods.add_meta_function(MetaMethod::Sub, |_, (v1, v2): (Vec2, Vec2)| Ok(v1 - v2));

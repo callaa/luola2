@@ -28,10 +28,22 @@ needs_rotation = true
 file = "mine.png"
 subrect = [0, 0, 32, 32]
 
-[mine_active]
+[mine_armed]
 file = "mine.png"
 subrect = [32, 0, 256, 32]
 frames = 8
+duration = 0.6
+width = 32
+height = 32
+
+[magmine]
+file = "magmine.png"
+subrect = [0, 0, 32, 32]
+
+[magmine_armed]
+file = "magmine.png"
+subrect = [32, 0, 96, 32]
+frames = 2
 duration = 0.6
 width = 32
 height = 32
