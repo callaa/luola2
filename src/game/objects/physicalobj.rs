@@ -24,6 +24,16 @@ pub const SCALE_FACTOR: f32 = 50.0;
 pub enum TerrainCollisionMode {
     Exact,  // check every pixel on the line from old to new position
     Simple, // just check the new pixel, may clip through thin terrain strips
+    None,   // terrain collisions disabled (except for level boundaries)
+}
+
+impl TerrainCollisionMode {
+    pub fn is_none(&self) -> bool {
+        match self {
+            Self::None => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -71,7 +81,7 @@ impl PhysicalObject {
 
         // Object already embedded in ground?
         let embedded = level.terrain_at(self.pos);
-        if terrain::is_solid(embedded) {
+        if terrain::is_solid(embedded) && !self.terrain_collision_mode.is_none() {
             self.vel = Vec2::ZERO;
             embedded
         } else {
@@ -113,6 +123,16 @@ impl PhysicalObject {
                         self.pos = new_pos;
                     }
                     t
+                }
+                TerrainCollisionMode::None => {
+                    let t = level.terrain_at(new_pos);
+                    if terrain::is_level_boundary(t) {
+                        self.vel = Vec2::ZERO;
+                        t
+                    } else {
+                        self.pos = new_pos;
+                        0
+                    }
                 }
             }
         }

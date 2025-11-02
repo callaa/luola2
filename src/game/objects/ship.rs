@@ -20,7 +20,7 @@ use mlua::{Function, Lua, Table, UserData};
 use super::{GameObject, PhysicalObject, SCALE_FACTOR, TerrainCollisionMode};
 use crate::game::controller::GameController;
 use crate::game::level::{Level, terrain};
-use crate::gfx::{Color, RenderOptions, Renderer, TexAlt, TextureId};
+use crate::gfx::{Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId};
 use crate::math::Vec2;
 
 /**
@@ -125,6 +125,9 @@ pub struct Ship {
     /// Cloaking device active: use special rendering mode
     cloaked: bool,
 
+    /// Ghost mode active: terrain collisions disabled and special rendering mode used
+    ghostmode: bool,
+
     /// Object scheduler
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -153,6 +156,11 @@ impl UserData for Ship {
         fields.add_field_method_get("cloaked", |_, this| Ok(this.cloaked));
         fields.add_field_method_set("cloaked", |_, this, c: bool| {
             this.cloaked = c;
+            Ok(())
+        });
+        fields.add_field_method_get("ghostmode", |_, this| Ok(this.ghostmode));
+        fields.add_field_method_set("ghostmode", |_, this, gm: bool| {
+            this.set_ghostmode(gm);
             Ok(())
         });
         fields.add_field_method_get("timer", |_, this| Ok(this.timer));
@@ -217,6 +225,7 @@ impl mlua::FromLua for Ship {
                 destroyed: false,
                 engine_active: false,
                 cloaked: false,
+                ghostmode: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
             })
@@ -293,6 +302,15 @@ impl Ship {
         }
     }
 
+    fn set_ghostmode(&mut self, gm: bool) {
+        self.ghostmode = gm;
+        if gm {
+            self.phys.terrain_collision_mode = TerrainCollisionMode::None;
+        } else {
+            self.phys.terrain_collision_mode = TerrainCollisionMode::Simple;
+        }
+    }
+
     /**
      * Perform a simulation step and return a new copy of the ship
      */
@@ -365,6 +383,14 @@ impl Ship {
 
         if terrain::is_solid(ter) && impact_speed_squared > 100000.0 {
             // TODO scale damage based on speed?
+            ship.damage(1.0);
+        }
+
+        if terrain::is_indestructible_solid(ter)
+            && terrain::is_indestructible_solid(level.terrain_at(ship.pos()))
+        {
+            // if a ship gets stuck inside indestructable terrain, it can soft-lock the round
+            // (we also don't want to give ghostmode users safe camping areas)
             ship.damage(1.0);
         }
 
@@ -446,10 +472,18 @@ impl Ship {
         );
 
         let mut renderopts = RenderOptions {
-            dest: crate::gfx::RenderDest::Centered(self.phys.pos - camera_pos),
-            mode: crate::gfx::RenderMode::Rotated(self.angle, false),
+            dest: RenderDest::Centered(self.phys.pos - camera_pos),
+            mode: RenderMode::Rotated(self.angle, false),
             ..Default::default()
         };
+
+        if self.ghostmode {
+            renderopts.color = Color::new_rgba(1.0, 1.0, 1.0, 0.3);
+            renderopts.dest = RenderDest::Centered(
+                self.phys.pos - camera_pos
+                    + Vec2(fastrand::f32() * 8.0 - 4.0, fastrand::f32() * 8.0 - 4.0),
+            );
+        }
 
         let cloaked = self.cloaked && self.damage_effect <= 0.0 && !self.is_wrecked();
         if cloaked {
@@ -467,6 +501,9 @@ impl Ship {
             && let Some(decal) = ts.get_texture_alt(self.texture, crate::gfx::TexAlt::Decal)
         {
             renderopts.color = Color::player_color(self.player_id);
+            if self.ghostmode {
+                renderopts.color = renderopts.color.with_alpha(0.3);
+            }
             decal.render(renderer, &renderopts);
         }
     }

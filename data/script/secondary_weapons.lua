@@ -223,4 +223,24 @@ function weapons.cloaking_device(ship)
 	end
 end
 
+function weapons.ghostship(ship)
+	ship.secondary_weapon_cooldown = 0.6
+	if ship.ghostmode then
+		ship.ghostmode = false
+	elseif ship.ammo > 0 then
+		ship.ghostmode = true
+		Scheduler.add_to_object(ship, 0.1, function(ship)
+			if ship.ghostmode then
+				local ammo = ship.ammo - 0.009
+				if ammo < 0 then
+					ship.ghostmode = false
+					return
+				end
+				ship.ammo = ammo
+				return 0.1
+			end
+		end)
+	end
+end
+
 return weapons

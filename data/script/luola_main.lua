@@ -119,4 +119,8 @@ luola_secondary_weapons = {
 		title = "Chameleon skin",
 		fire_func = sweapons.cloaking_device,
 	},
+	ghostship = {
+		title = "Improbability drive",
+		fire_func = sweapons.ghostship,
+	},
 }
