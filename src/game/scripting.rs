@@ -119,15 +119,11 @@ impl ScriptEnvironment {
             )?;
         }
 
-        // Get level size
-        {
-            let level = level.clone();
-            api.set(
-                "level_width",
-                self.lua
-                    .create_function(move |_, _: ()| Ok(level.borrow().width()))?,
-            )?;
-        }
+        // Level size and colors
+        api.set("level_width", level.borrow().width())?;
+        api.set("level_height", level.borrow().height())?;
+        api.set("snow_color", level.borrow().snow_color)?;
+
         // Check terrain type
         // function terrain_at(pos) -> Terrain
         {

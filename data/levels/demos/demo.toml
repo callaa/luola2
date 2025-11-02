@@ -17,6 +17,14 @@ background = "grid.jpeg"
 # A starfield background can be drawn behind the parallax background
 starfield = false
 
+[colors]
+# There is typically no need to specify the water color explicitly.
+# By default, the color from the terrain image palette is used.
+# water = 0xff0000ff
+
+# Snow color is used by the snowfall level feature
+snow = 0xffeeeeff
+
 # Mapping of terrain types to palette indices
 # All unmapped colors will be mapped to "ground"
 [terrain-palette]

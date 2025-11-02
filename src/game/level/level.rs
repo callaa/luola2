@@ -72,7 +72,8 @@ pub struct Level {
     tiles_wide: i32, // width in tiles
     tiles_high: i32, // height in tiles
 
-    pub(super) water_color: u32, // pixel value used when creating water
+    pub water_color: u32, // pixel value used when creating water
+    pub snow_color: u32,  // pixel value used when creating snow
 }
 
 impl Level {
@@ -128,6 +129,8 @@ impl Level {
         let water_color = info
             .find_water_color(terrain.palette().unwrap(), SDL_PIXELFORMAT_ARGB8888)
             .unwrap_or(0xff0000ff);
+
+        let snow_color = info.get_snow_color();
 
         // Copy level pixel data into the tile array
         let ts: usize = TILE_SIZE as usize;
@@ -195,6 +198,7 @@ impl Level {
             tiles_wide,
             tiles_high,
             water_color,
+            snow_color,
         })
     }
 

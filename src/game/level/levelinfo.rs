@@ -16,7 +16,7 @@
 
 use log::error;
 use sdl3_sys::pixels::{SDL_GetPixelFormatDetails, SDL_MapRGBA, SDL_Palette, SDL_PixelFormat};
-use serde::{self, Deserialize, Deserializer, de};
+use serde;
 use std::{
     fs,
     ops::RangeInclusive,
@@ -73,8 +73,8 @@ struct LevelInfoToml {
 
 #[derive(serde::Deserialize, Clone, Debug, Default)]
 struct TerrainColors {
-    #[serde(deserialize_with = "deserialize_color")]
     water: Option<u32>,
+    snow: Option<u32>,
 }
 
 impl LevelInfo {
@@ -202,6 +202,10 @@ impl LevelInfo {
         }
         None
     }
+
+    pub(super) fn get_snow_color(&self) -> u32 {
+        self.colors.snow.unwrap_or(0xffffffff)
+    }
 }
 
 fn parse_palette_mapping(table: &toml::Table) -> Result<TerrainPalette> {
@@ -296,31 +300,6 @@ fn parse_range(rangestr: &str) -> Result<RangeInclusive<usize>> {
     }
 
     Ok(start..=end)
-}
-
-fn deserialize_color<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let strval = Option::<String>::deserialize(deserializer)?;
-    if let Some(strval) = strval {
-        let val = match u32::from_str_radix(&strval, 16) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(de::Error::invalid_value(
-                    de::Unexpected::Str(&strval),
-                    &"hex encoded color value",
-                ));
-            }
-        };
-
-        return Ok(Some(if (val & 0xff000000) == 0 && val != 0 {
-            val | 0xff000000
-        } else {
-            val
-        }));
-    }
-    Ok(None)
 }
 
 #[cfg(test)]
