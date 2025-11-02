@@ -23,7 +23,9 @@ use crate::{
             rectiter::MutableRectIterator,
             terrain::{self, TER_BIT_WATER, Terrain},
         },
+        objects::TerrainParticle,
         scripting::ScriptEnvironment,
+        world::WorldEffect,
     },
     gfx::Color,
     math::{Rect, Vec2},
@@ -97,12 +99,6 @@ impl<'a> LevelEditor<'a> {
                     {
                         let dd = dy * dy + dx * dx;
                         if dd <= rr && terrain::is_destructible(*ter) {
-                            if terrain::is_underwater(*ter) {
-                                *art = water_color;
-                            } else {
-                                *art = 0;
-                            }
-
                             if (terrain::is_high_explosive(*ter) && fastrand::f32() < 0.3)
                                 || (terrain::is_explosive(*ter) && fastrand::f32() < 0.05)
                             {
@@ -125,7 +121,30 @@ impl<'a> LevelEditor<'a> {
                                         );
                                     }
                                 }
+                            } else if fastrand::f32() < 0.05 {
+                                // create dust
+                                let pos = Vec2(
+                                    (tile_rect.x() + rect_in_tile.x() + row_x as i32) as f32
+                                        * LEVEL_SCALE,
+                                    (tile_rect.y() + y as i32) as f32 * LEVEL_SCALE,
+                                );
+
+                                scripting.add_effect(WorldEffect::AddTerrainParticle(
+                                    TerrainParticle::new(
+                                        pos,
+                                        *ter,
+                                        None,
+                                        Color::from_argb_u32(*art),
+                                    ),
+                                ));
                             }
+
+                            if terrain::is_underwater(*ter) {
+                                *art = water_color;
+                            } else {
+                                *art = 0;
+                            }
+
                             *ter &= !(terrain::TER_MASK_SOLID | terrain::TER_BIT_DESTRUCTIBLE);
                             dirty = true;
                         }
