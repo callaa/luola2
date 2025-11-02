@@ -27,6 +27,11 @@ local function ship_thrust_effect(ship, uw)
 end
 
 local function ship_on_base(ship, timestep)
+	if ship.cloaked then
+		-- pit crew can't see what they're doing
+		-- (we don't want cloaked players to camp on bases indefinitely)
+		return
+	end
 	local hp = ship.health
 	ship:damage(-5 * timestep)
 

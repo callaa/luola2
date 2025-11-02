@@ -23,7 +23,6 @@ file = "megabomb.png"
 width = 32
 height = 32
 angles = 64
-needs_rotation = true
 
 [rocket]
 file = "bullets.png"

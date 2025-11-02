@@ -115,4 +115,8 @@ luola_secondary_weapons = {
 		title = "Drones",
 		fire_func = sweapons.drone,
 	},
+	cloak = {
+		title = "Chameleon skin",
+		fire_func = sweapons.cloaking_device,
+	},
 }

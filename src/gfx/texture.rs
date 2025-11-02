@@ -201,7 +201,7 @@ impl Texture {
             tex.height = height as f32;
         }
 
-        tex.needs_rotation = config.needs_rotation;
+        tex.needs_rotation = config.needs_rotation || tex.angles > 1;
         tex.flippable = config.flippable;
 
         if let Some(scale) = config.scale.as_ref() {

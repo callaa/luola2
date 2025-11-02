@@ -31,7 +31,7 @@ use crate::game::objects::{
     Critter, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
-use crate::gfx::Renderer;
+use crate::gfx::{Color, Renderer};
 use crate::math::{LineF, RectF, Vec2};
 
 pub struct ScriptEnvironment {
@@ -123,6 +123,12 @@ impl ScriptEnvironment {
         api.set("level_width", level.borrow().width())?;
         api.set("level_height", level.borrow().height())?;
         api.set("snow_color", level.borrow().snow_color)?;
+
+        api.set(
+            "player_color",
+            self.lua
+                .create_function(move |_, p: PlayerId| Ok(Color::player_color(p).as_argb_u32()))?,
+        )?;
 
         // Check terrain type
         // function terrain_at(pos) -> Terrain

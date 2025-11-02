@@ -190,4 +190,37 @@ function weapons.drone(ship)
 	Drone.create(ship.pos, ship.player)
 end
 
+function weapons.cloaking_device(ship)
+	ship.secondary_weapon_cooldown = 0.6
+	if ship.cloaked then
+		ship.cloaked = false
+	elseif ship.ammo > 0 then
+		ship.cloaked = true
+		Scheduler.add_to_object(ship, 0.1, function(ship)
+			if ship.cloaked then
+				local ammo = ship.ammo - 0.005
+				if ammo < 0 then
+					ship.cloaked = false
+					return
+				end
+				ship.ammo = ammo
+				return 0.1
+			end
+		end)
+
+		-- Cool special effect
+		for i = 0, 360, 36 do
+			game.effect("AddParticle", {
+				pos = ship.pos,
+				vel = ship.vel + Vec2_for_angle(i, 100),
+				angle = ship.angle,
+				texture = ship.texture,
+				lifetime = 0.5,
+				color = game.player_color(ship.player) - 0x80000000,
+				target_color = game.player_color(ship.player) - 0xff000000,
+			})
+		end
+	end
+end
+
 return weapons

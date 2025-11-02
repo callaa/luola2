@@ -16,7 +16,10 @@
 
 use crate::{
     game::objects::GameObject,
-    gfx::{AnimatedTexture, Color, ColorDiff, RenderDest, RenderOptions, Renderer, TextureId},
+    gfx::{
+        AnimatedTexture, Color, ColorDiff, RenderDest, RenderMode, RenderOptions, Renderer,
+        TextureId,
+    },
     math::Vec2,
 };
 
@@ -30,6 +33,7 @@ pub struct Particle {
     pos: Vec2,
     vel: Vec2,
     a: Vec2,
+    angle: f32,
     reveal_in: f32,
     lifetime: Option<f32>,
     texture: Option<AnimatedTexture>,
@@ -74,6 +78,11 @@ impl Particle {
                     renderer,
                     &RenderOptions {
                         dest: RenderDest::Centered(self.pos - camera_pos),
+                        mode: if tex.id().needs_rotation() {
+                            RenderMode::Rotated(self.angle, false)
+                        } else {
+                            RenderMode::Normal
+                        },
                         color: self.color,
                         ..Default::default()
                     },
@@ -109,6 +118,7 @@ impl mlua::FromLua for Particle {
                 pos: table.get("pos")?,
                 vel: table.get::<Option<Vec2>>("vel")?.unwrap_or_default(),
                 a: table.get::<Option<Vec2>>("a")?.unwrap_or_default(),
+                angle: table.get::<Option<f32>>("angle")?.unwrap_or(0.0),
                 lifetime,
                 reveal_in: table.get::<Option<f32>>("reveal_in")?.unwrap_or(0.0),
                 texture: tex.map(|t| AnimatedTexture::new(t)),

@@ -122,6 +122,9 @@ pub struct Ship {
     /// Used to select sprite
     engine_active: bool,
 
+    /// Cloaking device active: use special rendering mode
+    cloaked: bool,
+
     /// Object scheduler
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -135,6 +138,7 @@ pub struct Ship {
 
 impl UserData for Ship {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("texture", |_, this| Ok(this.texture));
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_get("radius", |_, this| Ok(this.phys.radius));
@@ -144,6 +148,11 @@ impl UserData for Ship {
         fields.add_field_method_get("ammo", |_, this| Ok(this.ammo_remaining));
         fields.add_field_method_set("ammo", |_, this, ammo: f32| {
             this.ammo_remaining = ammo.clamp(0.0, 1.0);
+            Ok(())
+        });
+        fields.add_field_method_get("cloaked", |_, this| Ok(this.cloaked));
+        fields.add_field_method_set("cloaked", |_, this, c: bool| {
+            this.cloaked = c;
             Ok(())
         });
         fields.add_field_method_get("timer", |_, this| Ok(this.timer));
@@ -207,6 +216,7 @@ impl mlua::FromLua for Ship {
                 texture: table.get("texture")?,
                 destroyed: false,
                 engine_active: false,
+                cloaked: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
             })
@@ -441,6 +451,11 @@ impl Ship {
             ..Default::default()
         };
 
+        let cloaked = self.cloaked && self.damage_effect <= 0.0 && !self.is_wrecked();
+        if cloaked {
+            renderopts.color = Color::new_rgba(0.0, 0.0, 0.0, 0.5);
+        }
+
         tex.render(renderer, &renderopts);
 
         if self.damage_effect > 0.0
@@ -448,6 +463,7 @@ impl Ship {
         {
             damage.render(renderer, &renderopts);
         } else if self.player_id > 0
+            && !cloaked
             && let Some(decal) = ts.get_texture_alt(self.texture, crate::gfx::TexAlt::Decal)
         {
             renderopts.color = Color::player_color(self.player_id);
