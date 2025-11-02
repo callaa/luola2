@@ -50,9 +50,9 @@ pub fn is_solid(t: Terrain) -> bool {
     t & TER_MASK_SOLID != 0
 }
 
-/// Is this indestructible solid terrain
+/// Is this solid terrain that cannot be erased?
 pub fn is_indestructible_solid(t: Terrain) -> bool {
-    t > 0 && t & (TER_MASK_SOLID | TER_BIT_DESTRUCTIBLE) < TER_BIT_DESTRUCTIBLE
+    is_solid(t) && !is_destructible(t)
 }
 
 /// Is this (normal) explosive terrain?
