@@ -111,15 +111,17 @@ impl TerrainParticle {
         if ter != 0 {
             self.destroyed = true;
 
-            if terrain::is_level_boundary(ter) {
-                return None;
-            }
+            if self.terrain != 0 {
+                if terrain::is_level_boundary(ter) {
+                    return None;
+                }
 
-            if terrain::is_water(ter) && !terrain::is_ice(self.terrain) {
-                // Only ice floats
-                return None;
+                if terrain::is_water(ter) && !terrain::is_ice(self.terrain) {
+                    // Only ice floats
+                    return None;
+                }
+                return Some((self.pos(), self.terrain, self.color));
             }
-            return Some((self.pos(), self.terrain, self.color));
         }
 
         None

@@ -59,14 +59,11 @@ function Bird._on_bullet_hit(critter, bullet)
 	end
 
 	-- puff of feathers
-	for a = 0, 360, (360 / 36) do
-		game.effect("AddParticle", {
+	for a = 0, 360, (360 / 20) do
+		game.effect("AddTerrainParticle", {
 			pos = critter.pos,
 			vel = Vec2_for_angle(a + math.random(-10, 10), 400.0),
-			lifetime = 2,
-			a = Vec2(0, 9.81 * 50),
-			color = 0xffffffff,
-			target_color = 0x00ffffff,
+			color = 0x99ffffff,
 		})
 	end
 end
