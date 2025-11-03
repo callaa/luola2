@@ -165,7 +165,7 @@ end
 
 function weapons.landmine(ship)
 	if Mines.detonate_landmine(ship.player) then
-		ship.secondary_weapon_cooldown = 0.1
+		ship.secondary_weapon_cooldown = 0.2
 		return
 	end
 
@@ -174,7 +174,7 @@ function weapons.landmine(ship)
 		return
 	end
 	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.4
+	ship.secondary_weapon_cooldown = 0.2
 
 	Mines.create_landmine(ship.pos, ship.angle, ship.player)
 end
