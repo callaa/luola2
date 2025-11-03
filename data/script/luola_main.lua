@@ -10,6 +10,7 @@ local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
 local Bird = require("critters.bird")
 local Fish = require("critters.fish")
+local Spider = require("critters.spider")
 local Snowfall = require("snowfall")
 
 -- Main entrypoint
@@ -45,6 +46,9 @@ function luola_init_level(settings)
 	end
 	if settings["random-fish"] ~= nil then
 		Fish.create_random(settings["random-fish"])
+	end
+	if settings["random-spiders"] ~= nil then
+		Spider.create_random(settings["random-spiders"])
 	end
 
 	if settings["snowfall"] == true then

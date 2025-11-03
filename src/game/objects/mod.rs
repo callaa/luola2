@@ -19,6 +19,7 @@ mod objarray;
 mod particle;
 mod physicalobj;
 mod projectile;
+mod rope;
 mod ship;
 mod terpart;
 
@@ -27,5 +28,6 @@ pub use objarray::*;
 pub use particle::*;
 pub use physicalobj::*;
 pub use projectile::*;
+pub use rope::*;
 pub use ship::*;
 pub use terpart::*;

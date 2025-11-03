@@ -51,3 +51,6 @@ random-birds = 20
 random-fish = [
 	{ count = 10, area = [192, 960, 960, 192] }
 ]
+random-spiders = [
+	{ count = 3, area = [320, 470, 128, 40]}
+]

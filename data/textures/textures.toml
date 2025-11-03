@@ -91,6 +91,17 @@ height = 32
 duration = 0.6
 flippable = true
 
+[spider]
+file = "spider.png"
+frames = 2
+width = 56
+height = 32
+duration = 0.2
+flippable = true
+
+[spider_hanging]
+file = "spider-hanging.png"
+
 [drone]
 file = "drone.png"
 subrect = [0, 0, 384, 32]

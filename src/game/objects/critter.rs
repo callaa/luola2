@@ -1,10 +1,12 @@
 use crate::{
     game::{
         PlayerId,
-        level::{Level, terrain},
-        objects::{GameObject, PhysicalObject, Projectile, TerrainCollisionMode},
+        level::{LEVEL_SCALE, Level, terrain},
+        objects::{GameObject, PhysicalObject, Projectile, Rope, TerrainCollisionMode},
     },
-    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt},
+    gfx::{
+        AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId,
+    },
     math::Vec2,
 };
 
@@ -23,9 +25,22 @@ pub struct Critter {
     /// Object flagged for destruction
     destroyed: bool,
 
+    /// Walking direction (0 for no walk)
+    walking: i32,
+
+    /// How many seconds to take one step
+    walkspeed: f32,
+
+    /// Timer for taking the next step
+    step_timer: f32,
+
     /// Extra state for scripting.
     /// Most critter state lives here.
     state: mlua::Table,
+
+    /// Rope for attaching to things
+    /// Used by spiders.
+    rope: Option<Rope>,
 
     /// Callback to handle bullet hits. (Typically critters are one shotted by any projectile)
     /// The callback may return "false" to indicate it has performed special handling
@@ -34,6 +49,9 @@ pub struct Critter {
     on_bullet_hit: mlua::Function,
 
     on_touch_ground: Option<mlua::Function>,
+
+    /// Called when a walking critter can't walk any further
+    on_touch_ledge: Option<mlua::Function>,
 
     /// Object scheduler
     timer: Option<f32>,
@@ -48,6 +66,23 @@ impl mlua::UserData for Critter {
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_set("vel", |_, this, v: Vec2| {
             this.phys.vel = v;
+            Ok(())
+        });
+        fields.add_field_method_get("walking", |_, this| Ok(this.walking));
+        fields.add_field_method_set("walking", |_, this, dir: i32| {
+            this.walking = dir;
+            Ok(())
+        });
+        fields.add_field_method_get("rope_attached", |_, this| Ok(this.rope.is_some()));
+        fields.add_field_method_get("rope_length", |_, this| {
+            Ok(match &this.rope {
+                Some(r) => r.length(),
+                None => 0.0,
+            })
+        });
+        fields.add_field_method_get("texture", |_, this| Ok(this.texture.id()));
+        fields.add_field_method_set("texture", |_, this, t: TextureId| {
+            this.texture = AnimatedTexture::new(t);
             Ok(())
         });
         fields.add_field_method_get("id", |_, this| Ok(this.id));
@@ -69,6 +104,27 @@ impl mlua::UserData for Critter {
 
         methods.add_method_mut("impulse", |_, this, v: Vec2| {
             this.phys.add_impulse(v);
+            Ok(())
+        });
+
+        methods.add_method_mut("attach_rope", |_, this, pos: Vec2| {
+            this.rope = Some(Rope::new(this.phys.pos, pos));
+            Ok(())
+        });
+
+        methods.add_method_mut("detach_rope", |_, this, _: ()| {
+            Ok(if this.rope.is_some() {
+                this.rope = None;
+                true
+            } else {
+                false
+            })
+        });
+
+        methods.add_method_mut("climb_rope", |_, this, d: f32| {
+            if let Some(r) = &mut this.rope {
+                r.adjust(d);
+            }
             Ok(())
         });
     }
@@ -94,11 +150,16 @@ impl mlua::FromLua for Critter {
                 },
                 id: unsafe { LAST_CRITTER_ID },
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),
+                walking: table.get::<Option<i32>>("walking")?.unwrap_or(0),
+                walkspeed: table.get::<Option<f32>>("walkspeed")?.unwrap_or(0.03),
+                step_timer: 0.0,
+                rope: None,
                 state: table
                     .get::<Option<mlua::Table>>("state")?
                     .unwrap_or_else(|| lua.create_table().unwrap()),
                 texture: AnimatedTexture::new(table.get("texture")?),
                 on_bullet_hit: table.get("on_bullet_hit")?,
+                on_touch_ledge: table.get("on_touch_ledge")?,
                 on_touch_ground: table.get("on_touch_ground")?,
                 destroyed: false,
                 timer: table.get("timer")?,
@@ -131,11 +192,46 @@ impl Critter {
         self.owner
     }
 
+    // Take a step to the right or left
+    fn walk(&mut self, level: &Level) -> (Vec2, bool) {
+        let new_x = self.phys.pos.0 + (self.walking as f32 * LEVEL_SCALE);
+
+        const MAX_SLOPE: i32 = 5;
+
+        for i in 0..MAX_SLOPE {
+            // uphill
+            let new_pos = Vec2(new_x, self.phys.pos.1 + i as f32 * LEVEL_SCALE);
+            if terrain::is_solid(level.terrain_at(new_pos)) {
+                // pixel above must be free
+                let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
+                if terrain::is_space(level.terrain_at(new_pos)) {
+                    return (new_pos, false);
+                }
+            }
+
+            // downhill
+            let new_pos = Vec2(new_x, self.phys.pos.1 - i as f32 * LEVEL_SCALE);
+            if terrain::is_solid(level.terrain_at(new_pos)) {
+                // pixel above must be free
+                let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
+                if terrain::is_space(level.terrain_at(new_pos)) {
+                    return (new_pos, false);
+                }
+            }
+        }
+
+        return (self.pos(), true);
+    }
+
     /// Perform a simulation step and return a new copy of this critter
     pub fn step(&self, level: &Level, lua: &mlua::Lua, timestep: f32) -> Self {
         let mut critter = self.clone();
 
         let ter = critter.phys.step(level, timestep);
+
+        if let Some(rope) = &self.rope {
+            rope.physics_step(&mut critter.phys);
+        }
 
         if terrain::is_solid(ter)
             && let Some(callback) = critter.on_touch_ground.clone()
@@ -145,6 +241,24 @@ impl Critter {
             {
                 log::error!("Critter on_touch_ground: {err}");
                 critter.timer = None;
+            }
+        }
+
+        if critter.walking != 0 {
+            if self.step_timer <= 0.0 {
+                let (pos, stopped) = critter.walk(level);
+                critter.phys.pos = pos;
+                critter.step_timer = self.walkspeed;
+                if stopped && let Some(callback) = critter.on_touch_ledge.clone() {
+                    if let Err(err) = lua.scope(|scope| {
+                        callback.call::<()>(scope.create_userdata_ref_mut(&mut critter)?)
+                    }) {
+                        log::error!("Critter on_touch_ledge: {err}");
+                        critter.timer = None;
+                    }
+                }
+            } else {
+                critter.step_timer -= timestep;
             }
         }
 
@@ -177,9 +291,13 @@ impl Critter {
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+        if let Some(rope) = &self.rope {
+            rope.render(self.phys.pos, renderer, camera_pos);
+        }
+
         let mut options = RenderOptions {
             dest: RenderDest::Centered(self.phys.pos - camera_pos),
-            mode: if self.texture.id().flippable() && self.phys.vel.0 < 0.0 {
+            mode: if self.texture.id().flippable() && (self.phys.vel.0 < 0.0 || self.walking < 0) {
                 RenderMode::Mirrored
             } else {
                 RenderMode::Normal

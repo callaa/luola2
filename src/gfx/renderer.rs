@@ -30,7 +30,7 @@ use std::path::Path;
 use std::ptr::{null, null_mut};
 
 use crate::gfx::FontSet;
-use crate::math::{Rect, RectF, Vec2};
+use crate::math::{LineF, Rect, RectF, Vec2};
 
 use super::texturestore::*;
 use super::{Color, SdlError, SdlResult};
@@ -234,6 +234,13 @@ impl Renderer {
         unsafe {
             SDL_SetRenderDrawColorFloat(self.renderer, color.r, color.g, color.b, color.a);
             SDL_RenderPoints(self.renderer, points.as_ptr(), points.len() as i32);
+        }
+    }
+
+    pub fn draw_line(&self, color: Color, line: LineF) {
+        unsafe {
+            SDL_SetRenderDrawColorFloat(self.renderer, color.r, color.g, color.b, color.a);
+            SDL_RenderLine(self.renderer, line.0.0, line.0.1, line.1.0, line.1.1);
         }
     }
 

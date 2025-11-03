@@ -15,7 +15,6 @@ function Scheduler:add(timeout, callback)
 end
 
 function Scheduler:service(context, timestep)
-	local next_timer = nil
 	for i = #self, 1, -1 do
 		local timer = self[i]
 		local t = timer.t - timestep
@@ -23,19 +22,24 @@ function Scheduler:service(context, timestep)
 			local rerun = timer.c(context)
 			if rerun ~= nil then
 				timer.t = rerun
-				if next_timer == nil or rerun < next_timer then
-					next_timer = rerun
-				end
 			else
 				table.remove(self, i)
 			end
 		else
 			timer.t = t
-			if next_timer == nil or t < next_timer then
-				next_timer = t
-			end
 		end
 	end
+
+	-- Check when to run the next timer.
+	-- We do this as a separate pass, since a timer callback
+	-- may call :add
+	local next_timer = nil
+	for i = 1, #self do
+		if next_timer == nil or self[i].t < next_timer then
+			next_timer = self[i].t
+		end
+	end
+
 	return next_timer
 end
 
