@@ -20,7 +20,7 @@ use crate::{
         AnimatedTexture, Color, ColorDiff, RenderDest, RenderMode, RenderOptions, Renderer,
         TextureId,
     },
-    math::Vec2,
+    math::{RectF, Vec2},
 };
 
 /**
@@ -35,7 +35,7 @@ pub struct Particle {
     a: Vec2,
     angle: f32,
     reveal_in: f32,
-    lifetime: Option<f32>,
+    lifetime: f32,
     texture: Option<AnimatedTexture>,
     color: Color,
     target_color: Color,
@@ -51,23 +51,10 @@ impl Particle {
 
         self.vel = self.vel + self.a * timestep;
         self.pos = self.pos + self.vel * timestep;
-
-        match self.lifetime {
-            Some(lt) => {
-                self.lifetime = Some(lt - timestep);
-                if let Some(tex) = self.texture.as_mut() {
-                    tex.step(timestep);
-                }
-            }
-            None => {
-                if let Some(tex) = self.texture.as_mut() {
-                    if tex.step(timestep) {
-                        self.lifetime = Some(0.0);
-                    }
-                }
-            }
+        self.lifetime -= timestep;
+        if let Some(tex) = self.texture.as_mut() {
+            tex.step(timestep);
         }
-
         self.color = self.color + self.dcolor * timestep;
     }
 
@@ -88,7 +75,8 @@ impl Particle {
                     },
                 );
             } else {
-                renderer.draw_point(self.pos - camera_pos, &self.color);
+                let p = self.pos() - camera_pos;
+                renderer.draw_filled_rectangle(RectF::new(p.0, p.1, 2.0, 2.0), &self.color);
             }
         }
     }
@@ -104,15 +92,15 @@ impl mlua::FromLua for Particle {
                 .map(|c| Color::from_argb_u32(c))
                 .unwrap_or(color);
 
-            let lifetime = table.get::<Option<f32>>("lifetime")?;
+            let tex: Option<TextureId> = table.get("texture")?;
 
-            let dcolor = if let Some(l) = lifetime {
-                (target_color - color) / l
-            } else {
-                ColorDiff::new()
+            let lifetime = match (tex, table.get::<Option<f32>>("lifetime")?) {
+                (None, None) => 1.0,
+                (_, Some(l)) => l,
+                (Some(tex), None) => tex.frame_duration() * tex.frames().max(1) as f32,
             };
 
-            let tex: Option<TextureId> = table.get("texture")?;
+            let dcolor = (target_color - color) / lifetime;
 
             Ok(Particle {
                 pos: table.get("pos")?,
@@ -138,10 +126,7 @@ impl mlua::FromLua for Particle {
 
 impl GameObject for Particle {
     fn is_destroyed(&self) -> bool {
-        match self.lifetime {
-            Some(lt) => lt <= 0.0,
-            None => false,
-        }
+        self.lifetime <= 0.0
     }
 
     fn pos(&self) -> Vec2 {
