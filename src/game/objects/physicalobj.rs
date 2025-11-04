@@ -22,9 +22,10 @@ pub const SCALE_FACTOR: f32 = 50.0;
 
 #[derive(Clone, Debug)]
 pub enum TerrainCollisionMode {
-    Exact,  // check every pixel on the line from old to new position
-    Simple, // just check the new pixel, may clip through thin terrain strips
-    None,   // terrain collisions disabled (except for level boundaries)
+    Exact,       // check every pixel on the line from old to new position
+    Simple,      // just check the new pixel, may clip through thin terrain strips
+    Passthrough, // pass through the terrain but return the terrain type
+    None,        // terrain collisions disabled (except for level boundaries)
 }
 
 impl TerrainCollisionMode {
@@ -119,6 +120,15 @@ impl PhysicalObject {
                             // Regular non-slippery terrain
                             self.vel = Vec2::ZERO;
                         }
+                    } else {
+                        self.pos = new_pos;
+                    }
+                    t
+                }
+                TerrainCollisionMode::Passthrough => {
+                    let t = level.terrain_at(new_pos);
+                    if terrain::is_level_boundary(t) {
+                        self.vel = Vec2::ZERO;
                     } else {
                         self.pos = new_pos;
                     }

@@ -48,13 +48,13 @@ function Bird._on_bullet_hit(critter, bullet)
 
 	-- blood splatter
 	for _ = 0, 4 do
-		game.effect("AddParticle", {
+		game.effect("AddTerrainParticle", {
 			pos = critter.pos,
 			vel = Vec2_for_angle(-hit_angle + math.random(-30, 30), 300.0),
-			a = Vec2(0, 9.81 * 100),
-			color = 0xffff0000,
-			target_color = 0x00ff0000,
-			texture = textures.get("dot3x3"),
+			imass = 1,
+			drag = 0.002,
+			stain = true,
+			color = 0x80ff0000,
 		})
 	end
 

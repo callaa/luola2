@@ -45,6 +45,7 @@ pub enum WorldEffect {
     AddParticle(Particle),
     AddTerrainParticle(TerrainParticle),
     AddPixel(Vec2, Terrain, Color),
+    ColorPixel(Vec2, Color),
     MakeBulletHole(Vec2),
     MakeBigHole(Vec2, i32),
     AddCritter(Critter),
@@ -204,6 +205,9 @@ impl World {
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
                 WorldEffect::AddTerrainParticle(p) => self.terrainparticles.push(p),
+                WorldEffect::ColorPixel(pos, color) => {
+                    level_editor.color_point(pos, color);
+                }
                 WorldEffect::AddPixel(pos, ter, color) => {
                     level_editor.add_point(pos, ter, color);
                 }
@@ -291,8 +295,12 @@ impl World {
         for tp in self.terrainparticles.iter_mut() {
             let e = tp.step_mut(&level, self.windspeed, timestep);
             if let Some(e) = e {
-                self.scripting
-                    .add_effect(WorldEffect::AddPixel(e.0, e.1, e.2));
+                if tp.is_staining() {
+                    self.scripting.add_effect(WorldEffect::ColorPixel(e.0, e.2));
+                } else {
+                    self.scripting
+                        .add_effect(WorldEffect::AddPixel(e.0, e.1, e.2));
+                }
             }
         }
         self.terrainparticles.sort();
@@ -450,7 +458,7 @@ impl World {
                 sign = -sign;
             }
 
-            self.windspeed_target = fastrand::f32() * 1200.0 * sign;
+            self.windspeed_target = fastrand::f32() * sign;
         } else {
             self.wind_timer -= timestep;
         }

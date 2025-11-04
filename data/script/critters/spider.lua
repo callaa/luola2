@@ -49,13 +49,13 @@ function Spider._on_bullet_hit(critter, bullet)
 
 	-- blood splatter
 	for a = 0, 360, (360 / 16) do
-		game.effect("AddParticle", {
+		game.effect("AddTerrainParticle", {
 			pos = critter.pos,
 			vel = Vec2_for_angle(a + math.random(-30, 30), 300.0),
-			a = Vec2(0, 9.81 * 100),
-			color = 0xffc5be02,
-			target_color = 0x00c5be02,
-			lifetime = 1 + math.random() * 3,
+			color = 0x80c5be02,
+			imass = 1,
+			drag = 0.002,
+			stain = true,
 		})
 	end
 end

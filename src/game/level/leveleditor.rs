@@ -160,6 +160,28 @@ impl<'a> LevelEditor<'a> {
         }
     }
 
+    /// Change the color of an artwork pixel without changing the terrain type
+    pub fn color_point(&mut self, pos: Vec2, color: Color) {
+        if pos.0 < 0.0 || pos.1 < 0.0 || pos.0 >= self.level.width() || pos.1 >= self.level.height()
+        {
+            return;
+        }
+
+        let x = (pos.0 / LEVEL_SCALE) as i32;
+        let y = (pos.1 / LEVEL_SCALE) as i32;
+
+        let i = x / TILE_SIZE;
+        let j = y / TILE_SIZE;
+        let tile = self.level.tile_mut(i, j);
+
+        let offset = ((y - j * TILE_SIZE) * TILE_SIZE + (x - i * TILE_SIZE)) as usize;
+
+        let pix = Color::from_argb_u32(tile.artwork[offset]);
+
+        tile.artwork[offset] = pix.blend(color).as_argb_u32();
+        self.dirty_set.insert((i, j));
+    }
+
     /**
      * Add a terrain point. Change is performed only if there is not
      * already a solid pixel in the given position.

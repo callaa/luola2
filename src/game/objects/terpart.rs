@@ -37,24 +37,31 @@ pub struct TerrainParticle {
     phys: PhysicalObject,
     texture: Option<TextureId>,
     color: Color,
-    terrain: Terrain, // if zero, this particle won't turn into real terrain
+    stain: bool,      // if true, recolor an existing pixel rather than creating a new one
+    terrain: Terrain, // if zero, this particle won't turn into real terrain (unused in stain mode)
     destroyed: bool,
 }
 
 impl mlua::FromLua for TerrainParticle {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
+            let stain = table.get::<Option<bool>>("stain")?.unwrap_or(false);
             Ok(TerrainParticle {
                 phys: PhysicalObject {
                     pos: table.get("pos")?,
                     vel: table.get("vel")?,
                     imass: 100.0,
                     radius: LEVEL_SCALE / 2.0,
-                    drag: 0.3,
+                    drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.6),
                     impulse: Vec2::ZERO,
-                    terrain_collision_mode: TerrainCollisionMode::Simple,
+                    terrain_collision_mode: if stain {
+                        TerrainCollisionMode::Passthrough
+                    } else {
+                        TerrainCollisionMode::Simple
+                    },
                 },
                 texture: table.get("texture")?,
+                stain,
                 terrain: table.get::<Option<Terrain>>("terrain")?.unwrap_or(0),
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
@@ -86,6 +93,7 @@ impl TerrainParticle {
             texture,
             terrain,
             color,
+            stain: false,
             destroyed: false,
         }
     }
@@ -98,20 +106,25 @@ impl TerrainParticle {
         &mut self.phys
     }
 
+    pub fn is_staining(&self) -> bool {
+        self.stain
+    }
+
     pub fn step_mut(
         &mut self,
         level: &Level,
         windspeed: f32,
         timestep: f32,
     ) -> Option<(Vec2, Terrain, Color)> {
-        let jitter = -1000.0 + fastrand::f32() * 2000.0;
-        self.phys.vel.0 += (windspeed + jitter) * timestep;
+        let jitter = (-0.5 + fastrand::f32()) * 0.5;
+        self.phys
+            .add_impulse(Vec2((windspeed / 10.0 + jitter), 0.0));
         let ter = self.phys.step(level, timestep);
 
         if ter != 0 {
             self.destroyed = true;
 
-            if self.terrain != 0 {
+            if self.terrain != 0 || self.stain {
                 if terrain::is_level_boundary(ter) {
                     return None;
                 }
@@ -120,6 +133,7 @@ impl TerrainParticle {
                     // Only ice floats
                     return None;
                 }
+
                 return Some((self.pos(), self.terrain, self.color));
             }
         }

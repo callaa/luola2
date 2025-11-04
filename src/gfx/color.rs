@@ -94,6 +94,16 @@ impl Color {
 
         a << 24 | (self.r_u8() as u32) << 16 | (self.g_u8() as u32) << 8 | self.b_u8() as u32
     }
+
+    pub fn blend(&self, over: Color) -> Color {
+        let a = over.a + self.a * (1.0 - over.a);
+        Color {
+            r: (over.r * over.a + self.r * self.a * (1.0 - over.a)) / a,
+            g: (over.g * over.a + self.g * self.a * (1.0 - over.a)) / a,
+            b: (over.b * over.a + self.b * self.a * (1.0 - over.a)) / a,
+            a,
+        }
+    }
 }
 
 impl Sub for Color {
