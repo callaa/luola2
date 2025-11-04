@@ -25,7 +25,11 @@ use crate::{
     },
     gfx::Renderer,
     menu::AnimatedStarfield,
-    states::{MainMenu, game_assets::GameAssets, game_state::GameState},
+    states::{
+        MainMenu,
+        game_assets::{GameAssets, SelectableWeapon},
+        game_state::GameState,
+    },
 };
 
 use super::{StackableState, StackableStateResult};
@@ -85,12 +89,16 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
 
     let mut weapons: Vec<_> = secondary_weapon_table
         .pairs::<String, mlua::Table>()
-        //.map(|pair| pair.unwrap())
         .map(|pair| {
-            let (k, v) = pair?;
-            let title = v.get::<String>("title")?;
+            let (name, v) = pair?;
+            let title: String = v.get("title")?;
+            let flavortext: String = v.get("description")?;
 
-            Ok((k, title))
+            Ok(SelectableWeapon {
+                name,
+                title,
+                flavortext,
+            })
         })
         .collect::<Result<Vec<_>>>()?;
 
@@ -98,7 +106,7 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
         return Err(anyhow!("No weapons defined!"));
     }
 
-    weapons.sort_by(|a, b| a.1.cmp(&b.1));
+    weapons.sort_by(|a, b| a.title.cmp(&b.title));
 
     Ok(Rc::new(GameAssets { levels, weapons }))
 }

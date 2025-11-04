@@ -19,7 +19,13 @@ use crate::game::level::LevelInfo;
 /// Game assets (levels, weapons, etc.) loaded in the beginning
 pub struct GameAssets {
     pub levels: Vec<LevelInfo>,
-    pub weapons: Vec<(String, String)>,
+    pub weapons: Vec<SelectableWeapon>,
+}
+
+pub struct SelectableWeapon {
+    pub name: String,
+    pub title: String,
+    pub flavortext: String,
 }
 
 impl GameAssets {

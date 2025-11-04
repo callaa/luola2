@@ -86,41 +86,51 @@ luola_secondary_weapons = {
 	grenade = {
 		title = "Grenade",
 		fire_func = sweapons.grenade,
+		description = "The grenade launcher fires a lightweight fragmentation grenade that can deal a surprising amount of damage for its size.",
 	},
 	megabomb = {
 		title = "Megabomb",
 		fire_func = sweapons.megabomb,
+		description = "An unguided bomb packed full of high explosives for massive damage.",
 	},
 	rocket = {
 		title = "Rocket launcher",
 		fire_func = sweapons.rocket,
+		description = "Though smaller than the Megabomb, this self propelled weapon can still carry a large explosive payload.",
 	},
 	missile = {
 		title = "Homing missile",
 		fire_func = sweapons.missile,
+		description = "The addition of a guidance system has reduced the available payload capacity but the autonomous target seeking capability makes up for it.",
 	},
 	mine = {
 		title = "Mine",
 		fire_func = sweapons.mine,
+		description = "A floating mine with variable buoyancy suitable for use in both water and open air.",
 	},
 	magmine = {
 		title = "Magnetic mine",
 		fire_func = sweapons.magmine,
+		description = "A mine augmented with a short range magnetic target seeking system.",
 	},
 	landmine = {
 		title = "Landmine",
 		fire_func = sweapons.landmine,
+		description = "A remote detonable directional charge that can be placed on hard terrain.",
 	},
 	drone = {
 		title = "Drones",
 		fire_func = sweapons.drone,
+		description = "Autonomous target seeking drones equipped with a rapid-fire cannon.",
 	},
 	cloak = {
 		title = "Chameleon skin",
 		fire_func = sweapons.cloaking_device,
+		description = "Active optical surface coating that can render the ship nearly invisible.",
 	},
 	ghostship = {
 		title = "Improbability drive",
 		fire_func = sweapons.ghostship,
+		description = "A quantum mechanical device that alters the natural probability field around the ship, allowing it to pass through solid ground.",
 	},
 }

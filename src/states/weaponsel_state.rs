@@ -21,19 +21,20 @@ use anyhow::{Result, anyhow};
 use super::{StackableState, StackableStateResult};
 use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId},
-    gfx::{Color, Renderer, Text, Texture, make_button_icon},
+    gfx::{Color, RenderMode, RenderOptions, Renderer, Text, Texture, TextureId, make_button_icon},
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
-    states::game_assets::GameAssets,
+    states::game_assets::{GameAssets, SelectableWeapon},
 };
 
 pub struct WeaponSelection {
     starfield: Rc<RefCell<AnimatedStarfield>>,
     assets: Rc<GameAssets>,
+    box_border: TextureId,
     round_text: Text,
     renderer: Rc<RefCell<Renderer>>,
     players: Vec<PlayerWeaponChoice>,
-    weapon_texts: Vec<Text>,
+    weapon_texts: Vec<(Text, Text)>,
     longest_weapon_text_width: f32,
     start_timer: Option<f32>,
 }
@@ -54,14 +55,14 @@ impl PlayerWeaponChoice {
     fn from_weapon_name(
         player: &Player,
         player_id: PlayerId,
-        weapon_list: &[(String, String)],
+        weapon_list: &[SelectableWeapon],
         renderer: &Renderer,
         controllers: &GameControllerSet,
     ) -> Result<Self> {
         let selection = weapon_list
             .iter()
             .enumerate()
-            .find(|(_, (n, _))| n == &player.weapon)
+            .find(|(_, w)| &w.name == &player.weapon)
             .map(|(idx, _)| idx)
             .unwrap_or(0);
 
@@ -71,7 +72,7 @@ impl PlayerWeaponChoice {
             player_text: renderer
                 .fontset()
                 .menu
-                .create_text(renderer, &format!("Player {}:", player_id))?
+                .create_text(renderer, &format!("Player {}", player_id))?
                 .with_color(Color::player_color(player_id)),
             left_button_icon: make_button_icon(
                 player.controller,
@@ -111,21 +112,27 @@ impl WeaponSelection {
             .create_text(&renderer.borrow(), &format!("Round {}", round))?
             .with_color(Color::new(0.9, 0.2, 0.2));
 
+        let flavortext_max_width = Self::flavortext_max_width(renderer.borrow().width());
+
         let weapon_texts = assets
             .weapons
             .iter()
-            .map(|(_, title)| {
-                renderer
-                    .borrow()
-                    .fontset()
-                    .menu
-                    .create_text(&renderer.borrow(), title)
+            .map(|w| {
+                let r = renderer.borrow();
+                Ok((
+                    r.fontset().menu.create_text(&r, &w.title)?,
+                    r.fontset()
+                        .flavotext
+                        .create_text(&r, &w.flavortext)?
+                        .with_color(Color::new(0.6, 0.6, 0.8))
+                        .with_wrapwidth(flavortext_max_width),
+                ))
             })
             .collect::<Result<Vec<_>>>()?;
 
         let longest_weapon_text_width = weapon_texts
             .iter()
-            .fold(0.0, |acc, t| f32::max(acc, t.width()));
+            .fold(0.0, |acc, t| f32::max(acc, t.0.width()));
 
         let choices: Result<Vec<_>> = players
             .iter()
@@ -141,8 +148,14 @@ impl WeaponSelection {
             })
             .collect();
 
+        let box_border = renderer
+            .borrow()
+            .texture_store()
+            .find_texture("box_border")?;
+
         Ok(Self {
             assets,
+            box_border,
             weapon_texts,
             players: choices?,
             round_text,
@@ -153,10 +166,90 @@ impl WeaponSelection {
         })
     }
 
+    fn flavortext_max_width(screen_width: i32) -> i32 {
+        screen_width * 3 / 4 - 16
+    }
+
     fn find_player_mut(&mut self, controller: i32) -> Option<&mut PlayerWeaponChoice> {
         assert!(controller > 0);
         let controller = (controller - 1) as usize;
         self.players.iter_mut().find(|p| p.controller == controller)
+    }
+
+    fn render_player_box(&self, player: &PlayerWeaponChoice, rect: RectF) {
+        let renderer = &self.renderer.borrow();
+
+        player.player_text.render(Vec2(rect.x() + 8.0, rect.y()));
+
+        let rect = RectF::new(
+            rect.x(),
+            rect.y() + player.player_text.height(),
+            rect.w(),
+            rect.h() - player.player_text.height(),
+        );
+
+        renderer
+            .texture_store()
+            .get_texture(self.box_border)
+            .render(
+                renderer,
+                &RenderOptions {
+                    dest: crate::gfx::RenderDest::Rect(rect),
+                    mode: RenderMode::NineGrid(1.0),
+                    ..Default::default()
+                },
+            );
+
+        let (title_text, flavor_text) = &self.weapon_texts[player.selection];
+        let weapon_title_x = rect.x() + (rect.w() - title_text.width()) / 2.0;
+
+        if player.decided {
+            title_text.render(Vec2(
+                weapon_title_x,
+                rect.y() + (rect.h() - title_text.height()) / 2.0,
+            ));
+        } else {
+            let y = rect.y() + 8.0;
+            title_text.render(Vec2(
+                weapon_title_x,
+                y + (title_text.height().max(player.left_button_icon.height())
+                    - title_text.height())
+                    / 2.0,
+            ));
+
+            flavor_text.render(Vec2(rect.x() + 8.0, y + title_text.height() + 16.0));
+
+            player.left_button_icon.render_simple(
+                renderer,
+                None,
+                Some(RectF::new(
+                    weapon_title_x - player.left_button_icon.width() - 8.0,
+                    y,
+                    player.left_button_icon.width(),
+                    player.left_button_icon.height(),
+                )),
+            );
+            player.right_button_icon.render_simple(
+                renderer,
+                None,
+                Some(RectF::new(
+                    weapon_title_x + title_text.width() + 8.0,
+                    y,
+                    player.right_button_icon.width(),
+                    player.right_button_icon.height(),
+                )),
+            );
+            player.select_button_icon.render_simple(
+                renderer,
+                None,
+                Some(RectF::new(
+                    rect.x() + rect.w() - player.select_button_icon.width() - 8.0,
+                    rect.y() + rect.h() - player.select_button_icon.height() - 8.0,
+                    player.select_button_icon.width(),
+                    player.select_button_icon.height(),
+                )),
+            );
+        }
     }
 
     fn render(&self) {
@@ -170,70 +263,30 @@ impl WeaponSelection {
         self.round_text
             .render_hcenter(renderer.width() as f32, 10.0);
 
-        // Player weapon selections
-        let line_height = self.players[0]
-            .left_button_icon
-            .height()
-            .max(self.players[0].player_text.height());
+        // Player weapon selection boxes
+        let player_box_w = renderer.width() as f32 * (3.0 / 4.0);
+        let player_box_h = f32::min(
+            (renderer.height() as f32 - self.round_text.height() - 10.0)
+                / self.players.len() as f32
+                - 20.0,
+            renderer.height() as f32 / 4.0,
+        );
 
-        let x = (renderer.width() as f32
-            - (self.players[0].player_text.width()
-                + self.players[0].left_button_icon.width() * 3.0
-                + self.longest_weapon_text_width
-                + 30.0))
-            / 2.0;
-        let mut y = (renderer.height() as f32 - (line_height * self.players.len() as f32)) / 2.0;
+        let player_box_x = (renderer.width() as f32 - player_box_w) / 2.0;
+        let mut player_box_y = self.round_text.height()
+            + ((renderer.height() as f32 - self.round_text.height())
+                - ((player_box_h + 20.0) * self.players.len() as f32))
+                / 2.0;
 
-        for plr in &self.players {
-            let mut x = x;
-            let center = (line_height - plr.player_text.height()) / 2.0;
-            plr.player_text.render(Vec2(x, y + center));
-            x += plr.player_text.width() + 10.0;
-
-            if !plr.decided {
-                plr.left_button_icon.render_simple(
-                    renderer,
-                    None,
-                    Some(RectF::new(
-                        x,
-                        y,
-                        plr.left_button_icon.width(),
-                        plr.left_button_icon.height(),
-                    )),
-                );
-                x += plr.left_button_icon.width() + 10.0;
-            }
-
-            self.weapon_texts[plr.selection].render(Vec2(x, y + center));
-            x += self.weapon_texts[plr.selection].width() + 10.0;
-
-            if !plr.decided {
-                plr.right_button_icon.render_simple(
-                    renderer,
-                    None,
-                    Some(RectF::new(
-                        x,
-                        y,
-                        plr.right_button_icon.width(),
-                        plr.right_button_icon.height(),
-                    )),
-                );
-                x += plr.right_button_icon.width() + 10.0;
-                plr.select_button_icon.render_simple(
-                    renderer,
-                    None,
-                    Some(RectF::new(
-                        x,
-                        y,
-                        plr.select_button_icon.width(),
-                        plr.select_button_icon.height(),
-                    )),
-                );
-            }
-
-            y += line_height;
+        for player in &self.players {
+            self.render_player_box(
+                player,
+                RectF::new(player_box_x, player_box_y, player_box_w, player_box_h),
+            );
+            player_box_y += player_box_h + 20.0;
         }
 
+        // Fadeout when it's time to start
         if let Some(t) = self.start_timer {
             let a = 1.0 - t;
             renderer.draw_filled_rectangle(
@@ -295,6 +348,11 @@ impl StackableState for WeaponSelection {
         self.starfield
             .borrow_mut()
             .update_screensize(self.renderer.borrow().size());
+
+        let ww = Self::flavortext_max_width(self.renderer.borrow().width());
+        self.weapon_texts
+            .iter_mut()
+            .for_each(|(_, t)| t.set_wrapwidth(ww));
     }
 
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
@@ -311,7 +369,7 @@ impl StackableState for WeaponSelection {
                     return StackableStateResult::Return(Box::new(SelectedWeapons(
                         self.players
                             .iter()
-                            .map(|p| self.assets.weapons[p.selection].0.clone())
+                            .map(|p| self.assets.weapons[p.selection].name.clone())
                             .collect(),
                     )));
                 }

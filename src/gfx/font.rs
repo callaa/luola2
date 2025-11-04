@@ -127,6 +127,12 @@ impl Text {
         self
     }
 
+    pub fn set_wrapwidth(&mut self, width: i32) {
+        unsafe {
+            TTF_SetTextWrapWidth(self.text, width);
+        }
+    }
+
     pub fn with_color(mut self, color: Color) -> Self {
         self.set_color(color);
         self

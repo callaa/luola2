@@ -36,9 +36,10 @@ use sdl3_sys::{
     rect::SDL_Rect,
     render::{
         SDL_CreateTexture, SDL_CreateTextureFromSurface, SDL_DestroyTexture, SDL_GetTextureSize,
-        SDL_RenderTexture, SDL_RenderTextureRotated, SDL_RenderTextureTiled,
-        SDL_SetTextureAlphaModFloat, SDL_SetTextureBlendMode, SDL_SetTextureColorModFloat,
-        SDL_SetTextureScaleMode, SDL_Texture, SDL_TextureAccess, SDL_UpdateTexture,
+        SDL_RenderTexture, SDL_RenderTexture9Grid, SDL_RenderTextureRotated,
+        SDL_RenderTextureTiled, SDL_SetTextureAlphaModFloat, SDL_SetTextureBlendMode,
+        SDL_SetTextureColorModFloat, SDL_SetTextureScaleMode, SDL_Texture, SDL_TextureAccess,
+        SDL_UpdateTexture,
     },
     surface::{SDL_FLIP_HORIZONTAL, SDL_FLIP_NONE, SDL_SCALEMODE_LINEAR, SDL_SCALEMODE_NEAREST},
 };
@@ -102,6 +103,7 @@ pub enum RenderMode {
     Mirrored,
     Rotated(f32, bool), // angle, mirror
     Tiled(f32),         // scale
+    NineGrid(f32),      // scale
 }
 
 #[derive(Clone, Copy)]
@@ -346,6 +348,18 @@ impl Texture {
         }
     }
 
+    fn subsubrect(&self, source: Option<RectF>) -> RectF {
+        match source {
+            Some(s) => RectF::new(
+                self.subrect.x() + s.x(),
+                self.subrect.y() + s.y(),
+                s.w(),
+                s.h(),
+            ),
+            None => self.subrect,
+        }
+    }
+
     pub fn render(&self, renderer: &Renderer, options: &RenderOptions) {
         let dest = match options.dest {
             RenderDest::Fill => None,
@@ -379,57 +393,31 @@ impl Texture {
         }
 
         let result = match options.mode {
-            RenderMode::Normal => {
-                let source = if let Some(s) = options.source {
-                    RectF::new(
-                        self.subrect.x() + s.x(),
-                        self.subrect.y() + s.y(),
-                        s.w(),
-                        s.h(),
-                    )
-                } else {
-                    self.subrect
-                };
-
-                unsafe {
-                    SDL_RenderTexture(
-                        renderer.renderer,
-                        self.tex,
-                        &source.0,
-                        match dest {
-                            Some(ref r) => &r.0,
-                            None => null(),
-                        },
-                    )
-                }
-            }
-            RenderMode::Mirrored => {
-                let source = if let Some(s) = options.source {
-                    RectF::new(
-                        self.subrect.x() + s.x(),
-                        self.subrect.y() + s.y(),
-                        s.w(),
-                        s.h(),
-                    )
-                } else {
-                    self.subrect
-                };
-
-                unsafe {
-                    SDL_RenderTextureRotated(
-                        renderer.renderer,
-                        self.tex,
-                        &source.0,
-                        match dest {
-                            Some(ref r) => &r.0,
-                            None => null(),
-                        },
-                        0.0,
-                        null(),
-                        SDL_FLIP_HORIZONTAL,
-                    )
-                }
-            }
+            RenderMode::Normal => unsafe {
+                SDL_RenderTexture(
+                    renderer.renderer,
+                    self.tex,
+                    &self.subsubrect(options.source).0,
+                    match dest {
+                        Some(ref r) => &r.0,
+                        None => null(),
+                    },
+                )
+            },
+            RenderMode::Mirrored => unsafe {
+                SDL_RenderTextureRotated(
+                    renderer.renderer,
+                    self.tex,
+                    &self.subsubrect(options.source).0,
+                    match dest {
+                        Some(ref r) => &r.0,
+                        None => null(),
+                    },
+                    0.0,
+                    null(),
+                    SDL_FLIP_HORIZONTAL,
+                )
+            },
             RenderMode::Rotated(angle, mirror) => {
                 let (source, angle) = if self.angles > 1 {
                     let angle = angle.rem_euclid(360.0);
@@ -463,31 +451,34 @@ impl Texture {
                     )
                 }
             }
-            RenderMode::Tiled(scale) => {
-                let source = if let Some(s) = options.source {
-                    RectF::new(
-                        self.subrect.x() + s.x(),
-                        self.subrect.y() + s.y(),
-                        s.w(),
-                        s.h(),
-                    )
-                } else {
-                    self.subrect
-                };
-
-                unsafe {
-                    SDL_RenderTextureTiled(
-                        renderer.renderer,
-                        self.tex,
-                        &source.0,
-                        scale,
-                        match dest {
-                            Some(ref r) => &r.0,
-                            None => null(),
-                        },
-                    )
-                }
-            }
+            RenderMode::Tiled(scale) => unsafe {
+                SDL_RenderTextureTiled(
+                    renderer.renderer,
+                    self.tex,
+                    &self.subsubrect(options.source).0,
+                    scale,
+                    match dest {
+                        Some(ref r) => &r.0,
+                        None => null(),
+                    },
+                )
+            },
+            RenderMode::NineGrid(scale) => unsafe {
+                SDL_RenderTexture9Grid(
+                    renderer.renderer,
+                    self.tex,
+                    &self.subsubrect(options.source).0,
+                    self.width / 3.0,
+                    self.width / 3.0,
+                    self.height / 3.0,
+                    self.height / 3.0,
+                    scale,
+                    match dest {
+                        Some(ref r) => &r.0,
+                        None => null(),
+                    },
+                )
+            },
         };
         if !result {
             SdlError::log("Texture render");

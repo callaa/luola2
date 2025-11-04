@@ -123,3 +123,6 @@ file = "input-devices.png"
 
 [gamepad_buttons]
 file = "gamepad-buttons.png"
+
+[box_border]
+file = "box-border.png"

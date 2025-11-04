@@ -24,6 +24,7 @@ use serde::Deserialize;
 pub struct FontSet {
     pub menu: Font,
     pub menu_big: Font,
+    pub flavotext: Font,
 }
 
 #[derive(Deserialize)]
@@ -36,6 +37,7 @@ struct FontOptions {
 struct FontSetConfig {
     menu: FontOptions,
     menu_big: FontOptions,
+    flavortext: FontOptions,
 }
 
 impl FontSet {
@@ -50,6 +52,7 @@ impl FontSet {
         Ok(Self {
             menu: config.menu.load(root)?,
             menu_big: config.menu_big.load(root)?,
+            flavotext: config.flavortext.load(root)?,
         })
     }
 }
