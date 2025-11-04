@@ -7,90 +7,71 @@ local Mines = require("weapons.mines")
 local weapons = {}
 
 function weapons.grenade(ship)
-	local ammo = ship.ammo - 0.05
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(5, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("pewpew"),
+			on_impact = bullets.grenade,
+		})
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.4
-
-	game.effect("AddBullet", {
-		pos = ship.pos,
-		vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
-		mass = 300,
-		radius = 5,
-		drag = 0.0025,
-		owner = ship.player,
-		texture = textures.get("pewpew"),
-		on_impact = bullets.grenade,
-	})
 end
 
 function weapons.megabomb(ship)
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(10, 1.0) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel,
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("megabomb"),
+			on_impact = bullets.megabomb,
+		})
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 1.0
-
-	game.effect("AddBullet", {
-		pos = ship.pos,
-		vel = ship.vel,
-		mass = 300,
-		radius = 5,
-		drag = 0.0025,
-		owner = ship.player,
-		texture = textures.get("megabomb"),
-		on_impact = bullets.megabomb,
-	})
 end
 
 function weapons.rocket(ship)
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(10, 1.0) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 100.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("rocket"),
+			on_impact = bullets.rocket,
+			state = {
+				impulse = Vec2_for_angle(-ship.angle, 8000.0),
+				scheduler = Scheduler:new():add(0, function(p)
+					p:impulse(p.state.impulse)
+
+					game.effect("AddParticle", {
+						pos = p.pos,
+						color = 0xffffffff,
+						target_color = 0x00ff0000,
+						lifetime = 0.15,
+						texture = textures.get("dot3x3"),
+					})
+
+					return 0
+				end),
+			},
+			timer = 0,
+		})
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 1.0
-
-	game.effect("AddBullet", {
-		pos = ship.pos,
-		vel = ship.vel + Vec2_for_angle(-ship.angle, 100.0),
-		mass = 300,
-		radius = 5,
-		drag = 0.0025,
-		owner = ship.player,
-		texture = textures.get("rocket"),
-		on_impact = bullets.rocket,
-		state = {
-			impulse = Vec2_for_angle(-ship.angle, 8000.0),
-			scheduler = Scheduler:new():add(0, function(p)
-				p:impulse(p.state.impulse)
-
-				game.effect("AddParticle", {
-					pos = p.pos,
-					color = 0xffffffff,
-					target_color = 0x00ff0000,
-					lifetime = 0.15,
-					texture = textures.get("dot3x3"),
-				})
-
-				return 0
-			end),
-		},
-		timer = 0,
-	})
 end
 
 function weapons.missile(ship)
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
+	if not ship:consume_ammo(8, 1.0) then
 		return
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 1.0
-
 	game.effect("AddBullet", {
 		pos = ship.pos,
 		vel = ship.vel + Vec2_for_angle(-ship.angle, 100.0),
@@ -142,25 +123,15 @@ function weapons.missile(ship)
 end
 
 function weapons.mine(ship)
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(10, 0.4) then
+		Mines.create_mine(ship.pos, ship.player)
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.4
-
-	Mines.create_mine(ship.pos, ship.player)
 end
 
 function weapons.magmine(ship)
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(10, 0.4) then
+		Mines.create_magmine(ship.pos, ship.player)
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.4
-
-	Mines.create_magmine(ship.pos, ship.player)
 end
 
 function weapons.landmine(ship)
@@ -169,36 +140,26 @@ function weapons.landmine(ship)
 		return
 	end
 
-	local ammo = ship.ammo - 0.1
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(10, 0.2) then
+		Mines.create_landmine(ship.pos, ship.angle, ship.player)
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.2
-
-	Mines.create_landmine(ship.pos, ship.angle, ship.player)
 end
 
 function weapons.drone(ship)
-	local ammo = ship.ammo - 0.2
-	if ammo < 0 then
-		return
+	if ship:consume_ammo(20, 0.4) then
+		Drone.create(ship.pos, ship.player)
 	end
-	ship.ammo = ammo
-	ship.secondary_weapon_cooldown = 0.4
-
-	Drone.create(ship.pos, ship.player)
 end
 
 function weapons.cloaking_device(ship)
 	ship.secondary_weapon_cooldown = 0.6
 	if ship.cloaked then
 		ship.cloaked = false
-	elseif ship.ammo > 0 then
+	elseif ship.ammo >= 0.5 then
 		ship.cloaked = true
 		Scheduler.add_to_object(ship, 0.1, function(ship)
 			if ship.cloaked then
-				local ammo = ship.ammo - 0.005
+				local ammo = ship.ammo - 0.5
 				if ammo < 0 then
 					ship.cloaked = false
 					return
@@ -227,11 +188,11 @@ function weapons.ghostship(ship)
 	ship.secondary_weapon_cooldown = 0.6
 	if ship.ghostmode then
 		ship.ghostmode = false
-	elseif ship.ammo > 0 then
+	elseif ship.ammo > 0.9 then
 		ship.ghostmode = true
 		Scheduler.add_to_object(ship, 0.1, function(ship)
 			if ship.ghostmode then
-				local ammo = ship.ammo - 0.009
+				local ammo = ship.ammo - 0.9
 				if ammo < 0 then
 					ship.ghostmode = false
 					return

@@ -46,7 +46,7 @@ local function ship_on_base(ship, timestep)
 			lifetime = 1,
 		})
 	end
-	ship.ammo = ship.ammo + timestep / 10
+	ship.ammo = ship.ammo + timestep * 10
 end
 
 local function check_round_end_condition()

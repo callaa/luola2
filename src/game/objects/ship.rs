@@ -72,8 +72,11 @@ pub struct Ship {
     /// Number of seconds the secondary weapon is still on cooldown
     secondary_weapon_cooldown: f32,
 
-    /// Amount of ammo remaining in range 0-1.0 (for secondary weapon, primary has infinite ammo)
+    /// Number of ammo units remaining
     ammo_remaining: f32,
+
+    /// Maximum ammo
+    max_ammo: f32,
 
     /// Timer for damage effect
     damage_effect: f32,
@@ -150,7 +153,7 @@ impl UserData for Ship {
         fields.add_field_method_get("health", |_, this| Ok(this.hitpoints));
         fields.add_field_method_get("ammo", |_, this| Ok(this.ammo_remaining));
         fields.add_field_method_set("ammo", |_, this, ammo: f32| {
-            this.ammo_remaining = ammo.clamp(0.0, 1.0);
+            this.ammo_remaining = ammo.clamp(0.0, this.max_ammo);
             Ok(())
         });
         fields.add_field_method_get("cloaked", |_, this| Ok(this.cloaked));
@@ -180,9 +183,21 @@ impl UserData for Ship {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        // apply damage to the ship with side effects
         methods.add_method_mut("damage", |_, this, hp: f32| {
             this.damage(hp);
             Ok(())
+        });
+        // Consume ammo if there is enough and set secondary weapon cooldown..
+        methods.add_method_mut("consume_ammo", |_, this, (amount, cooldown): (f32, f32)| {
+            let a = this.ammo_remaining - amount;
+            Ok(if a < 0.0 {
+                false
+            } else {
+                this.ammo_remaining = a;
+                this.secondary_weapon_cooldown = cooldown;
+                true
+            })
         });
     }
 }
@@ -191,7 +206,7 @@ impl mlua::FromLua for Ship {
     fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
             let hitpoints = table.get::<Option<f32>>("hitpoints")?.unwrap_or(100.0);
-
+            let ammo = table.get::<Option<f32>>("ammo")?.unwrap_or(100.0);
             Ok(Ship {
                 phys: PhysicalObject {
                     pos: table.get("pos")?,
@@ -216,7 +231,8 @@ impl mlua::FromLua for Ship {
                 on_thrust: table.get("on_thrust")?,
                 on_destroyed: table.get("on_destroyed")?,
                 on_base: table.get("on_base")?,
-                ammo_remaining: 1.0,
+                ammo_remaining: ammo,
+                max_ammo: ammo,
                 damage_effect: 0.0,
                 state: table
                     .get::<Option<Table>>("state")?
@@ -261,7 +277,7 @@ impl Ship {
     }
 
     pub fn ammo(&self) -> f32 {
-        self.ammo_remaining
+        self.ammo_remaining / self.max_ammo
     }
 
     pub fn is_wrecked(&self) -> bool {
