@@ -1,6 +1,6 @@
 local Scheduler = require("utils.scheduler")
 local weapons = require("primary_weapons")
-local bullets = require("bullets")
+local Impacts = require("weapons.impacts")
 
 local function ship_thrust_effect(ship, uw)
 	if uw then
@@ -85,10 +85,10 @@ local function on_ship_destroyed(ship)
 		})
 	end
 
-	bullets.make_shrapnell(36, ship.pos, {
+	Impacts.make_shrapnell(36, ship.pos, {
 		color = 0xffff6666,
 		texture = textures.get("pewpew"),
-		on_impact = bullets.bullet,
+		on_impact = Impacts.bullet,
 	})
 end
 

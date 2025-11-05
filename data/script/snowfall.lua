@@ -10,7 +10,7 @@ function snowfall.init()
 			local p = game.find_spawnpoint(snow_zone)
 			game.effect("AddTerrainParticle", {
 				pos = p,
-				vel=Vec2(0,0),
+				vel = Vec2(0, 0),
 				terrain = 0x46,
 				color = game.snow_color,
 			})

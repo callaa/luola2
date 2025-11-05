@@ -1,8 +1,9 @@
-local bullets = require("bullets")
+local Impacts = require("weapons.impacts")
 local Scheduler = require("utils.scheduler")
-local trig = require("utils.trig")
 local Drone = require("critters.drone")
+local Tank = require("critters.tank")
 local Mines = require("weapons.mines")
+local Rockets = require("weapons.rockets")
 
 local weapons = {}
 
@@ -16,7 +17,7 @@ function weapons.grenade(ship)
 			drag = 0.0025,
 			owner = ship.player,
 			texture = textures.get("pewpew"),
-			on_impact = bullets.grenade,
+			on_impact = Impacts.grenade,
 		})
 	end
 end
@@ -31,95 +32,21 @@ function weapons.megabomb(ship)
 			drag = 0.0025,
 			owner = ship.player,
 			texture = textures.get("megabomb"),
-			on_impact = bullets.megabomb,
+			on_impact = Impacts.megabomb,
 		})
 	end
 end
 
 function weapons.rocket(ship)
 	if ship:consume_ammo(10, 1.0) then
-		game.effect("AddBullet", {
-			pos = ship.pos,
-			vel = ship.vel + Vec2_for_angle(-ship.angle, 100.0),
-			mass = 300,
-			radius = 5,
-			drag = 0.0025,
-			owner = ship.player,
-			texture = textures.get("rocket"),
-			on_impact = bullets.rocket,
-			state = {
-				impulse = Vec2_for_angle(-ship.angle, 8000.0),
-				scheduler = Scheduler:new():add(0, function(p)
-					p:impulse(p.state.impulse)
-
-					game.effect("AddParticle", {
-						pos = p.pos,
-						color = 0xffffffff,
-						target_color = 0x00ff0000,
-						lifetime = 0.15,
-						texture = textures.get("dot3x3"),
-					})
-
-					return 0
-				end),
-			},
-			timer = 0,
-		})
+		Rockets.rocket(ship.pos, ship.vel, -ship.angle, ship.player)
 	end
 end
 
 function weapons.missile(ship)
-	if not ship:consume_ammo(8, 1.0) then
-		return
+	if ship:consume_ammo(8, 1.0) then
+		Rockets.homing_missile(ship.pos, ship.vel, -ship.angle, ship.player)
 	end
-	game.effect("AddBullet", {
-		pos = ship.pos,
-		vel = ship.vel + Vec2_for_angle(-ship.angle, 100.0),
-		mass = 300,
-		radius = 5,
-		drag = 0.0025,
-		owner = ship.player,
-		texture = textures.get("rocket"),
-		on_impact = bullets.missile,
-		state = {
-			angle = -ship.angle,
-			scheduler = Scheduler:new():add(0, function(this)
-				local target = nil
-				local nearest = 0
-
-				game.ships_iter(function(ship)
-					local dist = ship.pos:dist(this.pos)
-					if ship.player ~= this.owner and (target == nil or dist < nearest) then
-						target = ship.pos
-						nearest = dist
-					end
-				end)
-
-				if target ~= nil then
-					local target_angle = -(target - this.pos):angle()
-					local turn = trig.angle_difference(this.state.angle, target_angle)
-					if turn < 0 then
-						this.state.angle = this.state.angle - 20
-					else
-						this.state.angle = this.state.angle + 20
-					end
-					local impulse = Vec2_for_angle(this.state.angle, 10000)
-					this:impulse(impulse)
-
-					game.effect("AddParticle", {
-						pos = this.pos,
-						color = 0xffffffff,
-						target_color = 0x00ff0000,
-						lifetime = 0.15,
-						texture = textures.get("dot3x3"),
-					})
-				end
-
-				return 0.02
-			end),
-		},
-		timer = 0,
-	})
 end
 
 function weapons.mine(ship)
@@ -148,6 +75,12 @@ end
 function weapons.drone(ship)
 	if ship:consume_ammo(20, 0.4) then
 		Drone.create(ship.pos, ship.player)
+	end
+end
+
+function weapons.tank(ship)
+	if ship:consume_ammo(20, 0.4) then
+		Tank.create(ship.pos, ship.player)
 	end
 end
 

@@ -1,5 +1,5 @@
 local Scheduler = require("utils.scheduler")
-local bullets = require("bullets")
+local Impacts = require("weapons.impacts")
 
 local Drone = {}
 
@@ -74,7 +74,7 @@ function Drone._timer_shoot(critter)
 			radius = 5,
 			owner = critter.owner,
 			texture = textures.get("pewpew"),
-			on_impact = bullets.bullet,
+			on_impact = Impacts.bullet,
 		})
 	else
 		return nil

@@ -4,7 +4,7 @@
 -- in this file.
 
 local sweapons = require("secondary_weapons")
-local bullets = require("bullets")
+local Impacts = require("weapons.impacts")
 local ships = require("ships")
 local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
@@ -69,7 +69,7 @@ function luola_explosive_terrain(x, y)
 			vel = Vec2_for_angle(a + math.random(-30, 30), 1000.0),
 			color = 0xffffa672,
 			texture = tex,
-			on_impact = bullets.bullet,
+			on_impact = Impacts.bullet,
 		})
 	end
 end
@@ -126,6 +126,11 @@ luola_secondary_weapons = {
 		title = "Drones",
 		fire_func = sweapons.drone,
 		description = "Autonomous target seeking drones equipped with a rapid-fire cannon.",
+	},
+	tank = {
+		title = "Tank",
+		fire_func = sweapons.tank,
+		description = "A wheeled autonomous destruction delivery platform. Compared to the flying drone, this ground based unit can carry much heavier weaponry.",
 	},
 	cloak = {
 		title = "Chameleon skin",

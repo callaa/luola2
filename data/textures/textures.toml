@@ -114,6 +114,24 @@ duration = 1
 file = "drone.png"
 subrect = [0, 32, 384, 32]
 
+[tank]
+file = "tank.png"
+subrect = [0, 0, 462, 84]
+width = 42
+height = 84
+frames = 11
+duration = 0.5
+flippable = true
+
+[tank_attack]
+file = "tank.png"
+subrect = [0, 84, 462, 84]
+width = 42
+height = 84
+frames = 11
+duration = 0.5
+flippable = true
+
 [noise]
 file = "noise.png"
 width = 32

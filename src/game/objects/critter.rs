@@ -25,8 +25,15 @@ pub struct Critter {
     /// Object flagged for destruction
     destroyed: bool,
 
+    /// If false, touch ground callback will be called when critter touches water
+    waterproof: bool,
+
     /// Walking direction (0 for no walk)
-    walking: i32,
+    walking: i8,
+
+    /// Direction to face if not currently walking (applies to flippable sprites)
+    /// If zero, phys.vel.0 is used
+    facing: i8,
 
     /// How many seconds to take one step
     walkspeed: f32,
@@ -69,8 +76,13 @@ impl mlua::UserData for Critter {
             Ok(())
         });
         fields.add_field_method_get("walking", |_, this| Ok(this.walking));
-        fields.add_field_method_set("walking", |_, this, dir: i32| {
+        fields.add_field_method_set("walking", |_, this, dir: i8| {
             this.walking = dir;
+            Ok(())
+        });
+        fields.add_field_method_get("facing", |_, this| Ok(this.facing));
+        fields.add_field_method_set("facing", |_, this, dir: i8| {
+            this.facing = dir;
             Ok(())
         });
         fields.add_field_method_get("rope_attached", |_, this| Ok(this.rope.is_some()));
@@ -150,7 +162,9 @@ impl mlua::FromLua for Critter {
                 },
                 id: unsafe { LAST_CRITTER_ID },
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),
-                walking: table.get::<Option<i32>>("walking")?.unwrap_or(0),
+                waterproof: table.get::<Option<bool>>("waterproof")?.unwrap_or(true),
+                walking: table.get::<Option<i8>>("walking")?.unwrap_or(0),
+                facing: 0,
                 walkspeed: table.get::<Option<f32>>("walkspeed")?.unwrap_or(0.03),
                 step_timer: 0.0,
                 rope: None,
@@ -233,12 +247,12 @@ impl Critter {
             rope.physics_step(&mut critter.phys);
         }
 
-        if terrain::is_solid(ter)
+        if (terrain::is_solid(ter) || (terrain::is_water(ter) && !critter.waterproof))
             && let Some(callback) = critter.on_touch_ground.clone()
         {
-            if let Err(err) =
-                lua.scope(|scope| callback.call::<()>(scope.create_userdata_ref_mut(&mut critter)?))
-            {
+            if let Err(err) = lua.scope(|scope| {
+                callback.call::<()>((scope.create_userdata_ref_mut(&mut critter)?, ter))
+            }) {
                 log::error!("Critter on_touch_ground: {err}");
                 critter.timer = None;
             }
@@ -290,6 +304,16 @@ impl Critter {
         critter
     }
 
+    fn need_flip_tex(&self) -> bool {
+        if self.walking != 0 {
+            self.walking < 0
+        } else if self.facing != 0 {
+            self.facing < 0
+        } else {
+            self.phys.vel.0 < 0.0
+        }
+    }
+
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
         if let Some(rope) = &self.rope {
             rope.render(self.phys.pos, renderer, camera_pos);
@@ -297,7 +321,7 @@ impl Critter {
 
         let mut options = RenderOptions {
             dest: RenderDest::Centered(self.phys.pos - camera_pos),
-            mode: if self.texture.id().flippable() && (self.phys.vel.0 < 0.0 || self.walking < 0) {
+            mode: if self.texture.id().flippable() && self.need_flip_tex() {
                 RenderMode::Mirrored
             } else {
                 RenderMode::Normal

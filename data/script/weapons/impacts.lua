@@ -113,4 +113,19 @@ function impacts.missile(this, terrain, ship)
 	})
 end
 
+-- Mini missiles are small (possibly homing) missiles that are typically
+-- launched in great numbers do don't do much damage on their own
+function impacts.minimissile(this, terrain, ship)
+	this:destroy()
+	game.effect("MakeBigHole", { pos = this.pos, r = 5 })
+	game.effect("AddParticle", {
+		pos = this.pos,
+		texture = textures.get("bigboom"),
+	})
+
+	if ship ~= nil then
+		ship:damage(5)
+	end
+end
+
 return impacts

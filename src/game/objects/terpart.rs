@@ -117,8 +117,7 @@ impl TerrainParticle {
         timestep: f32,
     ) -> Option<(Vec2, Terrain, Color)> {
         let jitter = (-0.5 + fastrand::f32()) * 0.5;
-        self.phys
-            .add_impulse(Vec2((windspeed / 10.0 + jitter), 0.0));
+        self.phys.add_impulse(Vec2(windspeed / 10.0 + jitter, 0.0));
         let ter = self.phys.step(level, timestep);
 
         if ter != 0 {

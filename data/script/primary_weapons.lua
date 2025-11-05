@@ -1,4 +1,4 @@
-local bullets = require("bullets")
+local Impacts = require("weapons.impacts")
 
 local weapons = {}
 
@@ -12,7 +12,7 @@ function weapons.cannon(ship)
 		radius = 5,
 		owner = ship.player,
 		texture = textures.get("pewpew"),
-		on_impact = bullets.bullet,
+		on_impact = Impacts.bullet,
 	})
 end
 
