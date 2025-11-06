@@ -4,6 +4,7 @@ local Drone = require("critters.drone")
 local Tank = require("critters.tank")
 local Mines = require("weapons.mines")
 local Rockets = require("weapons.rockets")
+local Gravmine = require("weapons.gravmine")
 
 local weapons = {}
 
@@ -134,6 +135,12 @@ function weapons.ghostship(ship)
 				return 0.1
 			end
 		end)
+	end
+end
+
+function weapons.gravmine(ship)
+	if ship:consume_ammo(20, 2.0) then
+		Gravmine.create(ship.pos)
 	end
 end
 

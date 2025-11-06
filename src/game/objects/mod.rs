@@ -15,6 +15,7 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 mod critter;
+mod fixedobj;
 mod objarray;
 mod particle;
 mod physicalobj;
@@ -24,6 +25,7 @@ mod ship;
 mod terpart;
 
 pub use critter::*;
+pub use fixedobj::*;
 pub use objarray::*;
 pub use particle::*;
 pub use physicalobj::*;

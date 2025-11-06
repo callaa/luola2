@@ -24,7 +24,7 @@ use crate::{
         PlayerId,
         hud::draw_hud,
         level::{LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
-        objects::{Critter, GameObjectArray, TerrainParticle},
+        objects::{Critter, FixedObject, GameObjectArray, TerrainParticle},
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
     math::{Rect, Vec2},
@@ -44,6 +44,7 @@ pub enum WorldEffect {
     AddMine(Projectile),
     AddParticle(Particle),
     AddTerrainParticle(TerrainParticle),
+    AddFixedObject(FixedObject),
     AddPixel(Vec2, Terrain, Color),
     ColorPixel(Vec2, Color),
     MakeBulletHole(Vec2),
@@ -94,10 +95,12 @@ pub struct World {
     /// Terrain particle (e.g. snow and dust)
     terrainparticles: GameObjectArray<TerrainParticle>,
 
-    // particles that interact with terrain only
     /// Decorative particles with no interactions with anything.
     /// No need to double buffer these, since they don't do anything except get drawn on screen.
     particles: GameObjectArray<Particle>, // decorative particles with no interactions at all
+
+    /// Game objects that are fixed in place (or move via script actions only)
+    fixedobjects: Rc<RefCell<GameObjectArray<FixedObject>>>,
 
     /// Actual windspeed
     windspeed: f32,
@@ -138,6 +141,7 @@ impl World {
         let ships = Rc::new(RefCell::new(GameObjectArray::new()));
         let mines = Rc::new(RefCell::new(GameObjectArray::new()));
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
+        let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
 
         scripting.init_game(
             level.clone(),
@@ -163,6 +167,7 @@ impl World {
             critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
             terrainparticles: GameObjectArray::new(),
             particles: GameObjectArray::new(),
+            fixedobjects,
             windspeed: 0.0,
             wind_timer: 0.0,
             windspeed_target: 0.0,
@@ -207,6 +212,11 @@ impl World {
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
                 WorldEffect::AddTerrainParticle(p) => self.terrainparticles.push(p),
+                WorldEffect::AddFixedObject(o) => {
+                    let mut objs = self.fixedobjects.borrow_mut();
+                    objs.push(o);
+                    objs.sort();
+                }
                 WorldEffect::ColorPixel(pos, color) => {
                     level_editor.color_point(pos, color);
                 }
@@ -316,6 +326,18 @@ impl World {
 
         self.particles.sort();
 
+        // Fixed object simulation step
+        {
+            let mut any_destroyed = false;
+            let mut objects = self.fixedobjects.borrow_mut();
+            for o in objects.iter_mut() {
+                o.step_mut(self.scripting.lua(), timestep);
+                any_destroyed |= o.is_destroyed();
+            }
+            if any_destroyed {
+                objects.sort();
+            }
+        }
         drop(level);
 
         //
@@ -519,6 +541,10 @@ impl World {
             // World objects
             let left = camera_rect.x();
             let right = camera_rect.right();
+
+            for o in self.fixedobjects.borrow().range_slice(left, right) {
+                o.render(renderer, camera_pos);
+            }
 
             for particle in self.particles.range_slice(left, right) {
                 particle.render(renderer, camera_pos);

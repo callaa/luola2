@@ -126,6 +126,11 @@ luola_secondary_weapons = {
 		fire_func = sweapons.landmine,
 		description = "A remote detonable directional charge that can be placed on hard terrain.",
 	},
+	gravmine = {
+		title = "Gravity mine",
+		fire_func = sweapons.gravmine,
+		description = "Generates a short-lived artificial gravity well far deeper than the device's own mass-energy would permit according to classical physics.",
+	},
 	drone = {
 		title = "Drones",
 		fire_func = sweapons.drone,

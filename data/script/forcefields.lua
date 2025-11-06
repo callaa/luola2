@@ -1,15 +1,13 @@
 local Level = require("utils.level")
+local UniqID = require("utils.uniqid")
 
-local Forcefields = {
-	LAST_ID = 0,
-}
+local Forcefields = {}
 
 function Forcefields.add(ff)
 	if ff.id == nil then
-		Forcefields.LAST_ID = Forcefields.LAST_ID + 1
-		ff.id = Forcefields.LAST_ID
-		game.effect("UpdateForcefield", ff)
+		ff.id = UniqID.new()
 	end
+	game.effect("UpdateForcefield", ff)
 	return ff.id
 end
 

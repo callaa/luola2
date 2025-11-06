@@ -28,7 +28,7 @@ use crate::fs::find_datafile_path;
 use crate::game::PlayerId;
 use crate::game::level::{Forcefield, Level};
 use crate::game::objects::{
-    Critter, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
+    Critter, FixedObject, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
 use crate::gfx::{Color, Renderer};
@@ -263,6 +263,9 @@ impl ScriptEnvironment {
                         }
                         b"RemoveForcefield" => {
                             WorldEffect::RemoveForcefield(i32::from_lua(props, lua)?)
+                        }
+                        b"AddFixedObject" => {
+                            WorldEffect::AddFixedObject(FixedObject::from_lua(props, lua)?)
                         }
                         b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
                         unknown => {
