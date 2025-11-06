@@ -4,7 +4,7 @@ local Drone = require("critters.drone")
 local Tank = require("critters.tank")
 local Mines = require("weapons.mines")
 local Rockets = require("weapons.rockets")
-local Gravmine = require("weapons.gravmine")
+local Grav = require("weapons.grav")
 
 local weapons = {}
 
@@ -141,6 +141,15 @@ end
 function weapons.gravmine(ship)
 	if ship:consume_ammo(20, 2.0) then
 		Gravmine.create(ship.pos)
+	end
+end
+
+function weapons.shield(ship)
+	ship.secondary_weapon_cooldown = 0.2
+	if ship.state.forcefield ~= nil then
+		Grav.deactivate_shield(ship)
+	elseif ship.ammo > 1 then
+		Grav.activate_shield(ship)
 	end
 end
 

@@ -151,4 +151,9 @@ luola_secondary_weapons = {
 		fire_func = sweapons.ghostship,
 		description = "A quantum mechanical device that alters the natural probability field around the ship, allowing it to pass through solid ground.",
 	},
+	shield = {
+		title = "Shield",
+		fire_func = sweapons.shield,
+		description = "A grav-tech deflector shield that offers up to 99% protection against incoming fire.",
+	}
 }

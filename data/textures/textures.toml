@@ -132,6 +132,9 @@ frames = 11
 duration = 0.5
 flippable = true
 
+[shield]
+file = "shield.png"
+
 [noise]
 file = "noise.png"
 width = 32
