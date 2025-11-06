@@ -146,6 +146,7 @@ impl mlua::UserData for Vec2 {
 impl mlua::FromLua for Vec2 {
     fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
         match value {
+            mlua::Value::Table(t) => Ok(Vec2(t.get(1)?, t.get(2)?)),
             mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),

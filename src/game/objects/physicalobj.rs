@@ -66,7 +66,7 @@ impl PhysicalObject {
 
         let vv = self.vel.dot(self.vel);
 
-        let a =
+        let mut a =
             // Gravity
             Vec2(0.0, g)
             // Air/water resistance (capped so we don't bounce when entering water)
@@ -74,6 +74,27 @@ impl PhysicalObject {
             // Buoyancy
             - Vec2(0.0, g * (density * self.drag))
             ;
+
+        // Force fields
+        for ff in &level.forcefields {
+            if ff.bounds.contains(self.pos) {
+                a = a + ff.uniform_force * SCALE_FACTOR;
+
+                if ff.point_force != 0.0 {
+                    let point = ff.bounds.center();
+                    let delta = point - self.pos;
+                    let dist = delta.dot(delta).sqrt();
+                    if dist > 3.0 {
+                        let normal = delta / dist;
+
+                        // Make the gravity field less realistic and more fun.
+                        let fudged_dist = 2.0 * dist / ff.bounds.w() + 1.0;
+                        let force = ff.point_force / fudged_dist.powf(1.5);
+                        a = a + normal * (force * SCALE_FACTOR);
+                    }
+                }
+            }
+        }
 
         // Euler integration works well enough here
         self.vel = self.vel + a * timestep;

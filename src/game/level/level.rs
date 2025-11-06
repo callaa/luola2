@@ -28,6 +28,7 @@ use anyhow::{Result, anyhow};
 use either::Either;
 use fastrand;
 use log::error;
+use mlua;
 use sdl3_sys::pixels::SDL_PIXELFORMAT_ARGB8888;
 
 pub const LEVEL_SCALE: f32 = 3.0; // Scaling factor: 1 level pixel equals this many world coordinates
@@ -39,8 +40,8 @@ pub const TILE_LENGTH: usize = (TILE_SIZE * TILE_SIZE) as usize;
  * allows us to skip certain checks in certain cases.
  *
  *  - Any subtractive level effect need only apply to Destructible tiles.
- *  - Collision checks can be skipped entirely for FreeSpace tiles.
- *  - FreeSpace and Indestructible tiles may turn into Destructible tiles if
+ *  - Collision checks can be skipped entirely for FreeSpace and Water tiles.
+ *  - FreeSpace, Water and Indestructible tiles may turn into Destructible tiles if
  *    an additive level effect is applied.
  */
 pub(super) enum TileContentHint {
@@ -54,6 +55,22 @@ pub(super) struct TerrainTile {
     pub terrain: [terrain::Terrain; TILE_LENGTH], // used for collision checks
     pub artwork: [u32; TILE_LENGTH],              // used to update the artwork texture
     pub content_hint: TileContentHint,            // optimization hint
+}
+
+#[derive(Clone, Debug)]
+pub struct Forcefield {
+    /// The area (in world coordinates) of the field
+    pub bounds: RectF,
+
+    /// A uniform force applied to physical objects inside the field
+    pub uniform_force: Vec2,
+
+    /// Attractive or repulsive point force in the center of the field
+    /// that falls off with distance in a physically inaccurate way.
+    pub point_force: f32,
+
+    /// ID value for updating the field after it's been created
+    pub id: i32,
 }
 
 /**
@@ -72,8 +89,28 @@ pub struct Level {
     tiles_wide: i32, // width in tiles
     tiles_high: i32, // height in tiles
 
+    pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
     pub snow_color: u32,  // pixel value used when creating snow
+}
+
+impl mlua::FromLua for Forcefield {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        if let mlua::Value::Table(table) = value {
+            Ok(Self {
+                bounds: table.get("bounds")?,
+                uniform_force: table.get::<Option<Vec2>>("uniform")?.unwrap_or_default(),
+                point_force: table.get::<Option<f32>>("point")?.unwrap_or_default(),
+                id: table.get("id")?,
+            })
+        } else {
+            Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "Projectile".to_owned(),
+                message: Some("expected a table describing a projectile".to_string()),
+            })
+        }
+    }
 }
 
 impl Level {
@@ -197,6 +234,7 @@ impl Level {
             height,
             tiles_wide,
             tiles_high,
+            forcefields: Vec::new(),
             water_color,
             snow_color,
         })
@@ -333,6 +371,25 @@ impl Level {
         }
 
         Either::Right(last_non_solid)
+    }
+
+    /// Remove the force field with the given ID
+    pub fn remove_forcefield(&mut self, id: i32) {
+        if let Some(idx) = self.forcefields.iter().position(|f| f.id == id) {
+            self.forcefields.swap_remove(idx);
+        }
+    }
+
+    /// Update a force field. If the field does not exist yet, it will be created
+    pub fn update_forcefield(&mut self, ff: &Forcefield) {
+        for f in self.forcefields.iter_mut() {
+            if f.id == ff.id {
+                *f = ff.clone();
+                return;
+            }
+        }
+
+        self.forcefields.push(ff.clone());
     }
 
     /// Return a rectangle centered on the given point and clamped to the level bounds

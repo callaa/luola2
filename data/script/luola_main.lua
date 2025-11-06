@@ -12,6 +12,7 @@ local Bird = require("critters.bird")
 local Fish = require("critters.fish")
 local Spider = require("critters.spider")
 local Snowfall = require("snowfall")
+local Forcefields = require("forcefields")
 
 -- Main entrypoint
 -- This is called when initializing the game for a new round.
@@ -49,6 +50,9 @@ function luola_init_level(settings)
 	end
 	if settings["random-spiders"] ~= nil then
 		Spider.create_random(settings["random-spiders"])
+	end
+	if settings["forcefields"] ~= nil then
+		Forcefields.add_from_config(settings["forcefields"])
 	end
 
 	if settings["snowfall"] == true then

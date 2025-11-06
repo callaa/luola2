@@ -32,7 +32,7 @@ use crate::{
 
 use super::{
     controller::GameController,
-    level::{Level, LevelEditor},
+    level::{Forcefield, Level, LevelEditor},
     objects::{GameObject, Particle, Projectile, Ship},
     scripting::ScriptEnvironment,
 };
@@ -49,6 +49,8 @@ pub enum WorldEffect {
     MakeBulletHole(Vec2),
     MakeBigHole(Vec2, i32),
     AddCritter(Critter),
+    UpdateForcefield(Forcefield),
+    RemoveForcefield(i32),
     EndRound(PlayerId),
 }
 
@@ -220,6 +222,8 @@ impl World {
                 WorldEffect::AddCritter(critter) => {
                     self.critters.borrow_mut().push(critter);
                 }
+                WorldEffect::UpdateForcefield(ff) => level_editor.update_forcefield(&ff),
+                WorldEffect::RemoveForcefield(id) => level_editor.remove_forcefield(id),
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }

@@ -26,7 +26,7 @@ use mlua::{
 
 use crate::fs::find_datafile_path;
 use crate::game::PlayerId;
-use crate::game::level::Level;
+use crate::game::level::{Forcefield, Level};
 use crate::game::objects::{
     Critter, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
 };
@@ -258,8 +258,20 @@ impl ScriptEnvironment {
                         }
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
                         b"AddCritter" => WorldEffect::AddCritter(Critter::from_lua(props, lua)?),
+                        b"UpdateForcefield" => {
+                            WorldEffect::UpdateForcefield(Forcefield::from_lua(props, lua)?)
+                        }
+                        b"RemoveForcefield" => {
+                            WorldEffect::RemoveForcefield(i32::from_lua(props, lua)?)
+                        }
                         b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
-                        unknown => return Err(anyhow!("Unknown effect type: {:?}", unknown).into()),
+                        unknown => {
+                            return Err(anyhow!(
+                                "Unknown effect type: {}",
+                                str::from_utf8(unknown).unwrap()
+                            )
+                            .into());
+                        }
                     };
 
                     efacc.borrow_mut().push(effect);

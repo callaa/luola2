@@ -19,7 +19,7 @@ use std::collections::HashSet;
 use crate::{
     game::{
         level::{
-            LEVEL_SCALE, TILE_SIZE, TileContentHint,
+            Forcefield, LEVEL_SCALE, TILE_SIZE, TileContentHint,
             rectiter::MutableRectIterator,
             terrain::{self, TER_BIT_WATER, Terrain},
         },
@@ -44,6 +44,14 @@ impl<'a> LevelEditor<'a> {
             level,
             dirty_set: HashSet::new(),
         }
+    }
+
+    pub fn update_forcefield(&mut self, ff: &Forcefield) {
+        self.level.update_forcefield(ff);
+    }
+
+    pub fn remove_forcefield(&mut self, id: i32) {
+        self.level.remove_forcefield(id);
     }
 
     /**

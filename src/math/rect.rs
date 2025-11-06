@@ -30,11 +30,18 @@ pub struct Rect(pub(super) SDL_Rect);
 
 impl fmt::Display for RectF {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "({}, {} : {}x{})",
-            self.0.x, self.0.y, self.0.w, self.0.h
-        )
+        write!(f, "({}, {}, {}x{})", self.0.x, self.0.y, self.0.w, self.0.h)
+    }
+}
+
+impl fmt::Debug for RectF {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RectF")
+            .field("x", &self.0.x)
+            .field("y", &self.0.y)
+            .field("w", &self.0.w)
+            .field("h", &self.0.h)
+            .finish()
     }
 }
 
@@ -119,10 +126,10 @@ impl RectF {
 
     /// Check if the given point is inside this rectangle
     pub fn contains(&self, point: Vec2) -> bool {
-        self.0.x <= point.0
-            && self.0.x + self.0.w < point.0
-            && self.0.y <= point.1
-            && self.0.y + self.0.h < point.1
+        point.0 >= self.x()
+            && point.0 < self.right()
+            && point.1 >= self.y()
+            && point.1 < self.bottom()
     }
 }
 
