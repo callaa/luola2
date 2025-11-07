@@ -78,6 +78,22 @@ function luola_explosive_terrain(x, y)
 	end
 end
 
+-- Splash handler is called when an object enters/exits water
+function luola_splash(pos, vel, imass)
+	local mag = vel:magnitude()
+	if mag > 120 then
+		for a = 0, 360, 10 do
+			game.effect("AddTerrainParticle", {
+				pos = pos + Vec2_for_angle(a, 6),
+				vel = Vec2_for_angle(a, 300.0),
+				color = game.water_color,
+				imass = 1,
+				drag = 0.002,
+			})
+		end
+	end
+end
+
 -- Game object timer callback
 function luola_on_object_timer(obj, timestep)
 	return obj.state.scheduler:service(obj, timestep)

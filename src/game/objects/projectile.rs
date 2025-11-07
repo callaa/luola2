@@ -194,7 +194,7 @@ impl Projectile {
     }
 
     pub fn step_mut(&mut self, level: &Level, lua: &mlua::Lua, timestep: f32) {
-        let ter = self.phys.step(level, timestep);
+        let (_, ter) = self.phys.step(level, timestep);
 
         if terrain::is_solid(ter) {
             self.impact(ter, None, lua);

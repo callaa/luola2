@@ -123,6 +123,7 @@ impl ScriptEnvironment {
         api.set("level_width", level.borrow().width())?;
         api.set("level_height", level.borrow().height())?;
         api.set("snow_color", level.borrow().snow_color)?;
+        api.set("water_color", level.borrow().water_color)?;
 
         api.set(
             "player_color",

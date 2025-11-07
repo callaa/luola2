@@ -118,9 +118,9 @@ impl TerrainParticle {
     ) -> Option<(Vec2, Terrain, Color)> {
         let jitter = (-0.5 + fastrand::f32()) * 0.5;
         self.phys.add_impulse(Vec2(windspeed / 10.0 + jitter, 0.0));
-        let ter = self.phys.step(level, timestep);
+        let (_, ter) = self.phys.step(level, timestep);
 
-        if ter != 0 {
+        if !terrain::is_space(ter) {
             self.destroyed = true;
 
             if self.terrain != 0 || self.stain {

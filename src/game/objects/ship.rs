@@ -355,7 +355,7 @@ impl Ship {
 
         let impact_speed_squared = ship.phys.vel.magnitude_squared();
 
-        let ter = ship.phys.step(level, timestep);
+        let (prev_ter, ter) = ship.phys.step(level, timestep);
 
         if ship.engine_active
             && let Some(func) = self.on_thrust.as_ref()
@@ -372,6 +372,21 @@ impl Ship {
 
         if ship.damage_effect > 0.0 {
             ship.damage_effect -= timestep;
+        }
+
+        if terrain::is_underwater(prev_ter) != terrain::is_underwater(ter) {
+            // Water/air transition
+            match lua.globals().get::<Function>("luola_splash") {
+                Ok(func) => {
+                    if let Err(err) = func.call::<()>((ship.pos(), ship.phys.vel, ship.phys.imass))
+                    {
+                        error!("luola_spash error: {err}");
+                    }
+                }
+                Err(err) => {
+                    error!("Couldn't get splash function: {err}");
+                }
+            }
         }
 
         if terrain::is_base(ter) {

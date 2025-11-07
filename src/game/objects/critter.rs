@@ -241,7 +241,7 @@ impl Critter {
     pub fn step(&self, level: &Level, lua: &mlua::Lua, timestep: f32) -> Self {
         let mut critter = self.clone();
 
-        let ter = critter.phys.step(level, timestep);
+        let (_, ter) = critter.phys.step(level, timestep);
 
         if let Some(rope) = &self.rope {
             rope.physics_step(&mut critter.phys);

@@ -53,8 +53,9 @@ impl PhysicalObject {
      * Perform a physics simulation step.
      *
      */
-    pub fn step(&mut self, level: &Level, timestep: f32) -> terrain::Terrain {
-        let is_water = terrain::is_water(level.terrain_at(self.pos));
+    pub fn step(&mut self, level: &Level, timestep: f32) -> (terrain::Terrain, terrain::Terrain) {
+        let old_terrain = level.terrain_at(self.pos);
+        let is_water = terrain::is_water(old_terrain);
 
         let density = if is_water { 60.0 } else { 1.2 };
 
@@ -102,70 +103,74 @@ impl PhysicalObject {
         let new_pos = self.pos + self.vel * timestep;
 
         // Object already embedded in ground?
-        let embedded = level.terrain_at(self.pos);
-        if terrain::is_solid(embedded) && !self.terrain_collision_mode.is_none() {
+        if terrain::is_solid(old_terrain) && !self.terrain_collision_mode.is_none() {
             self.vel = Vec2::ZERO;
-            embedded
+            (old_terrain, old_terrain)
         } else {
             // Terrain collision detection treats the object as a point particle
             // because that's good enough for this game.
-            match self.terrain_collision_mode {
-                TerrainCollisionMode::Exact => match level.terrain_line(LineF(self.pos, new_pos)) {
-                    Either::Left((t, exact_pos)) => {
-                        self.vel = Vec2::ZERO;
-                        self.pos = exact_pos;
-                        t
-                    }
-                    Either::Right(t) => {
-                        self.pos = new_pos;
-                        t
-                    }
-                },
-                TerrainCollisionMode::Simple => {
-                    let t = level.terrain_at(new_pos);
-                    if terrain::is_solid(t) {
-                        if terrain::is_ice(t) {
-                            // TODO we could check the terrain slope at new_pos
-                            // and have the ship slide uphill depending on
-                            // its vector, but this simple horizontal sliding
-                            // works pretty well even on its own.
-                            let newvel = Vec2(self.vel.0, 0.0);
-                            let new_pos = self.pos + newvel * timestep;
-                            if !terrain::is_solid(level.terrain_at(new_pos)) {
-                                self.vel = newvel;
+            (
+                old_terrain,
+                match self.terrain_collision_mode {
+                    TerrainCollisionMode::Exact => {
+                        match level.terrain_line(LineF(self.pos, new_pos)) {
+                            Either::Left((t, exact_pos)) => {
+                                self.vel = Vec2::ZERO;
+                                self.pos = exact_pos;
+                                t
+                            }
+                            Either::Right(t) => {
                                 self.pos = new_pos;
+                                t
+                            }
+                        }
+                    }
+                    TerrainCollisionMode::Simple => {
+                        let t = level.terrain_at(new_pos);
+                        if terrain::is_solid(t) {
+                            if terrain::is_ice(t) {
+                                // TODO we could check the terrain slope at new_pos
+                                // and have the ship slide uphill depending on
+                                // its vector, but this simple horizontal sliding
+                                // works pretty well even on its own.
+                                let newvel = Vec2(self.vel.0, 0.0);
+                                let new_pos = self.pos + newvel * timestep;
+                                if !terrain::is_solid(level.terrain_at(new_pos)) {
+                                    self.vel = newvel;
+                                    self.pos = new_pos;
+                                } else {
+                                    self.vel = Vec2::ZERO;
+                                }
                             } else {
+                                // Regular non-slippery terrain
                                 self.vel = Vec2::ZERO;
                             }
                         } else {
-                            // Regular non-slippery terrain
-                            self.vel = Vec2::ZERO;
+                            self.pos = new_pos;
                         }
-                    } else {
-                        self.pos = new_pos;
-                    }
-                    t
-                }
-                TerrainCollisionMode::Passthrough => {
-                    let t = level.terrain_at(new_pos);
-                    if terrain::is_level_boundary(t) {
-                        self.vel = Vec2::ZERO;
-                    } else {
-                        self.pos = new_pos;
-                    }
-                    t
-                }
-                TerrainCollisionMode::None => {
-                    let t = level.terrain_at(new_pos);
-                    if terrain::is_level_boundary(t) {
-                        self.vel = Vec2::ZERO;
                         t
-                    } else {
-                        self.pos = new_pos;
-                        0
                     }
-                }
-            }
+                    TerrainCollisionMode::Passthrough => {
+                        let t = level.terrain_at(new_pos);
+                        if terrain::is_level_boundary(t) {
+                            self.vel = Vec2::ZERO;
+                        } else {
+                            self.pos = new_pos;
+                        }
+                        t
+                    }
+                    TerrainCollisionMode::None => {
+                        let t = level.terrain_at(new_pos);
+                        if terrain::is_level_boundary(t) {
+                            self.vel = Vec2::ZERO;
+                            t
+                        } else {
+                            self.pos = new_pos;
+                            0
+                        }
+                    }
+                },
+            )
         }
     }
 
