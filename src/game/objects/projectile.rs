@@ -71,6 +71,7 @@ impl mlua::FromLua for Projectile {
                     match mode.as_bytes().deref() {
                         b"exact" => TerrainCollisionMode::Exact,
                         b"simple" => TerrainCollisionMode::Simple,
+                        b"passthrough" => TerrainCollisionMode::Passthrough,
                         _ => {
                             return Err(mlua::Error::FromLuaConversionError {
                                 from: "string",

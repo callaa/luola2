@@ -10,11 +10,10 @@ function Grav.create_gravmine(pos)
 		texture = textures.get("dot8x8"), -- TODO nicer texture
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new()
-				:add(1, Grav._activate_mine)
-				:add(30, function(obj)
-					obj:destroy()
-				end),a
+			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(30, function(obj)
+				obj:destroy()
+			end),
+			a,
 		},
 		on_destroy = Grav._on_destroy,
 		timer = 1,
@@ -23,7 +22,7 @@ end
 
 function Grav._activate_mine(obj)
 	obj.state.forcefield = Forcefields.add({
-		bounds = {obj.pos.x - 400, obj.pos.y - 400, 800, 800},
+		bounds = { obj.pos.x - 400, obj.pos.y - 400, 800, 800 },
 		point = 60,
 	})
 end
@@ -44,7 +43,6 @@ function Grav.deactivate_shield(ship)
 	game.effect("RemoveForcefield", ship.state.forcefield)
 	ship.state.forcefield = nil
 end
-
 
 function Grav._consume_shield_energy(ship)
 	if ship.state.forcefield ~= nil then
@@ -67,7 +65,7 @@ function Grav._update_shield(ship)
 	end
 	Forcefields.update({
 		id = ship.state.forcefield,
-		bounds = {ship.pos.x - 100, ship.pos.y - 100, 200, 200},
+		bounds = { ship.pos.x - 100, ship.pos.y - 100, 200, 200 },
 		point = -500,
 	})
 	game.effect("AddParticle", {

@@ -65,6 +65,16 @@ pub fn is_high_explosive(t: Terrain) -> bool {
     t & TER_MASK_SOLID == TER_TYPE_HIGH_EXPLOSIVE
 }
 
+/// Is this burnable terrain
+pub fn is_burnable(t: Terrain) -> bool {
+    t & TER_TYPE_CINDER >= TER_TYPE_BURNABLE
+}
+
+/// Is this burnable terrain that turns into cinder
+pub fn is_cinder(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_CINDER
+}
+
 /// Is this ice/snow?
 /// Ships will slide on icy surfaces
 pub fn is_ice(t: Terrain) -> bool {

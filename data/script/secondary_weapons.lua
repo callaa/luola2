@@ -153,4 +153,68 @@ function weapons.shield(ship)
 	end
 end
 
+function weapons.foam_grenade(ship)
+	if ship:consume_ammo(10, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("dot8x8"),
+			color = 0xffbc990f,
+			on_impact = Impacts.foam_grenade,
+		})
+	end
+end
+
+function weapons.greygoo(ship)
+	if ship:consume_ammo(10, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("dot8x8"),
+			color = 0xffcccccc,
+			on_impact = Impacts.greygoo,
+		})
+	end
+end
+
+function weapons.freezer(ship)
+	if ship:consume_ammo(10, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("dot8x8"),
+			color = 0xffb7f5fc,
+			on_impact = Impacts.freezer,
+		})
+	end
+end
+
+function weapons.nitroglycerin(ship)
+	if ship:consume_ammo(10, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 300,
+			radius = 5,
+			drag = 0.0025,
+			owner = ship.player,
+			texture = textures.get("dot8x8"),
+			color = 0xfffc2292,
+			on_impact = Impacts.nitroglycerin,
+		})
+	end
+end
+
 return weapons

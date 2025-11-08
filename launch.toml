@@ -8,19 +8,19 @@ rounds = 10
 #gameover = true # skip straight to game-over screen
 
 # prefill history for past rounds
-winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
+#winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
 
 [[player]]
 controller = 1
 ship = "vwing"
-weapon = "tank"
+weapon = "nitroglycerin"
 
 [[player]]
 controller = 2
 ship = "vwing"
-weapon = "rocket"
+weapon = "greygoo"
 
-[[player]]
-controller = 3
-ship = "vwing"
-weapon = "grenade"
+#[[player]]
+#controller = 3
+#ship = "vwing"
+#weapon = "grenade"

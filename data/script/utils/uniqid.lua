@@ -1,5 +1,5 @@
 local UniqID = {
-	LAST_ID = 0
+	LAST_ID = 0,
 }
 
 function UniqID.new()

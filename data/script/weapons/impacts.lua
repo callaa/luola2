@@ -1,5 +1,6 @@
 -- This file contains code for bullet impact functions.
 local tableutils = require("utils.table")
+local Scheduler = require("utils.scheduler")
 
 local impacts = {}
 
@@ -16,6 +17,40 @@ function impacts.make_shrapnell(count, pos, template)
 				vel = Vec2_for_angle(a, 1000.0),
 			})
 		)
+	end
+end
+
+-- Create firestarter bullets
+-- these are short-lived projectiles that pass through ground and only interact with
+-- combustible terrain to start fires
+function impacts.make_firestarters(count, pos)
+	local tex = textures.get("dot3x3")
+
+	for a = 0, 360, (360 / count) do
+		game.effect("AddBullet", {
+			pos = pos + Vec2_for_angle(a, 3.0),
+			vel = Vec2_for_angle(a, 1000.0),
+			terrain_collision = "passthrough",
+			color = 0,
+			texture = tex,
+			on_impact = impacts.firestarter,
+			state = {
+				scheduler = Scheduler:new():add(0.3, function(p)
+					p:destroy()
+				end),
+			},
+			timer = 0.3,
+		})
+	end
+end
+
+function impacts.firestarter(this, terrain, ship)
+	if terrain == 0x42 or terrain == 0x43 then
+		this:destroy()
+		game.effect("AddDynamicTerrain", {
+			pos = this.pos,
+			type = "Fire",
+		})
 	end
 end
 
@@ -51,6 +86,8 @@ function impacts.grenade(this, terrain, ship)
 		texture = textures.get("pewpew"),
 		on_impact = impacts.bullet,
 	})
+
+	impacts.make_firestarters(8, this.pos)
 end
 
 -- Special weapon Megabomb
@@ -72,6 +109,8 @@ function impacts.megabomb(this, terrain, ship)
 		texture = textures.get("pewpew"),
 		on_impact = impacts.grenade,
 	})
+
+	impacts.make_firestarters(8, this.pos)
 end
 
 -- Special weapon Rocket (should be slightly less powerful than a megabomb)
@@ -91,6 +130,7 @@ function impacts.rocket(this, terrain, ship)
 		texture = textures.get("pewpew"),
 		on_impact = impacts.grenade,
 	})
+	impacts.make_firestarters(8, this.pos)
 end
 
 -- Special weapon Homing Missile (should be less powerful than a rocket)
@@ -111,6 +151,7 @@ function impacts.missile(this, terrain, ship)
 		texture = textures.get("pewpew"),
 		on_impact = impacts.bullet,
 	})
+	impacts.make_firestarters(8, this.pos)
 end
 
 -- Mini missiles are small (possibly homing) missiles that are typically
@@ -126,6 +167,42 @@ function impacts.minimissile(this, terrain, ship)
 	if ship ~= nil then
 		ship:damage(5)
 	end
+	impacts.make_firestarters(3, this.pos)
+end
+
+function impacts.foam_grenade(this, terrain, ship)
+	this:destroy()
+	game.effect("AddDynamicTerrain", {
+		pos = this.pos,
+		type = "Foam",
+	})
+end
+
+function impacts.greygoo(this, terrain, ship)
+	this:destroy()
+	-- TODO damage ship on impact?
+	game.effect("AddDynamicTerrain", {
+		pos = this.pos,
+		type = "GreyGoo",
+	})
+end
+
+function impacts.freezer(this, terrain, ship)
+	this:destroy()
+	-- TODO freeze ship on impact
+	game.effect("AddDynamicTerrain", {
+		pos = this.pos,
+		type = "Freezer",
+	})
+end
+
+function impacts.nitroglycerin(this, terrain, ship)
+	this:destroy()
+	-- TODO doesn't do anything to ships but should turn critters explosive
+	game.effect("AddDynamicTerrain", {
+		pos = this.pos,
+		type = "Nitro",
+	})
 end
 
 return impacts

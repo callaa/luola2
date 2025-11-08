@@ -32,6 +32,7 @@ impl TerrainCollisionMode {
     pub fn is_none(&self) -> bool {
         match self {
             Self::None => true,
+            Self::Passthrough => true, // passthrough also counts as a "none" type mode
             _ => false,
         }
     }

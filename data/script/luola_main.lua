@@ -76,6 +76,8 @@ function luola_explosive_terrain(x, y)
 			on_impact = Impacts.bullet,
 		})
 	end
+
+	Impacts.make_firestarters(3, pos)
 end
 
 -- Splash handler is called when an object enters/exits water
@@ -171,5 +173,25 @@ luola_secondary_weapons = {
 		title = "Shield",
 		fire_func = sweapons.shield,
 		description = "A grav-tech deflector shield that offers up to 99% protection against incoming fire.",
-	}
+	},
+	foam = {
+		title = "Foam grenade",
+		fire_func = sweapons.foam_grenade,
+		description = "Originally developed as a firefighting tool, this weapon fires a glass sphere filled with pressurized foam that hardens in contact with air.",
+	},
+	greygoo = {
+		title = "Grey goo",
+		fire_func = sweapons.greygoo,
+		description = "Universal self replicating nano-disassemblers. Each individual nanite contains a limiter to prevent out-of-control spread.",
+	},
+	freezer = {
+		title = "Hailstone",
+		fire_func = sweapons.freezer,
+		description = "A glass sphere filled with liquid nitrogen. Can freeze a ship solid.",
+	},
+	nitroglycerin = {
+		title = "Nitro-ampule",
+		fire_func = sweapons.nitroglycerin,
+		description = "A glass sphere filled with nitroglyserin. The soaked ground may detonate if disturbed by a sufficiently large shock.",
+	},
 }

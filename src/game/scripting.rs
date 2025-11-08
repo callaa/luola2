@@ -26,7 +26,7 @@ use mlua::{
 
 use crate::fs::find_datafile_path;
 use crate::game::PlayerId;
-use crate::game::level::{Forcefield, Level};
+use crate::game::level::{DynamicTerrainCell, Forcefield, Level};
 use crate::game::objects::{
     Critter, FixedObject, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
 };
@@ -256,6 +256,13 @@ impl ScriptEnvironment {
                         b"AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
                         b"AddTerrainParticle" => {
                             WorldEffect::AddTerrainParticle(TerrainParticle::from_lua(props, lua)?)
+                        }
+                        b"AddDynamicTerrain" => {
+                            let table = props.as_table().ok_or(anyhow!("Expected table"))?;
+                            WorldEffect::AddDynamicTerrain(
+                                table.get("pos")?,
+                                DynamicTerrainCell::from_lua_table(&table)?,
+                            )
                         }
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
                         b"AddCritter" => WorldEffect::AddCritter(Critter::from_lua(props, lua)?),

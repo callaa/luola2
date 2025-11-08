@@ -20,8 +20,12 @@ use crate::{
     game::{
         level::{
             Forcefield, LEVEL_SCALE, TILE_SIZE, TileContentHint,
+            dynter::{DynamicTerrainCell, DynamicTerrainMap},
             rectiter::MutableRectIterator,
-            terrain::{self, TER_BIT_WATER, Terrain},
+            terrain::{
+                self, TER_BIT_DESTRUCTIBLE, TER_BIT_WATER, TER_MASK_SOLID, TER_TYPE_GROUND,
+                TER_TYPE_HIGH_EXPLOSIVE, TER_TYPE_ICE, Terrain,
+            },
         },
         objects::TerrainParticle,
         scripting::ScriptEnvironment,
@@ -35,13 +39,19 @@ use super::level::Level;
 
 pub struct LevelEditor<'a> {
     level: &'a mut Level,
+    water_color: u32,
+    snow_color: u32,
     dirty_set: HashSet<(i32, i32)>,
 }
 
 impl<'a> LevelEditor<'a> {
     pub fn new(level: &'a mut Level) -> Self {
+        let water_color = level.water_color;
+        let snow_color = level.snow_color;
         Self {
             level,
+            water_color,
+            snow_color,
             dirty_set: HashSet::new(),
         }
     }
@@ -74,8 +84,6 @@ impl<'a> LevelEditor<'a> {
         let rr = r * r;
 
         let hole_rect = Rect::new(center_x - r, center_y - r, r * 2, r * 2);
-
-        let water_color = self.level.water_color;
 
         for (i, j, tile) in self.level.tile_iterator_mut(hole_rect) {
             if let TileContentHint::Destructible = tile.content_hint {
@@ -148,7 +156,7 @@ impl<'a> LevelEditor<'a> {
                             }
 
                             if terrain::is_underwater(*ter) {
-                                *art = water_color;
+                                *art = self.water_color;
                             } else {
                                 *art = 0;
                             }
@@ -190,6 +198,34 @@ impl<'a> LevelEditor<'a> {
         self.dirty_set.insert((i, j));
     }
 
+    // Replace a point with a solid or an empty space.
+    // underwater bit is preserved.
+    fn replace_point_lc(&mut self, pos: (i32, i32), solid: Terrain, color: u32) {
+        debug_assert!((solid & !TER_MASK_SOLID) == 0);
+
+        if let Some((tile, offset, tilepos)) = self.level.tile_at_lc_mut(pos) {
+            if solid == 0 {
+                tile.terrain[offset] &= !(TER_BIT_DESTRUCTIBLE | TER_MASK_SOLID);
+                if terrain::is_underwater(tile.terrain[offset]) {
+                    tile.artwork[offset] = self.water_color;
+                } else {
+                    tile.artwork[offset] = color;
+                }
+            } else {
+                if terrain::is_underwater(tile.terrain[offset]) {
+                    tile.artwork[offset] = Color::from_argb_u32(color)
+                        .blend(Color::from_argb_u32(self.water_color).with_alpha(0.5))
+                        .as_argb_u32();
+                } else {
+                    tile.artwork[offset] = color;
+                }
+                tile.terrain[offset] =
+                    (tile.terrain[offset] & !TER_MASK_SOLID) | TER_BIT_DESTRUCTIBLE | solid;
+            };
+            self.dirty_set.insert(tilepos);
+        }
+    }
+
     /**
      * Add a terrain point. Change is performed only if there is not
      * already a solid pixel in the given position.
@@ -220,6 +256,222 @@ impl<'a> LevelEditor<'a> {
         }
     }
 
+    /// Add a new dynamic terrain cell
+    pub fn add_dynterrain(&mut self, pos: Vec2, dter: DynamicTerrainCell) {
+        if !dter.destroys_ground() || !terrain::is_indestructible_solid(self.level.terrain_at(pos))
+        {
+            let mut cells = self.level.dynterrain.take();
+            cells.insert(
+                ((pos.0 / LEVEL_SCALE) as i32, (pos.1 / LEVEL_SCALE) as i32),
+                dter,
+            );
+
+            self.level.dynterrain.replace(cells);
+        }
+    }
+
+    #[inline]
+    fn neighbors(n: &[(i32, i32)], pos: (i32, i32)) -> impl Iterator<Item = (i32, i32)> {
+        n.iter().map(move |&p| (p.0 + pos.0, p.1 + pos.1))
+    }
+
+    /// Perform a dynamic terrain simulation step
+    /// Note: this assumes a fixed timestep of 60FPS
+    pub fn step_dynterrain(&mut self) {
+        let old_cells = self.level.dynterrain.take();
+        if old_cells.is_empty() {
+            return;
+        }
+
+        let mut new_cells = DynamicTerrainMap::new();
+
+        for (&pos, &cell) in old_cells.iter() {
+            match cell {
+                DynamicTerrainCell::Foam { limit } => {
+                    self.replace_point_lc(
+                        pos,
+                        TER_TYPE_GROUND,
+                        Color::from_hsv(
+                            37.0 - limit as f32 / 2.0,
+                            0.372,
+                            0.811 - (limit as f32 / (30.0 * 3.0)) + fastrand::f32() * 0.1 - 0.05,
+                        )
+                        .as_argb_u32(),
+                    );
+                    if limit > 0 {
+                        Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
+                            if !terrain::is_solid(self.level.terrain_at_lc(p))
+                                && !new_cells.contains_key(&p)
+                            {
+                                if fastrand::f32() * limit as f32 > 3.0 {
+                                    new_cells
+                                        .insert(p, DynamicTerrainCell::Foam { limit: limit - 1 });
+                                }
+                            }
+                        });
+                    }
+                }
+                DynamicTerrainCell::GreyGoo { counter, limit } => {
+                    if counter > 0 {
+                        self.replace_point_lc(
+                            pos,
+                            TER_TYPE_GROUND,
+                            Color::from_hsv(183.0, 1.0, counter as f32 / 6.0).as_argb_u32(),
+                        );
+                        new_cells.insert(
+                            pos,
+                            DynamicTerrainCell::GreyGoo {
+                                counter: counter - 1,
+                                limit,
+                            },
+                        );
+                    } else {
+                        self.replace_point_lc(pos, 0, 0);
+                        if limit > 0 {
+                            Self::neighbors(&NEIGHBORS4, pos).for_each(|p| {
+                                if terrain::is_destructible(self.level.terrain_at_lc(p))
+                                    && !new_cells.contains_key(&p)
+                                {
+                                    new_cells.insert(
+                                        p,
+                                        DynamicTerrainCell::GreyGoo {
+                                            counter: fastrand::i32(1..6),
+                                            limit: limit - 1,
+                                        },
+                                    );
+                                }
+                            });
+                        }
+                    }
+                }
+                DynamicTerrainCell::Nitro { counter, limit } => {
+                    if counter > 0 {
+                        new_cells.insert(
+                            pos,
+                            DynamicTerrainCell::Nitro {
+                                counter: counter - 1,
+                                limit,
+                            },
+                        );
+                    } else {
+                        self.replace_point_lc(pos, TER_TYPE_HIGH_EXPLOSIVE, 0xffff0000);
+                        if limit > 0 {
+                            Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
+                                let ter_at_p = self.level.terrain_at_lc(p);
+                                if terrain::is_destructible(ter_at_p)
+                                    && !terrain::is_high_explosive(ter_at_p)
+                                    && !new_cells.contains_key(&p)
+                                {
+                                    new_cells.insert(
+                                        p,
+                                        DynamicTerrainCell::Nitro {
+                                            counter: fastrand::i32(1..6),
+                                            limit: limit - 1,
+                                        },
+                                    );
+                                }
+                            });
+                        }
+                    }
+                }
+                DynamicTerrainCell::Fire { counter, cinder } => {
+                    if counter == 30 {
+                        Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
+                            let ter_at_p = self.level.terrain_at_lc(p);
+                            if terrain::is_burnable(ter_at_p) && !new_cells.contains_key(&p) {
+                                new_cells.insert(
+                                    p,
+                                    DynamicTerrainCell::Fire {
+                                        counter: fastrand::i32(31..60),
+                                        cinder: terrain::is_cinder(ter_at_p),
+                                    },
+                                );
+                            }
+                        });
+                    }
+
+                    if counter > 0 {
+                        self.replace_point_lc(
+                            pos,
+                            if cinder { TER_TYPE_GROUND } else { 0 },
+                            Color::from_hsv((60 - counter) as f32, 1.0, 1.0).as_argb_u32(),
+                        );
+                        new_cells.insert(
+                            pos,
+                            DynamicTerrainCell::Fire {
+                                counter: counter - 1,
+                                cinder,
+                            },
+                        );
+                    } else {
+                        if cinder {
+                            let shade = fastrand::f32() * 0.1 + 0.2;
+                            self.replace_point_lc(
+                                pos,
+                                TER_TYPE_GROUND,
+                                Color::new(shade, shade, shade).as_argb_u32(),
+                            );
+                        } else {
+                            self.replace_point_lc(pos, 0, 0);
+                        }
+                    }
+                }
+                DynamicTerrainCell::Freezer { limit } => {
+                    if !terrain::is_solid(self.level.terrain_at_lc(pos)) {
+                        self.replace_point_lc(pos, TER_TYPE_ICE, self.snow_color);
+                    }
+                    if limit > 0 {
+                        Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
+                            let ter_at_p = self.level.terrain_at_lc(p);
+
+                            if terrain::is_space(ter_at_p) {
+                                // In open air, ice spreads as a thin surface hugging layer
+                                let neighboring_solid = Self::neighbors(&NEIGHBORS8, p).any(|n| {
+                                    let ter_at_n = self.level.terrain_at_lc(n);
+                                    terrain::is_solid(ter_at_n) && !terrain::is_ice(ter_at_n)
+                                });
+
+                                if neighboring_solid {
+                                    new_cells.insert(
+                                        p,
+                                        DynamicTerrainCell::Freezer { limit: limit - 1 },
+                                    );
+
+                                    if fastrand::f32() < 0.05 {
+                                        // icicles
+                                        for y in 1..4 {
+                                            let icepos = (pos.0, pos.1 + y);
+                                            if terrain::is_space(self.level.terrain_at_lc(icepos)) {
+                                                self.replace_point_lc(
+                                                    icepos,
+                                                    TER_TYPE_ICE,
+                                                    self.snow_color,
+                                                );
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if terrain::is_water(ter_at_p) {
+                                // spreads in all directions underwater
+                                if fastrand::f32() * limit as f32 > 3.0 {
+                                    new_cells.insert(
+                                        p,
+                                        DynamicTerrainCell::Freezer { limit: limit - 3 },
+                                    );
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        // println!("DynTerrain {}", new_cells.len());
+
+        self.level.dynterrain.replace(new_cells);
+    }
     /**
      * Update dirtied texture tiles (if any)
      */
@@ -231,6 +483,35 @@ impl<'a> LevelEditor<'a> {
     }
 }
 
+/// Von Neumann neighborhood
+static NEIGHBORS4: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+
+/// Moore neighborhood
+static NEIGHBORS8: [(i32, i32); 8] = [
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (-1, 1),
+    (1, 1),
+];
+
+static NEIGHBORS_ROUNDISH: [(i32, i32); 12] = [
+    (0, -1),
+    (1, 0),
+    (0, 1),
+    (-1, 0),
+    (-1, -2),
+    (1, -2),
+    (-2, -1),
+    (2, -1),
+    (-2, 1),
+    (2, 1),
+    (-1, 2),
+    (1, 2),
+];
 impl<'a> Drop for LevelEditor<'a> {
     fn drop(&mut self) {
         self.apply_texture_changes();

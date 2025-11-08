@@ -23,7 +23,7 @@ use crate::{
     game::{
         PlayerId,
         hud::draw_hud,
-        level::{LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
+        level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
         objects::{Critter, FixedObject, GameObjectArray, TerrainParticle},
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
@@ -44,6 +44,7 @@ pub enum WorldEffect {
     AddMine(Projectile),
     AddParticle(Particle),
     AddTerrainParticle(TerrainParticle),
+    AddDynamicTerrain(Vec2, DynamicTerrainCell),
     AddFixedObject(FixedObject),
     AddPixel(Vec2, Terrain, Color),
     ColorPixel(Vec2, Color),
@@ -212,6 +213,7 @@ impl World {
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
                 WorldEffect::AddTerrainParticle(p) => self.terrainparticles.push(p),
+                WorldEffect::AddDynamicTerrain(pos, t) => level_editor.add_dynterrain(pos, t),
                 WorldEffect::AddFixedObject(o) => {
                     let mut objs = self.fixedobjects.borrow_mut();
                     objs.push(o);
@@ -237,6 +239,7 @@ impl World {
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }
+        level_editor.step_dynterrain();
     }
 
     pub fn toggle_debugmode(&mut self) {

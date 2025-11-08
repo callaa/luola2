@@ -68,6 +68,52 @@ impl Color {
         }
     }
 
+    pub fn from_hsv(h: f32, s: f32, v: f32) -> Color {
+        let c = v * s;
+        let hp = (h / 60.0) % 6.0;
+        let x = c * (1.0 - ((hp % 2.0) - 1.0).abs());
+        let m = v - c;
+
+        let r;
+        let g;
+        let b;
+        if (0.0..1.0).contains(&hp) {
+            r = c;
+            g = x;
+            b = 0.0;
+        } else if hp < 2.0 {
+            r = x;
+            g = c;
+            b = 0.0;
+        } else if hp < 3.0 {
+            r = 0.0;
+            g = c;
+            b = x;
+        } else if hp < 4.0 {
+            r = 0.0;
+            g = x;
+            b = c;
+        } else if hp < 5.0 {
+            r = x;
+            g = 0.0;
+            b = c;
+        } else if hp < 6.0 {
+            r = c;
+            g = 0.0;
+            b = x;
+        } else {
+            r = 0.0;
+            g = 0.0;
+            b = 0.0;
+        }
+        Color {
+            r: r + m,
+            g: g + m,
+            b: b + m,
+            a: 1.0,
+        }
+    }
+
     /// Standard player colors (or white if not an active player)
     pub fn player_color(id: i32) -> Color {
         if id > 0 && id <= Self::PLAYER_COLORS.len() as i32 {

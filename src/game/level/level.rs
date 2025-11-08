@@ -14,12 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{LevelInfo, terrain};
+use std::cell::Cell;
+
+use super::{
+    LevelInfo,
+    dynter::DynamicTerrainMap,
+    terrain,
+    terrain::TER_BIT_WATER,
+    tileiterator::{MutableTileIterator, TileIterator},
+};
 use crate::{
-    game::level::{
-        terrain::TER_BIT_WATER,
-        tileiterator::{MutableTileIterator, TileIterator},
-    },
     gfx::{Color, Image, Renderer, Texture, TextureScaleMode},
     math::{Line, LineF, Rect, RectF, Vec2},
 };
@@ -84,6 +88,7 @@ pub struct Level {
     tiles: Vec<TerrainTile>, // length should be tiles_wide * tiles_high
     artwork: Texture,        // updated from tiles when changed
     background: Option<Texture>,
+    pub(super) dynterrain: Cell<DynamicTerrainMap>,
     width: f32,      // width in world coordinates
     height: f32,     // height in world coordinates
     tiles_wide: i32, // width in tiles
@@ -230,6 +235,7 @@ impl Level {
             tiles,
             artwork,
             background,
+            dynterrain: Cell::default(),
             width,
             height,
             tiles_wide,
@@ -248,6 +254,21 @@ impl Level {
     /// Level height in world coordinates
     pub fn height(&self) -> f32 {
         self.height
+    }
+
+    /// Return the terrain type at the given coordinates, using unscaled level coordinates
+    pub fn terrain_at_lc(&self, pos: (i32, i32)) -> terrain::Terrain {
+        let xq = pos.0 / TILE_SIZE;
+        let yq = pos.1 / TILE_SIZE;
+
+        if pos.0 < 0 || xq >= self.tiles_wide || pos.1 < 0 || yq >= self.tiles_high {
+            terrain::TER_LEVELBOUND
+        } else {
+            let xr = pos.0 % TILE_SIZE;
+            let yr = pos.1 % TILE_SIZE;
+
+            self.tiles[(yq * self.tiles_wide + xq) as usize].terrain[(yr * TILE_SIZE + xr) as usize]
+        }
     }
 
     /// Return the terrain type at the given coordinates
@@ -455,6 +476,27 @@ impl Level {
             (tx1 - tx0 + 1) as usize,
             (ty1 - ty0 + 1) as usize,
         )
+    }
+
+    /// Get tile, offset to point in tile, and tile position (or None if out of bounds)
+    pub(super) fn tile_at_lc_mut(
+        &mut self,
+        pos: (i32, i32),
+    ) -> Option<(&mut TerrainTile, usize, (i32, i32))> {
+        let tx = pos.0 / TILE_SIZE;
+        let ty = pos.1 / TILE_SIZE;
+        if tx < 0 || ty < 0 || tx >= self.tiles_wide || ty >= self.tiles_high {
+            return None;
+        }
+
+        let x = pos.0 % TILE_SIZE;
+        let y = pos.1 % TILE_SIZE;
+
+        Some((
+            &mut self.tiles[(ty * self.tiles_wide + tx) as usize],
+            (y * TILE_SIZE + x) as usize,
+            (tx, ty),
+        ))
     }
 
     pub(super) fn tile_mut(&mut self, tx: i32, ty: i32) -> &mut TerrainTile {
