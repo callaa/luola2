@@ -646,14 +646,14 @@ impl TerrainTile {
                 if x == line.x2 {
                     break;
                 }
-                error = error + dy;
+                error += dy;
                 x += sx;
             }
             if e2 <= dx {
                 if y == line.y2 {
                     break;
                 }
-                error = error + dx;
+                error += dx;
                 y += sy;
             }
         }

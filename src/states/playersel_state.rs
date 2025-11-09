@@ -160,7 +160,7 @@ impl PlayerSelection {
         ));
 
         // Start game prompt
-        if self.players.len() > 0 {
+        if !self.players.is_empty() {
             self.start_text.render(Vec2(
                 (w - self.start_text.width()) / 2.0 - offset_x,
                 offset_y,
@@ -180,7 +180,7 @@ impl PlayerSelection {
 
         let columns =
             ((renderer.width() as f32 / (size + SPACING)).floor() as usize).min(player_count);
-        let rows = (player_count + columns - 1) / columns;
+        let rows = player_count.div_ceil(columns);
 
         let left = (renderer.width() as f32 - columns as f32 * (size + SPACING)) / 2.0;
         let top = (renderer.height() as f32 - rows as f32 * (size + SPACING)) / 2.0;
@@ -237,7 +237,7 @@ impl StackableState for PlayerSelection {
                 }
             }
             MenuButton::Start => {
-                if self.players.len() > 0 {
+                if !self.players.is_empty() {
                     self.start_timer = Some(Self::START_TIMER);
                 }
             }

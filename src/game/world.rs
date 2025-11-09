@@ -444,11 +444,11 @@ impl World {
 
                 let mut minework = self.mines.borrow_mut();
                 for mine in minework.collider_slice_mut(critter).iter_mut() {
-                    if critter.physics().check_overlap(mine.physics()) {
-                        if critter.bullet_hit(mine, self.scripting.lua()) {
-                            let terrain = self.level.borrow().terrain_at(mine.pos());
-                            mine.impact(terrain, Some(critter), self.scripting.lua());
-                        }
+                    if critter.physics().check_overlap(mine.physics())
+                        && critter.bullet_hit(mine, self.scripting.lua())
+                    {
+                        let terrain = self.level.borrow().terrain_at(mine.pos());
+                        mine.impact(terrain, Some(critter), self.scripting.lua());
                     }
                 }
             }

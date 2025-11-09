@@ -53,21 +53,19 @@ pub enum DynamicTerrainCell {
 
 impl DynamicTerrainCell {
     pub fn destroys_ground(&self) -> bool {
-        match self {
+        matches!(
+            self,
             DynamicTerrainCell::GreyGoo {
                 counter: _,
-                limit: _,
-            } => true,
-            DynamicTerrainCell::Nitro {
+                limit: _
+            } | DynamicTerrainCell::Nitro {
                 counter: _,
                 limit: _,
-            } => true,
-            DynamicTerrainCell::Fire {
+            } | DynamicTerrainCell::Fire {
                 counter: _,
                 cinder: _,
-            } => true,
-            _ => false,
-        }
+            }
+        )
     }
 
     pub fn from_lua_table(table: &mlua::Table) -> mlua::Result<Self> {

@@ -115,7 +115,7 @@ impl<'a> LevelEditor<'a> {
                     let mut dx = (tile_rect.x() + rect_in_tile.x()) - center_x;
 
                     for (row_x, (ter, art)) in
-                        terrain_row.into_iter().zip(art_row.into_iter()).enumerate()
+                        terrain_row.iter_mut().zip(art_row.iter_mut()).enumerate()
                     {
                         let dd = dy * dy + dx * dx;
                         if dd <= rr && terrain::is_destructible(*ter) {
@@ -306,11 +306,9 @@ impl<'a> LevelEditor<'a> {
                         Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
                             if !terrain::is_solid(self.level.terrain_at_lc(p))
                                 && !new_cells.contains_key(&p)
+                                && fastrand::f32() * limit as f32 > 3.0
                             {
-                                if fastrand::f32() * limit as f32 > 3.0 {
-                                    new_cells
-                                        .insert(p, DynamicTerrainCell::Foam { limit: limit - 1 });
-                                }
+                                new_cells.insert(p, DynamicTerrainCell::Foam { limit: limit - 1 });
                             }
                         });
                     }
@@ -407,17 +405,15 @@ impl<'a> LevelEditor<'a> {
                                 cinder,
                             },
                         );
+                    } else if cinder {
+                        let shade = fastrand::f32() * 0.1 + 0.2;
+                        self.replace_point_lc(
+                            pos,
+                            TER_TYPE_GROUND,
+                            Color::new(shade, shade, shade).as_argb_u32(),
+                        );
                     } else {
-                        if cinder {
-                            let shade = fastrand::f32() * 0.1 + 0.2;
-                            self.replace_point_lc(
-                                pos,
-                                TER_TYPE_GROUND,
-                                Color::new(shade, shade, shade).as_argb_u32(),
-                            );
-                        } else {
-                            self.replace_point_lc(pos, 0, 0);
-                        }
+                        self.replace_point_lc(pos, 0, 0);
                     }
                 }
                 DynamicTerrainCell::Freezer { limit } => {

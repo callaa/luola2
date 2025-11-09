@@ -99,7 +99,7 @@ impl GameState {
                 .levels
                 .iter()
                 .find(|l| l.name() == config.level)
-                .map(|l| l.clone())
+                .cloned()
         };
 
         let round_winners = config.winners;
@@ -214,7 +214,7 @@ impl StackableState for GameState {
             GameSubState::PlayRound => {
                 self.substate = GameSubState::GameResults;
 
-                return StackableStateResult::Push(Box::new(
+                StackableStateResult::Push(Box::new(
                     match GameRoundState::new(
                         self.players.clone(),
                         self.level
@@ -226,11 +226,11 @@ impl StackableState for GameState {
                         Ok(g) => g,
                         Err(err) => return StackableStateResult::Error(err),
                     },
-                ));
+                ))
             }
             GameSubState::GameResults => {
                 self.controllers.borrow().clear_player_leds();
-                return StackableStateResult::Replace(Box::new(
+                StackableStateResult::Replace(Box::new(
                     match GameResultsState::new(
                         take(&mut self.players),
                         take(&mut self.round_winners),
@@ -239,7 +239,7 @@ impl StackableState for GameState {
                         Ok(r) => r,
                         Err(err) => return StackableStateResult::Error(err),
                     },
-                ));
+                ))
             }
         }
     }

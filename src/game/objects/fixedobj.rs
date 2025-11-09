@@ -88,12 +88,11 @@ impl FixedObject {
         if !self.destroyed {
             self.destroyed = true;
 
-            if let Some(callback) = self.on_destroy.as_ref() {
-                if let Err(err) =
+            if let Some(callback) = self.on_destroy.as_ref()
+                && let Err(err) =
                     lua.scope(|scope| callback.call::<()>(scope.create_userdata_ref(self)?))
-                {
-                    log::error!("FixedObject on_destroy: {err}");
-                }
+            {
+                log::error!("FixedObject on_destroy: {err}");
             }
         }
     }

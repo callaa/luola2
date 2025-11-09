@@ -261,7 +261,7 @@ impl ScriptEnvironment {
                             let table = props.as_table().ok_or(anyhow!("Expected table"))?;
                             WorldEffect::AddDynamicTerrain(
                                 table.get("pos")?,
-                                DynamicTerrainCell::from_lua_table(&table)?,
+                                DynamicTerrainCell::from_lua_table(table)?,
                             )
                         }
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),

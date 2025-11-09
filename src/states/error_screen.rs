@@ -41,8 +41,7 @@ impl ErrorScreenState {
         let message = match renderer
             .borrow()
             .try_fontset()
-            .map(|fs| fs.menu.create_text(&renderer.borrow(), &message))
-            .flatten()
+            .and_then(|fs| fs.menu.create_text(&renderer.borrow(), &message))
         {
             Ok(t) => Either::Right(t.with_wrapwidth(renderer.borrow().width())),
             Err(e) => {

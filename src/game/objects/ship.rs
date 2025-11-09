@@ -374,15 +374,14 @@ impl Ship {
 
         if ship.engine_active
             && let Some(func) = self.on_thrust.as_ref()
-        {
-            if let Err(err) = lua.scope(|scope| {
+            && let Err(err) = lua.scope(|scope| {
                 func.call::<()>((
                     scope.create_userdata_ref_mut(&mut ship).unwrap(),
                     terrain::is_underwater(ter),
                 ))
-            }) {
-                error!("Ship on_thrust callback: {err}");
-            }
+            })
+        {
+            error!("Ship on_thrust callback: {err}");
         }
 
         if ship.damage_effect > 0.0 {
@@ -414,16 +413,16 @@ impl Ship {
 
             // Repair/resupply logic is implemented in scripts to allow
             // for differences between ship types and so we can do special effects.
-            if let Some(func) = self.on_base.as_ref() {
-                if let Err(err) = lua.scope(|scope| {
+            if let Some(func) = self.on_base.as_ref()
+                && let Err(err) = lua.scope(|scope| {
                     func.call::<()>((
                         scope.create_userdata_ref_mut(&mut ship).unwrap(),
                         timestep,
                         terrain::is_underwater(ter),
                     ))
-                }) {
-                    error!("Ship on_base callback: {err}");
-                }
+                })
+            {
+                error!("Ship on_base callback: {err}");
             }
         }
 
@@ -460,23 +459,21 @@ impl Ship {
             if controller.fire_primary
                 && ship.primary_weapon_cooldown <= 0.0
                 && let Some(func) = self.on_fire_primary.as_ref()
-            {
-                if let Err(err) = lua.scope(|scope| {
+                && let Err(err) = lua.scope(|scope| {
                     func.call::<()>(scope.create_userdata_ref_mut(&mut ship).unwrap())
-                }) {
-                    error!("Ship on_primary_fire callback: {err}");
-                }
+                })
+            {
+                error!("Ship on_primary_fire callback: {err}");
             }
 
             if controller.fire_secondary
                 && ship.secondary_weapon_cooldown <= 0.0
                 && let Some(func) = self.on_fire_secondary.as_ref()
-            {
-                if let Err(err) = lua.scope(|scope| {
+                && let Err(err) = lua.scope(|scope| {
                     func.call::<()>(scope.create_userdata_ref_mut(&mut ship).unwrap())
-                }) {
-                    error!("Ship on_secondary_fire callback: {err}",);
-                }
+                })
+            {
+                error!("Ship on_secondary_fire callback: {err}",);
             }
         }
 

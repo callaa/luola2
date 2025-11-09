@@ -382,14 +382,13 @@ impl StackableState for MainMenu {
         let action = menus
             .into_iter()
             .find(|m| m.state() == MenuState::Normal)
-            .map(|m| {
+            .and_then(|m| {
                 let action = m.handle_button(button);
                 if action.is_some() {
                     m.disappear();
                 }
                 action
-            })
-            .flatten();
+            });
 
         if let Some(action) = action {
             match action {

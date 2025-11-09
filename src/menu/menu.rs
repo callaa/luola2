@@ -337,12 +337,9 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
     }
 
     pub fn step(&mut self, controllers: &GameControllerSet, timestep: f32) {
-        if self.key_grabbing {
-            if controllers.last_grabbed_key != 0 {
-                self.key_grabbing = false;
-                self.items[self.current]
-                    .set_value(MenuValue::KeyGrab(controllers.last_grabbed_key));
-            }
+        if self.key_grabbing && controllers.last_grabbed_key != 0 {
+            self.key_grabbing = false;
+            self.items[self.current].set_value(MenuValue::KeyGrab(controllers.last_grabbed_key));
         }
 
         // Menu item animation
@@ -376,7 +373,7 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
         );
 
         self.sine += 4.0 * timestep;
-        if self.sine > 3.14 {
+        if self.sine > std::f32::consts::PI {
             self.sine = 0.0;
         }
     }

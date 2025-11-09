@@ -236,7 +236,7 @@ impl Critter {
             }
         }
 
-        return (self.pos(), true);
+        (self.pos(), true)
     }
 
     /// Perform a simulation step and return a new copy of this critter
@@ -251,13 +251,12 @@ impl Critter {
 
         if (terrain::is_solid(ter) || (terrain::is_water(ter) && !critter.waterproof))
             && let Some(callback) = critter.on_touch_ground.clone()
-        {
-            if let Err(err) = lua.scope(|scope| {
+            && let Err(err) = lua.scope(|scope| {
                 callback.call::<()>((scope.create_userdata_ref_mut(&mut critter)?, ter))
-            }) {
-                log::error!("Critter on_touch_ground: {err}");
-                critter.timer = None;
-            }
+            })
+        {
+            log::error!("Critter on_touch_ground: {err}");
+            critter.timer = None;
         }
 
         if critter.walking != 0 {
@@ -265,13 +264,14 @@ impl Critter {
                 let (pos, stopped) = critter.walk(level);
                 critter.phys.pos = pos;
                 critter.step_timer = self.walkspeed;
-                if stopped && let Some(callback) = critter.on_touch_ledge.clone() {
-                    if let Err(err) = lua.scope(|scope| {
+                if stopped
+                    && let Some(callback) = critter.on_touch_ledge.clone()
+                    && let Err(err) = lua.scope(|scope| {
                         callback.call::<()>(scope.create_userdata_ref_mut(&mut critter)?)
-                    }) {
-                        log::error!("Critter on_touch_ledge: {err}");
-                        critter.timer = None;
-                    }
+                    })
+                {
+                    log::error!("Critter on_touch_ledge: {err}");
+                    critter.timer = None;
                 }
             } else {
                 critter.step_timer -= timestep;

@@ -18,7 +18,6 @@ use crate::gfx::{Renderer, TextureConfigWithAlts};
 
 use super::Texture;
 use anyhow::{Result, anyhow};
-use mlua;
 use sdl3_sys::render::SDL_Texture;
 use serde::Deserialize;
 use std::{collections::HashMap, fs, path::Path};
@@ -193,7 +192,7 @@ impl TextureStore {
             TexAlt::Active => &mut tex.active,
             TexAlt::Damage => &mut tex.damage,
         };
-        if let Some(_) = at {
+        if at.is_some() {
             return Err(anyhow!("Texture alt {:?} already set!", alt));
         }
 

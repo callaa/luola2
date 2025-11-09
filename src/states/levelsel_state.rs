@@ -179,7 +179,7 @@ impl LevelSelection {
         const SPACING: f32 = 32.0;
 
         let columns = ((w / (Self::BOX_SIZE + SPACING)).floor() as usize).min(count);
-        let rows = (count + columns - 1) / columns;
+        let rows = count.div_ceil(columns);
 
         let left = (w - columns as f32 * (Self::BOX_SIZE + SPACING)) / 2.0;
         let top = Self::TOP_MARGIN.max((h - rows as f32 * (Self::BOX_SIZE + SPACING)) / 2.0);
@@ -244,7 +244,7 @@ impl StackableState for LevelSelection {
                 if self.selection + self.columns < self.levelboxes.len() {
                     self.selection += self.columns;
                 } else {
-                    self.selection = self.selection % self.columns;
+                    self.selection %= self.columns;
                 }
             }
             MenuButton::Back => {

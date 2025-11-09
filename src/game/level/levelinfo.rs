@@ -116,7 +116,7 @@ impl LevelInfo {
 
         Ok(files
             .iter()
-            .filter_map(|f| match LevelInfo::load(&f) {
+            .filter_map(|f| match LevelInfo::load(f) {
                 Ok(l) => Some(l),
                 Err(err) => {
                     error!("Couldn't load level info: {}", err);

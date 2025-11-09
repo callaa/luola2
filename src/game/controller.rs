@@ -81,10 +81,7 @@ pub enum MenuButton {
 
 impl MenuButton {
     pub fn is_none(self) -> bool {
-        match self {
-            Self::None => true,
-            _ => false,
-        }
+        matches!(self, Self::None)
     }
 
     pub fn to_event_code(self) -> i32 {
@@ -372,7 +369,7 @@ impl GameControllerSet {
         // Deadzone
         // TODO this should be configurable
         let value = value as f32 / SDL_JOYSTICK_AXIS_MAX as f32;
-        let value = if value.abs() < 8000 as f32 / SDL_JOYSTICK_AXIS_MAX as f32 {
+        let value = if value.abs() < 8000.0 / SDL_JOYSTICK_AXIS_MAX as f32 {
             0.0
         } else {
             value

@@ -89,7 +89,7 @@ impl mlua::FromLua for Particle {
                 Color::from_argb_u32(table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff));
             let target_color = table
                 .get::<Option<u32>>("target_color")?
-                .map(|c| Color::from_argb_u32(c))
+                .map(Color::from_argb_u32)
                 .unwrap_or(color);
 
             let tex: Option<TextureId> = table.get("texture")?;
@@ -109,7 +109,7 @@ impl mlua::FromLua for Particle {
                 angle: table.get::<Option<f32>>("angle")?.unwrap_or(0.0),
                 lifetime,
                 reveal_in: table.get::<Option<f32>>("reveal_in")?.unwrap_or(0.0),
-                texture: tex.map(|t| AnimatedTexture::new(t)),
+                texture: tex.map(AnimatedTexture::new),
                 color,
                 target_color,
                 dcolor,

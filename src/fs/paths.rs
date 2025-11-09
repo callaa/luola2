@@ -60,7 +60,7 @@ pub fn find_datafile_path(path: &[&str]) -> Result<PathBuf> {
     }
 
     // TODO other paths
-    return Err(anyhow!("File not found: {:?}", path));
+    Err(anyhow!("File not found: {:?}", path))
 }
 
 /**
@@ -99,9 +99,8 @@ pub fn glob_datafiles(path: &Path, pattern: &str) -> Result<Vec<PathBuf>> {
 
     for i in 0..count {
         let f = unsafe { CStr::from_ptr(*files.add(i) as *const c_char) };
-        match f.to_str() {
-            Ok(f) => paths.push(basepath.join(f)),
-            Err(_) => {}
+        if let Ok(f) = f.to_str() {
+            paths.push(basepath.join(f));
         }
     }
 
@@ -143,6 +142,6 @@ pub fn pathbuf_to_cstring(path: PathBuf) -> Result<CString> {
     if let Ok(string) = osstr.into_string() {
         Ok(CString::new(string)?)
     } else {
-        return Err(anyhow!("Couldn't convert path to string"));
+        Err(anyhow!("Couldn't convert path to string"))
     }
 }

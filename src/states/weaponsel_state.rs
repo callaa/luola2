@@ -62,7 +62,7 @@ impl PlayerWeaponChoice {
         let selection = weapon_list
             .iter()
             .enumerate()
-            .find(|(_, w)| &w.name == &player.weapon)
+            .find(|(_, w)| w.name == player.weapon)
             .map(|(idx, _)| idx)
             .unwrap_or(0);
 
@@ -308,21 +308,21 @@ impl StackableState for WeaponSelection {
                 return StackableStateResult::Pop;
             }
             MenuButton::Left(plr) if plr > 0 => {
-                if let Some(p) = self.find_player_mut(plr) {
-                    if !p.decided {
-                        if p.selection > 0 {
-                            p.selection -= 1;
-                        } else {
-                            p.selection = weapon_count - 1;
-                        }
+                if let Some(p) = self.find_player_mut(plr)
+                    && !p.decided
+                {
+                    if p.selection > 0 {
+                        p.selection -= 1;
+                    } else {
+                        p.selection = weapon_count - 1;
                     }
                 }
             }
             MenuButton::Right(plr) if plr > 0 => {
-                if let Some(p) = self.find_player_mut(plr) {
-                    if !p.decided {
-                        p.selection = (p.selection + 1) % weapon_count;
-                    }
+                if let Some(p) = self.find_player_mut(plr)
+                    && !p.decided
+                {
+                    p.selection = (p.selection + 1) % weapon_count;
                 }
             }
             MenuButton::Select(plr) if plr > 0 => {
