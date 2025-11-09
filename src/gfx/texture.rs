@@ -31,7 +31,7 @@ use super::{Renderer, SdlError};
 use anyhow::Result;
 use sdl3_image_sys::image::IMG_LoadTexture;
 use sdl3_sys::{
-    blendmode::SDL_BLENDMODE_BLEND,
+    blendmode::{SDL_BLENDMODE_ADD, SDL_BLENDMODE_BLEND},
     pixels::SDL_PIXELFORMAT_ARGB8888,
     rect::SDL_Rect,
     render::{
@@ -59,6 +59,8 @@ pub struct TextureConfig {
     height: Option<i32>,                   // Height of a single frame/subtexture
 
     scale: Option<TextureScaleMode>,
+    #[serde(default)]
+    blend: BlendMode,
     #[serde(default)]
     needs_rotation: bool, // Hint to the renderer that this sprite should be rotated in the direction of the motion
     #[serde(default)]
@@ -95,6 +97,18 @@ pub struct Texture {
 pub enum TextureScaleMode {
     Nearest,
     Linear,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub enum BlendMode {
+    AlphaBlend,
+    Add,
+}
+
+impl Default for BlendMode {
+    fn default() -> Self {
+        BlendMode::AlphaBlend
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -211,7 +225,13 @@ impl Texture {
         }
 
         unsafe {
-            SDL_SetTextureBlendMode(tex.tex, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureBlendMode(
+                tex.tex,
+                match config.blend {
+                    BlendMode::AlphaBlend => SDL_BLENDMODE_BLEND,
+                    BlendMode::Add => SDL_BLENDMODE_ADD,
+                },
+            );
         }
         Ok(tex)
     }

@@ -134,6 +134,7 @@ flippable = true
 
 [shield]
 file = "shield.png"
+blend = "Add"
 
 [noise]
 file = "noise.png"
