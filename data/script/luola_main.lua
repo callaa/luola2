@@ -11,7 +11,6 @@ local Scheduler = require("utils.scheduler")
 local Bird = require("critters.bird")
 local Fish = require("critters.fish")
 local Spider = require("critters.spider")
-local Snowfall = require("snowfall")
 local Forcefields = require("forcefields")
 local Level = require("level")
 
@@ -60,7 +59,7 @@ function luola_init_level(settings)
 	end
 
 	if settings["snowfall"] == true then
-		Snowfall.init()
+		Level.init_snowfall()
 	end
 end
 
