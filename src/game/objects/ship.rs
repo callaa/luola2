@@ -539,7 +539,9 @@ impl Ship {
         if (self.damage_effect > 0.0 || self.frozen)
             && let Some(damage) = ts.get_texture_alt(self.texture, TexAlt::Damage)
         {
-            renderopts.color = Color::new_rgba(0.49, 0.886, 0.909, 0.7);
+            if self.frozen {
+                renderopts.color = Color::new_rgba(0.49, 0.886, 0.909, 0.7);
+            }
             damage.render(renderer, &renderopts);
         } else if self.player_id > 0
             && !cloaked
