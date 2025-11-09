@@ -27,7 +27,7 @@ function weapons.megabomb(ship)
 	if ship:consume_ammo(10, 1.0) then
 		game.effect("AddBullet", {
 			pos = ship.pos,
-			vel = ship.vel,
+			vel = Vec2(ship.vel.x, math.max(0, ship.vel.y)),
 			mass = 300,
 			radius = 5,
 			drag = 0.0025,
