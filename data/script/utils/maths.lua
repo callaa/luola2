@@ -1,14 +1,7 @@
 local maths = {}
 
 function maths.angle_difference(a1, a2)
-	local d = a2 - a1
-	if d > 180 then
-		return -360 + d
-	elseif d < -180 then
-		return 360 + d
-	else
-		return d
-	end
+	return (a1 - a2 + 180) % 360 - 180
 end
 
 function maths.signum(val)

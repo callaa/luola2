@@ -40,21 +40,27 @@ local function homing_missile_targeting(this)
 
 	game.ships_iter(function(ship)
 		local dist = ship.pos:dist(this.pos)
-		if ship.player ~= this.owner and (target == nil or dist < nearest) then
+		if ship.player ~= this.owner and not ship.cloaked and (target == nil or dist < nearest) then
 			target = ship.pos
 			nearest = dist
 		end
 	end)
 
 	if target ~= nil then
-		local target_angle = -(target - this.pos):angle()
-		local turn = maths.angle_difference(this.state.angle, target_angle)
-		if turn < 0 then
-			this.state.angle = this.state.angle - 20
-		else
-			this.state.angle = this.state.angle + 20
+		local angle = -(target - this.pos):angle()
+		local my_angle = -this.vel:angle()
+		local boost = 10000
+		if maths.angle_difference(my_angle, angle) > 60 then
+			game.effect("AddParticle", {
+				pos = this.pos,
+				color = 0xffffffff,
+				target_color = 0x00ff0000,
+				lifetime = 0.15,
+				texture = textures.get("dot8x8"),
+			})
+			boost = boost * 5
 		end
-		local impulse = Vec2_for_angle(this.state.angle, 10000)
+		local impulse = Vec2_for_angle(angle, boost)
 		this:impulse(impulse)
 
 		game.effect("AddParticle", {
