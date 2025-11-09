@@ -53,6 +53,7 @@ pub enum WorldEffect {
     AddCritter(Critter),
     UpdateForcefield(Forcefield),
     RemoveForcefield(i32),
+    SetWindspeed(f32),
     EndRound(PlayerId),
 }
 
@@ -102,15 +103,6 @@ pub struct World {
 
     /// Game objects that are fixed in place (or move via script actions only)
     fixedobjects: Rc<RefCell<GameObjectArray<FixedObject>>>,
-
-    /// Actual windspeed
-    windspeed: f32,
-
-    /// What the windspeed should be
-    windspeed_target: f32,
-
-    /// Wind change timer
-    wind_timer: f32,
 
     /// Noise texture used for viewports of dead players
     noise_texture: AnimatedTexture,
@@ -169,9 +161,6 @@ impl World {
             terrainparticles: GameObjectArray::new(),
             particles: GameObjectArray::new(),
             fixedobjects,
-            windspeed: 0.0,
-            wind_timer: 0.0,
-            windspeed_target: 0.0,
             noise_texture: AnimatedTexture::new(
                 renderer.borrow().texture_store().find_texture("noise")?,
             ),
@@ -236,6 +225,7 @@ impl World {
                 }
                 WorldEffect::UpdateForcefield(ff) => level_editor.update_forcefield(&ff),
                 WorldEffect::RemoveForcefield(id) => level_editor.remove_forcefield(id),
+                WorldEffect::SetWindspeed(ws) => level_editor.set_windspeed(ws),
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }
@@ -310,7 +300,7 @@ impl World {
 
         // Terrain particle simulation step
         for tp in self.terrainparticles.iter_mut() {
-            let e = tp.step_mut(&level, self.windspeed, timestep);
+            let e = tp.step_mut(&level, timestep);
             if let Some(e) = e {
                 if tp.is_staining() {
                     self.scripting.add_effect(WorldEffect::ColorPixel(e.0, e.2));
@@ -474,25 +464,6 @@ impl World {
         // Global timers
         self.noise_texture.step(timestep);
         self.scripting.step_global_timer(timestep);
-
-        // Wind change
-        if self.wind_timer < 0.0 {
-            self.wind_timer = fastrand::f32() * 16.0;
-            let mut sign = if self.windspeed != 0.0 {
-                self.windspeed.signum()
-            } else {
-                1.0
-            };
-            if fastrand::f32() < 0.3 {
-                sign = -sign;
-            }
-
-            self.windspeed_target = fastrand::f32() * sign;
-        } else {
-            self.wind_timer -= timestep;
-        }
-
-        self.windspeed += (self.windspeed_target - self.windspeed) * timestep;
 
         // Apply accumulated effects
         self.apply_accumulated_effects();

@@ -94,6 +94,8 @@ pub struct Level {
     tiles_wide: i32, // width in tiles
     tiles_high: i32, // height in tiles
 
+    windspeed: f32, // Wind speed (horizontal)
+
     pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
     pub snow_color: u32,  // pixel value used when creating snow
@@ -236,6 +238,7 @@ impl Level {
             artwork,
             background,
             dynterrain: Cell::default(),
+            windspeed: 0.0,
             width,
             height,
             tiles_wide,
@@ -254,6 +257,14 @@ impl Level {
     /// Level height in world coordinates
     pub fn height(&self) -> f32 {
         self.height
+    }
+
+    pub fn windspeed(&self) -> f32 {
+        self.windspeed
+    }
+
+    pub fn set_windspeed(&mut self, ws: f32) {
+        self.windspeed = ws
     }
 
     /// Return the terrain type at the given coordinates, using unscaled level coordinates

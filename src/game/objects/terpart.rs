@@ -110,14 +110,10 @@ impl TerrainParticle {
         self.stain
     }
 
-    pub fn step_mut(
-        &mut self,
-        level: &Level,
-        windspeed: f32,
-        timestep: f32,
-    ) -> Option<(Vec2, Terrain, Color)> {
+    pub fn step_mut(&mut self, level: &Level, timestep: f32) -> Option<(Vec2, Terrain, Color)> {
         let jitter = (-0.5 + fastrand::f32()) * 0.5;
-        self.phys.add_impulse(Vec2(windspeed / 10.0 + jitter, 0.0));
+        self.phys
+            .add_impulse(Vec2(level.windspeed() / 10.0 + jitter, 0.0));
         let (_, ter) = self.phys.step(level, timestep);
 
         if !terrain::is_space(ter) {

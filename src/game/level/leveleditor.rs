@@ -64,6 +64,10 @@ impl<'a> LevelEditor<'a> {
         self.level.remove_forcefield(id);
     }
 
+    pub fn set_windspeed(&mut self, ws: f32) {
+        self.level.set_windspeed(ws);
+    }
+
     /**
      * Make a regular bullet hole
      */

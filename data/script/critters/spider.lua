@@ -1,6 +1,6 @@
 local Scheduler = require("utils.scheduler")
-local Level = require("utils.level")
 local Impacts = require("weapons.impacts")
+local Level = require("level")
 
 local Spider = {}
 

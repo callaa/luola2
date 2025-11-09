@@ -1,4 +1,4 @@
-local Level = require("utils.level")
+local Level = require("level")
 local UniqID = require("utils.uniqid")
 
 local Forcefields = {}

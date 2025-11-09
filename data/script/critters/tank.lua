@@ -1,5 +1,5 @@
 local Scheduler = require("utils.scheduler")
-local Level = require("utils.level")
+local Level = require("level")
 local Rockets = require("weapons.rockets")
 local maths = require("utils.maths")
 
