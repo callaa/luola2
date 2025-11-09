@@ -7,7 +7,7 @@ local function rocket_thrust(rocket)
 	rocket:impulse(rocket.state.impulse)
 
 	game.effect("AddParticle", {
-		pos = p.pos,
+		pos = rocket.pos,
 		color = 0xffffffff,
 		target_color = 0x00ff0000,
 		lifetime = 0.15,

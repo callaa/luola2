@@ -140,7 +140,7 @@ end
 
 function weapons.gravmine(ship)
 	if ship:consume_ammo(20, 2.0) then
-		Gravmine.create(ship.pos)
+		Grav.create_gravmine(ship.pos)
 	end
 end
 

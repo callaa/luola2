@@ -35,9 +35,7 @@ function impacts.make_firestarters(count, pos)
 			texture = tex,
 			on_impact = impacts.firestarter,
 			state = {
-				scheduler = Scheduler:new():add(0.3, function(p)
-					p:destroy()
-				end),
+				scheduler = Scheduler:new():add(0.3, Scheduler.destroy_this),
 			},
 			timer = 0.3,
 		})

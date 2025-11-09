@@ -65,4 +65,9 @@ function Scheduler.add_global(timeout, callback)
 	game.set_global_timer(0)
 end
 
+-- Common callback
+function Scheduler.destroy_this(this)
+	this:destroy()
+end
+
 return Scheduler
