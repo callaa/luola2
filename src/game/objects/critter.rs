@@ -69,6 +69,8 @@ pub struct Critter {
 
 impl mlua::UserData for Critter {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field("is_critter", true);
+
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_set("vel", |_, this, v: Vec2| {

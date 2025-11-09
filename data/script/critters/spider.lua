@@ -1,5 +1,6 @@
 local Scheduler = require("utils.scheduler")
 local Level = require("utils.level")
+local Impacts = require("weapons.impacts")
 
 local Spider = {}
 
@@ -41,6 +42,16 @@ function Spider._climb_thread(critter)
 end
 
 function Spider._on_bullet_hit(critter, bullet)
+	if bullet.state ~= nil and bullet.state.is_nitro then
+		bullet:destroy()
+		critter.state.explosive = true
+		return false
+	end
+
+	if critter.state.explosive then
+		Impacts.grenade(critter, 0, nil)
+	end
+
 	if critter:detach_rope() then
 		return
 	end

@@ -408,8 +408,8 @@ impl World {
                 for other in rest {
                     if mine.physics().check_overlap(other.physics()) {
                         let terrain = self.level.borrow().terrain_at(mine.pos());
-                        mine.impact(terrain, None, self.scripting.lua());
-                        other.impact(terrain, None, self.scripting.lua());
+                        mine.impact(terrain, Some(other), self.scripting.lua());
+                        other.impact(terrain, Some(mine), self.scripting.lua());
                     }
                 }
 
@@ -417,8 +417,8 @@ impl World {
                 for bullet in self.bullets.collider_slice_mut(mine).iter_mut() {
                     if mine.physics().check_overlap(bullet.physics()) {
                         let terrain = self.level.borrow().terrain_at(mine.pos());
-                        bullet.impact(terrain, None, self.scripting.lua());
-                        mine.impact(terrain, None, self.scripting.lua());
+                        bullet.impact(terrain, Some(mine), self.scripting.lua());
+                        mine.impact(terrain, Some(bullet), self.scripting.lua());
                     }
                 }
             }
@@ -447,7 +447,7 @@ impl World {
                         // bullet (or wants it ignored otherwise.)
                         if critter.bullet_hit(bullet, self.scripting.lua()) {
                             let terrain = self.level.borrow().terrain_at(bullet.pos());
-                            bullet.impact(terrain, None, self.scripting.lua());
+                            bullet.impact(terrain, Some(critter), self.scripting.lua());
                         }
                     }
                 }
@@ -457,7 +457,7 @@ impl World {
                     if critter.physics().check_overlap(mine.physics()) {
                         if critter.bullet_hit(mine, self.scripting.lua()) {
                             let terrain = self.level.borrow().terrain_at(mine.pos());
-                            mine.impact(terrain, None, self.scripting.lua());
+                            mine.impact(terrain, Some(critter), self.scripting.lua());
                         }
                     }
                 }

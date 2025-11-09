@@ -1,5 +1,6 @@
 local Scheduler = require("utils.scheduler")
 local Level = require("utils.level")
+local Impacts = require("weapons.impacts")
 
 local Fish = {}
 
@@ -22,6 +23,16 @@ function Fish._on_touch_ground(critter)
 end
 
 function Fish._on_bullet_hit(critter, bullet)
+	if bullet.state ~= nil and bullet.state.is_nitro then
+		bullet:destroy()
+		critter.state.explosive = true
+		return false
+	end
+
+	if critter.state.explosive then
+		Impacts.grenade(critter, 0, nil)
+	end
+
 	critter:destroy()
 
 	-- blood splatter

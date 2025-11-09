@@ -42,7 +42,7 @@ function impacts.make_firestarters(count, pos)
 	end
 end
 
-function impacts.firestarter(this, terrain, ship)
+function impacts.firestarter(this, terrain, obj)
 	if terrain == 0x42 or terrain == 0x43 then
 		this:destroy()
 		game.effect("AddDynamicTerrain", {
@@ -53,7 +53,7 @@ function impacts.firestarter(this, terrain, ship)
 end
 
 -- Standard bullet
-function impacts.bullet(this, terrain, ship)
+function impacts.bullet(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBulletHole", this.pos)
 	game.effect("AddParticle", {
@@ -61,8 +61,8 @@ function impacts.bullet(this, terrain, ship)
 		texture = textures.get("boom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(3)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(3)
 	end
 end
 
@@ -75,8 +75,8 @@ function impacts.grenade(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(1)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(1)
 	end
 
 	impacts.make_shrapnell(36, this.pos, {
@@ -89,7 +89,7 @@ function impacts.grenade(this, terrain, ship)
 end
 
 -- Special weapon Megabomb
-function impacts.megabomb(this, terrain, ship)
+function impacts.megabomb(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 16 })
 	game.effect("AddParticle", {
@@ -97,8 +97,8 @@ function impacts.megabomb(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(20)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(20)
 	end
 
 	impacts.make_shrapnell(10, this.pos, {
@@ -112,7 +112,7 @@ function impacts.megabomb(this, terrain, ship)
 end
 
 -- Special weapon Rocket (should be slightly less powerful than a megabomb)
-function impacts.rocket(this, terrain, ship)
+function impacts.rocket(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 12 })
 	game.effect("AddParticle", {
@@ -120,8 +120,8 @@ function impacts.rocket(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(15)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(15)
 	end
 
 	impacts.make_shrapnell(4, this.pos, {
@@ -132,7 +132,7 @@ function impacts.rocket(this, terrain, ship)
 end
 
 -- Special weapon Homing Missile (should be less powerful than a rocket)
-function impacts.missile(this, terrain, ship)
+function impacts.missile(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {
@@ -140,8 +140,8 @@ function impacts.missile(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(10)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(10)
 	end
 
 	impacts.make_shrapnell(20, this.pos, {
@@ -154,7 +154,7 @@ end
 
 -- Mini missiles are small (possibly homing) missiles that are typically
 -- launched in great numbers do don't do much damage on their own
-function impacts.minimissile(this, terrain, ship)
+function impacts.minimissile(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 5 })
 	game.effect("AddParticle", {
@@ -162,13 +162,13 @@ function impacts.minimissile(this, terrain, ship)
 		texture = textures.get("bigboom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(5)
+	if obj ~= nil and obj.is_ship then
+		obj:damage(5)
 	end
 	impacts.make_firestarters(3, this.pos)
 end
 
-function impacts.foam_grenade(this, terrain, ship)
+function impacts.foam_grenade(this, terrain, obj)
 	this:destroy()
 	game.effect("AddDynamicTerrain", {
 		pos = this.pos,
@@ -176,27 +176,45 @@ function impacts.foam_grenade(this, terrain, ship)
 	})
 end
 
-function impacts.greygoo(this, terrain, ship)
+function impacts.greygoo(this, terrain, obj)
 	this:destroy()
-	-- TODO damage ship on impact?
+
+	if obj ~= nil and obj.is_ship then
+		obj.state.greygoo = 5
+		-- afflicted ship takes constant damage for a while
+		Scheduler.add_to_object(obj, 0.1, function(ship)
+			ship:damage(2)
+			ship.state.greygoo = ship.state.greygoo - 1
+			if ship.state.greygoo > 0 then
+				return 0.5
+			end
+		end)
+	end
 	game.effect("AddDynamicTerrain", {
 		pos = this.pos,
 		type = "GreyGoo",
 	})
 end
 
-function impacts.freezer(this, terrain, ship)
+function impacts.freezer(this, terrain, obj)
 	this:destroy()
-	-- TODO freeze ship on impact
-	game.effect("AddDynamicTerrain", {
-		pos = this.pos,
-		type = "Freezer",
-	})
+
+	if obj ~= nil and obj.is_ship then
+		obj.frozen = true
+		Scheduler.add_to_object(obj, 5, function(ship)
+			ship.frozen = false
+		end)
+	else
+		game.effect("AddDynamicTerrain", {
+			pos = this.pos,
+			type = "Freezer",
+		})
+	end
 end
 
-function impacts.nitroglycerin(this, terrain, ship)
+function impacts.nitroglycerin(this, terrain, obj)
 	this:destroy()
-	-- TODO doesn't do anything to ships but should turn critters explosive
+	-- Note: critters have special handling for nitro bullets
 	game.effect("AddDynamicTerrain", {
 		pos = this.pos,
 		type = "Nitro",

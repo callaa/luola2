@@ -213,6 +213,9 @@ function weapons.nitroglycerin(ship)
 			texture = textures.get("dot8x8"),
 			color = 0xfffc2292,
 			on_impact = Impacts.nitroglycerin,
+			state = {
+				is_nitro = true,
+			},
 		})
 	end
 end

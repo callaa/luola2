@@ -131,6 +131,9 @@ pub struct Ship {
     /// Ghost mode active: terrain collisions disabled and special rendering mode used
     ghostmode: bool,
 
+    /// Ship is frozen. Special rendering mode is used and controls are locked
+    frozen: bool,
+
     /// Object scheduler
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -144,6 +147,7 @@ pub struct Ship {
 
 impl UserData for Ship {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field("is_ship", true);
         fields.add_field_method_get("texture", |_, this| Ok(this.texture));
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
@@ -166,6 +170,15 @@ impl UserData for Ship {
             this.set_ghostmode(gm);
             Ok(())
         });
+        fields.add_field_method_get("frozen", |_, this| Ok(this.frozen));
+        fields.add_field_method_set("frozen", |_, this, f: bool| {
+            this.frozen = f;
+            if f {
+                this.engine_active = false;
+            }
+            Ok(())
+        });
+
         fields.add_field_method_get("timer", |_, this| Ok(this.timer));
         fields.add_field_method_set("timer", |_, this, timeout: Option<f32>| {
             this.timer = timeout;
@@ -242,6 +255,7 @@ impl mlua::FromLua for Ship {
                 engine_active: false,
                 cloaked: false,
                 ghostmode: false,
+                frozen: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
             })
@@ -340,6 +354,7 @@ impl Ship {
         let mut ship = self.clone();
 
         if !self.is_wrecked()
+            && !self.frozen
             && let Some(controller) = controller
         {
             ship.angle += ship.turn_speed * controller.turn * timestep;
@@ -415,6 +430,7 @@ impl Ship {
         if terrain::is_solid(ter) && impact_speed_squared > 100000.0 {
             // TODO scale damage based on speed?
             ship.damage(1.0);
+            ship.frozen = false;
         }
 
         if terrain::is_indestructible_solid(ter)
@@ -523,9 +539,10 @@ impl Ship {
 
         tex.render(renderer, &renderopts);
 
-        if self.damage_effect > 0.0
+        if (self.damage_effect > 0.0 || self.frozen)
             && let Some(damage) = ts.get_texture_alt(self.texture, TexAlt::Damage)
         {
+            renderopts.color = Color::new_rgba(0.49, 0.886, 0.909, 0.7);
             damage.render(renderer, &renderopts);
         } else if self.player_id > 0
             && !cloaked

@@ -1,4 +1,5 @@
 local Scheduler = require("utils.scheduler")
+local Impacts = require("weapons.impacts")
 
 local Bird = {}
 
@@ -42,7 +43,17 @@ function Bird._timer_flock(critter)
 end
 
 function Bird._on_bullet_hit(critter, bullet)
+	if bullet.state ~= nil and bullet.state.is_nitro then
+		bullet:destroy()
+		critter.state.explosive = true
+		return false
+	end
+
 	critter:destroy()
+
+	if critter.state.explosive then
+		Impacts.grenade(critter, 0, nil)
+	end
 
 	local hit_angle = bullet.vel:normalized():angle()
 

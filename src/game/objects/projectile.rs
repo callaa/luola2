@@ -24,7 +24,7 @@ use crate::{
             Level,
             terrain::{self, Terrain},
         },
-        objects::{GameObject, Ship, TerrainCollisionMode},
+        objects::{GameObject, TerrainCollisionMode},
     },
     gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
     math::Vec2,
@@ -118,6 +118,8 @@ impl mlua::FromLua for Projectile {
 
 impl mlua::UserData for Projectile {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field("is_projectile", true);
+
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_set("vel", |_, this, v: Vec2| {
@@ -176,14 +178,19 @@ impl Projectile {
         self.destroyed
     }
 
-    pub fn impact(&mut self, ter: Terrain, ship: Option<&mut Ship>, lua: &mlua::Lua) {
+    pub fn impact<T: mlua::UserData + 'static>(
+        &mut self,
+        ter: Terrain,
+        obj: Option<&mut T>,
+        lua: &mlua::Lua,
+    ) {
         if let Some(func) = self.on_impact.as_ref() {
             let func = func.clone();
             if let Err(err) = lua.scope(|scope| {
                 func.call::<()>((
                     scope.create_userdata_ref_mut(self)?,
                     ter,
-                    match ship {
+                    match obj {
                         Some(s) => mlua::Value::UserData(scope.create_userdata_ref_mut(s)?),
                         None => mlua::Value::Nil,
                     },
@@ -198,7 +205,7 @@ impl Projectile {
         let (_, ter) = self.phys.step(level, timestep);
 
         if terrain::is_solid(ter) {
-            self.impact(ter, None, lua);
+            self.impact::<Self>(ter, None, lua);
         }
 
         self.texture.step(timestep);
