@@ -19,10 +19,12 @@ use std::{collections::HashMap, ffi::CStr, ptr::null_mut};
 use sdl3_sys::{
     events::SDL_KeyboardEvent,
     gamepad::{
-        SDL_CloseGamepad, SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+        SDL_CloseGamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_LEFTX,
+        SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN,
         SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP,
         SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START, SDL_Gamepad,
-        SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
+        SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
+        SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
         SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
     },
     guid::SDL_GUID,
@@ -352,7 +354,7 @@ impl GameControllerSet {
         }
     }
 
-    pub fn handle_gamepad_axis(&mut self, id: SDL_JoystickID, axis: u8, value: i16) {
+    pub fn handle_gamepad_axis(&mut self, id: SDL_JoystickID, axis: SDL_GamepadAxis, value: i16) {
         let state = match self
             .states
             .iter_mut()
@@ -366,26 +368,30 @@ impl GameControllerSet {
             }
         };
 
-        // Deadzone
-        // TODO this should be configurable
-        let value = value as f32 / SDL_JOYSTICK_AXIS_MAX as f32;
-        let value = if value.abs() < 8000.0 / SDL_JOYSTICK_AXIS_MAX as f32 {
-            0.0
-        } else {
-            value
-        };
+        let value = Self::axis_value(value);
 
-        if axis == 0 {
+        if axis == SDL_GAMEPAD_AXIS_LEFTX {
             state.turn = -value;
         }
 
-        /* TODO make this configurable
-        if axis == 1 {
-            state.thrust = value < 0.0;
-        }
-        */
-        if axis == 4 {
+        if axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
             state.thrust = value > 0.0;
+        }
+
+        if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
+            // primary fire: also A button
+            let firebtn = unsafe { SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_EAST) };
+            state.fire_primary = firebtn || value > 0.0;
+        }
+    }
+
+    fn axis_value(val: i16) -> f32 {
+        // TODO deadzone should be configurable
+        let value = val as f32 / SDL_JOYSTICK_AXIS_MAX as f32;
+        if value.abs() < 8000.0 / SDL_JOYSTICK_AXIS_MAX as f32 {
+            0.0
+        } else {
+            value
         }
     }
 
@@ -436,7 +442,10 @@ impl GameControllerSet {
                 if down {
                     menubtn = MenuButton::Select(ctrl_id);
                 }
-                state.fire_primary = down;
+                let axis = Self::axis_value(unsafe {
+                    SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)
+                });
+                state.fire_primary = down || axis > 0.0;
             }
             SDL_GAMEPAD_BUTTON_SOUTH => {
                 state.fire_secondary = down;

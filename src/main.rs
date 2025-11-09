@@ -24,7 +24,7 @@ use sdl3_sys::events::{
     SDL_EVENT_GAMEPAD_BUTTON_UP, SDL_EVENT_GAMEPAD_REMOVED, SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP,
     SDL_EVENT_QUIT, SDL_EVENT_USER, SDL_EVENT_WINDOW_RESIZED, SDL_Event, SDL_EventType,
 };
-use sdl3_sys::gamepad::SDL_GamepadButton;
+use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 use sdl3_sys::init::{SDL_INIT_GAMEPAD, SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata};
 use sdl3_sys::keycode::{SDL_KMOD_ALT, SDLK_RETURN};
 use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
@@ -163,7 +163,7 @@ impl AppState {
                 let event = unsafe { &event.gaxis };
                 self.controllers.borrow_mut().handle_gamepad_axis(
                     event.which,
-                    event.axis,
+                    SDL_GamepadAxis(event.axis as i32),
                     event.value,
                 );
             }
