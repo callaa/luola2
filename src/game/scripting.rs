@@ -45,7 +45,7 @@ impl ScriptEnvironment {
     pub fn create_lua(renderer: Rc<RefCell<Renderer>>) -> Result<Lua> {
         let lua = Lua::new();
 
-        let script_path = find_datafile_path(&["script"])?;
+        let script_path = find_datafile_path("script")?;
 
         // Load modules from the script path only
         lua.globals()

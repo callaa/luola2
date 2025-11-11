@@ -117,8 +117,8 @@ fn keymap(key: u32) -> Rect {
 }
 
 fn make_keymap_icon(k1: u32, k2: u32, k3: u32, renderer: &Renderer) -> Result<Texture> {
-    let mut base = Image::from_file(find_datafile_path(&["images/keys-base.png"])?)?;
-    let letters = Image::from_file(find_datafile_path(&["images/keys.png"])?)?;
+    let mut base = Image::from_file(find_datafile_path("images/keys-base.png")?)?;
+    let letters = Image::from_file(find_datafile_path("images/keys.png")?)?;
 
     letters.blit(keymap(k1), &mut base, (22, 7));
     letters.blit(keymap(k2), &mut base, (5, 33));
@@ -128,8 +128,8 @@ fn make_keymap_icon(k1: u32, k2: u32, k3: u32, renderer: &Renderer) -> Result<Te
 }
 
 fn make_single_key_icon(key: u32, renderer: &Renderer) -> Result<Texture> {
-    let mut base = Image::from_file(find_datafile_path(&["images/key-base.png"])?)?;
-    let letters = Image::from_file(find_datafile_path(&["images/keys.png"])?)?;
+    let mut base = Image::from_file(find_datafile_path("images/key-base.png")?)?;
+    let letters = Image::from_file(find_datafile_path("images/keys.png")?)?;
 
     letters.blit(keymap(key), &mut base, (5, 1));
 

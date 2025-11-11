@@ -61,11 +61,11 @@ impl GameInitState {
 fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
     renderer
         .borrow_mut()
-        .load_fontset(&find_datafile_path(&["fonts/fonts.toml"])?)?;
+        .load_fontset(&find_datafile_path("fonts/fonts.toml")?)?;
 
     renderer
         .borrow_mut()
-        .load_textures(&find_datafile_path(&["textures/textures.toml"])?)?;
+        .load_textures(&find_datafile_path("textures/textures.toml")?)?;
 
     // Load list of levels
     let mut levels = LevelInfo::load_level_packs()?;

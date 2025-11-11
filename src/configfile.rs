@@ -16,7 +16,6 @@
 
 use std::{
     fs::{read_to_string, write},
-    path::Path,
     sync::RwLock,
 };
 
@@ -50,7 +49,7 @@ pub static GAME_CONFIG: RwLock<UserConfig> = RwLock::new(UserConfig {
 });
 
 pub fn load_user_config() {
-    let filename = get_savefile_path(Path::new("settings.toml"));
+    let filename = get_savefile_path("settings.toml");
     let content = match read_to_string(&filename) {
         Ok(c) => c,
         Err(e) => {
@@ -72,7 +71,7 @@ pub fn load_user_config() {
 }
 
 pub fn save_user_config(config: UserConfig) {
-    let filename = get_savefile_path(Path::new("settings.toml"));
+    let filename = get_savefile_path("settings.toml");
     let content = match toml::to_string(&config) {
         Ok(c) => c,
         Err(err) => {

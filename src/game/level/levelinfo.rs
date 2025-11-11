@@ -112,7 +112,7 @@ impl LevelInfo {
     }
 
     pub fn load_level_packs() -> Result<Vec<LevelInfo>> {
-        let files = glob_datafiles(Path::new("levels"), "*/*.toml")?;
+        let files = glob_datafiles("levels", "*/*.toml")?;
 
         Ok(files
             .iter()
