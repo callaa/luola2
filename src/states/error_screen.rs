@@ -69,8 +69,12 @@ impl StackableState for ErrorScreenState {
         }
     }
 
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> anyhow::Result<()> {
-        Ok(())
+    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
+        error!(
+            "Error screen received return value of type: {:?}",
+            retval.type_id()
+        );
+        StackableStateResult::Continue
     }
 
     fn resize_screen(&mut self) {}

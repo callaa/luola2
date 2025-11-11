@@ -23,7 +23,10 @@ use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
     gfx::{Color, RenderOptions, Renderer, TextureId},
     math::{Rect, RectF, Vec2},
-    states::{StackableState, StackableStateResult},
+    states::{
+        StackableState, StackableStateResult,
+        pause_state::{PauseReturn, PauseState},
+    },
 };
 
 pub struct GameRoundState {
@@ -45,7 +48,8 @@ pub struct GameRoundState {
     filler_logo_vel: Vec2,
 }
 
-pub struct RoundWinner(pub PlayerId);
+/// Return round winner (0 for draw) and whether to quit the game early
+pub struct RoundWinner(pub PlayerId, pub bool);
 
 impl GameRoundState {
     pub fn new(
@@ -100,15 +104,36 @@ impl GameRoundState {
 impl StackableState for GameRoundState {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
-            MenuButton::Back => return StackableStateResult::Return(Box::new(RoundWinner(0))),
+            MenuButton::Back => {
+                let pause_state = Box::new(match PauseState::new(self.renderer.clone()) {
+                    Ok(s) => s,
+                    Err(err) => return StackableStateResult::Error(err),
+                });
+                return StackableStateResult::Push(pause_state);
+            }
             MenuButton::Debug => self.world.toggle_debugmode(),
             _ => {}
         }
         StackableStateResult::Continue
     }
 
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> Result<()> {
-        Err(anyhow!("Round state did not expect a return!"))
+    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
+        if let Some(pauseret) = retval.downcast_ref::<PauseReturn>() {
+            match pauseret {
+                PauseReturn::Resume => StackableStateResult::Continue,
+                PauseReturn::EndRound => {
+                    StackableStateResult::Return(Box::new(RoundWinner(0, false)))
+                }
+                PauseReturn::EndGame => {
+                    StackableStateResult::Return(Box::new(RoundWinner(0, true)))
+                }
+            }
+        } else {
+            StackableStateResult::Error(anyhow!(
+                "Unhandled game state return type: {:?}",
+                retval.type_id()
+            ))
+        }
     }
 
     fn resize_screen(&mut self) {
@@ -147,7 +172,7 @@ impl StackableState for GameRoundState {
         let winner = self.world.step(&self.controllers.borrow().states, timestep);
 
         if let Some(winner) = winner {
-            return StackableStateResult::Return(Box::new(RoundWinner(winner)));
+            return StackableStateResult::Return(Box::new(RoundWinner(winner, false)));
         }
 
         let mut renderer = self.renderer.borrow_mut();

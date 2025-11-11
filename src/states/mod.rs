@@ -21,6 +21,7 @@ mod gameinit_state;
 mod gameresults_state;
 mod levelsel_state;
 mod mainmenu;
+mod pause_state;
 mod playersel_state;
 mod round_state;
 mod state;

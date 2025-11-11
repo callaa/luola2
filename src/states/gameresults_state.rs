@@ -202,10 +202,6 @@ impl StackableState for GameResultsState {
         StackableStateResult::Continue
     }
 
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> anyhow::Result<()> {
-        panic!("Game result screen did not expect a return");
-    }
-
     fn resize_screen(&mut self) {
         self.starfield
             .update_screensize(self.renderer.borrow().size());

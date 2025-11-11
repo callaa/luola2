@@ -336,8 +336,11 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
         None
     }
 
-    pub fn step(&mut self, controllers: &GameControllerSet, timestep: f32) {
-        if self.key_grabbing && controllers.last_grabbed_key != 0 {
+    pub fn step(&mut self, controllers: Option<&GameControllerSet>, timestep: f32) {
+        if let Some(controllers) = controllers
+            && self.key_grabbing
+            && controllers.last_grabbed_key != 0
+        {
             self.key_grabbing = false;
             self.items[self.current].set_value(MenuValue::KeyGrab(controllers.last_grabbed_key));
         }

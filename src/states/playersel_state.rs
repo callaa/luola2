@@ -16,8 +16,6 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::{Result, anyhow};
-
 use super::{StackableState, StackableStateResult};
 use crate::{
     game::{GameControllerSet, MenuButton, Player},
@@ -202,10 +200,6 @@ impl PlayerSelection {
 }
 
 impl StackableState for PlayerSelection {
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> Result<()> {
-        Err(anyhow!("Player selection screen did not expect a return"))
-    }
-
     fn resize_screen(&mut self) {
         self.starfield
             .borrow_mut()

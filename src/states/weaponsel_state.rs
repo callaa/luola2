@@ -16,7 +16,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use super::{StackableState, StackableStateResult};
 use crate::{
@@ -338,10 +338,6 @@ impl StackableState for WeaponSelection {
         }
 
         StackableStateResult::Continue
-    }
-
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> Result<()> {
-        Err(anyhow!("Weapon selection state did not expect a return"))
     }
 
     fn resize_screen(&mut self) {

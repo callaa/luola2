@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::anyhow;
+use log::error;
 use sdl3_main::AppResult;
 use std::{any::Any, cell::RefCell, rc::Rc};
 
@@ -38,7 +39,15 @@ pub struct StateStack {
 }
 
 pub trait StackableState {
-    fn receive_return(&mut self, retval: Box<dyn Any>) -> Result<()>;
+    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
+        error!(
+            "State with no receive_return implemented received unexpected return type {:?}",
+            (*retval).type_id()
+        );
+
+        StackableStateResult::Error(anyhow!("Unexpected return with value!"))
+    }
+
     fn resize_screen(&mut self);
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult;
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult;
@@ -62,61 +71,18 @@ impl StateStack {
         }
     }
 
-    pub fn handle_menu_button(&mut self, button: MenuButton) {
-        if let Some(state) = self.states.last_mut() {
-            match state.handle_menu_button(button) {
-                StackableStateResult::Continue => {}
-                StackableStateResult::Return(retval) => {
-                    self.states.pop();
-                    if let Err(err) = self
-                        .states
-                        .last_mut()
-                        .expect("expected a state to return to")
-                        .receive_return(retval)
-                    {
-                        self.states.clear();
-                        self.states
-                            .push(Box::new(ErrorScreenState::new(err, self.renderer.clone())));
-                    }
-                }
-                StackableStateResult::Pop => {
-                    self.states.pop();
-                }
-                StackableStateResult::Replace(s) => {
-                    self.states.pop();
-                    self.states.push(s)
-                }
-                StackableStateResult::Push(s) => self.states.push(s),
-                StackableStateResult::Error(err) => {
-                    self.states.clear();
-                    self.states
-                        .push(Box::new(ErrorScreenState::new(err, self.renderer.clone())));
-                }
-            };
-        }
-    }
-
-    pub fn state_iterate(&mut self, timestep: f32) -> AppResult {
-        let result = if let Some(state) = self.states.last_mut() {
-            state.state_iterate(timestep)
-        } else {
-            return AppResult::Success;
-        };
-
+    fn handle_state_result(&mut self, result: StackableStateResult) {
         match result {
             StackableStateResult::Continue => {}
             StackableStateResult::Return(retval) => {
                 self.states.pop();
-                if let Err(err) = self
+                let result = self
                     .states
                     .last_mut()
                     .expect("expected a state to return to")
-                    .receive_return(retval)
-                {
-                    self.states.clear();
-                    self.states
-                        .push(Box::new(ErrorScreenState::new(err, self.renderer.clone())));
-                }
+                    .receive_return(retval);
+
+                self.handle_state_result(result);
             }
             StackableStateResult::Pop => {
                 self.states.pop();
@@ -131,7 +97,25 @@ impl StateStack {
                 self.states
                     .push(Box::new(ErrorScreenState::new(err, self.renderer.clone())));
             }
-        }
+        };
+    }
+
+    pub fn handle_menu_button(&mut self, button: MenuButton) {
+        let result = match self.states.last_mut() {
+            Some(s) => s.handle_menu_button(button),
+            None => return,
+        };
+        self.handle_state_result(result);
+    }
+
+    pub fn state_iterate(&mut self, timestep: f32) -> AppResult {
+        let result = if let Some(state) = self.states.last_mut() {
+            state.state_iterate(timestep)
+        } else {
+            return AppResult::Success;
+        };
+
+        self.handle_state_result(result);
 
         if self.states.is_empty() {
             AppResult::Success

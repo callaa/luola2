@@ -342,13 +342,13 @@ impl MainMenu {
 }
 
 impl StackableState for MainMenu {
-    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> Result<()> {
+    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         match retval.downcast::<AnimatedStarfield>() {
             Ok(s) => {
                 self.starfield = *s;
-                Ok(())
+                StackableStateResult::Continue
             }
-            Err(e) => Err(anyhow!(
+            Err(e) => StackableStateResult::Error(anyhow!(
                 "Main menu state received unexpected return value type {:?}",
                 e.type_id()
             )),
@@ -436,10 +436,10 @@ impl StackableState for MainMenu {
         for menu in menus {
             match menu.state() {
                 MenuState::Appearing | MenuState::Normal => {
-                    menu.step(&self.controllers.borrow(), timestep);
+                    menu.step(Some(&self.controllers.borrow()), timestep);
                 }
                 MenuState::Disappearing => {
-                    menu.step(&self.controllers.borrow(), timestep);
+                    menu.step(Some(&self.controllers.borrow()), timestep);
                 }
                 MenuState::Disappeared => {}
             }

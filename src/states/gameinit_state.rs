@@ -112,10 +112,6 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
 }
 
 impl StackableState for GameInitState {
-    fn receive_return(&mut self, _retval: Box<dyn std::any::Any>) -> Result<()> {
-        Err(anyhow!("Init state did not expect a return with value!"))
-    }
-
     fn handle_menu_button(&mut self, _button: MenuButton) -> StackableStateResult {
         StackableStateResult::Continue
     }

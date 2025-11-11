@@ -132,7 +132,7 @@ impl GameState {
 }
 
 impl StackableState for GameState {
-    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> Result<()> {
+    fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         if let Some(level) = retval.downcast_ref::<LevelInfo>() {
             self.level = Some(level.clone());
             self.substate = GameSubState::SelectWeapons;
@@ -148,19 +148,19 @@ impl StackableState for GameState {
                 plr.wins += 1;
             }
 
-            if self.players.iter().any(|p| p.wins >= self.rounds_to_win) {
+            if winner.1 || self.players.iter().any(|p| p.wins >= self.rounds_to_win) {
                 self.substate = GameSubState::GameResults;
             } else {
                 self.substate = GameSubState::SelectLevel;
             }
         } else {
-            return Err(anyhow!(
+            return StackableStateResult::Error(anyhow!(
                 "Unhandled game state return type: {:?}",
                 retval.type_id()
             ));
         }
 
-        Ok(())
+        StackableStateResult::Continue
     }
 
     fn handle_menu_button(&mut self, _button: MenuButton) -> StackableStateResult {
