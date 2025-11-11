@@ -1,0 +1,26 @@
+# Container for making AppImage and Windows builds
+FROM rust:1.91
+
+# Build deps, including dynamically linked SDL which will be copied
+# into the AppImage.
+# The Windows version gets built and statically linked.
+RUN apt-get update && apt-get install -y libsdl3-dev libsdl3-ttf-dev libsdl3-image-dev liblua5.4-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 cmake zip
+
+# Windows cross compiler
+RUN rustup target add x86_64-pc-windows-gnu
+
+# AppImage build tool
+RUN wget -O /usr/local/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage ; chmod a+x /usr/local/bin/linuxdeploy
+
+# Build directory
+RUN mkdir /target ; chmod a+rwx /target
+
+# Dummy main.rs so we can run cargo fetch
+WORKDIR /app
+ADD pkg/main.rs /app/src/main.rs
+
+# Cache Rust deps
+# We still need to build these every time
+# but we can at least save some bandwidth.
+ADD Cargo.lock Cargo.toml /app/
+RUN cargo fetch
