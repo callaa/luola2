@@ -30,6 +30,7 @@ use sdl3_sys::keycode::{SDL_KMOD_ALT, SDLK_RETURN};
 use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
 
 use std::cell::RefCell;
+use std::ffi::CString;
 use std::rc::Rc;
 use std::sync::Mutex;
 
@@ -81,7 +82,7 @@ impl AppState {
         unsafe {
             if !SDL_SetAppMetadata(
                 c"Luola II".as_ptr(),
-                c"0.1.0".as_ptr(),
+                CString::new(env!("CARGO_PKG_VERSION")).unwrap().as_ptr(),
                 c"io.github.callaa.luola2".as_ptr(),
             ) {
                 return AppResultWithState::Failure(None);

@@ -25,7 +25,7 @@ use sdl3_sys::video::{SDL_SetWindowFullscreen, SDL_WINDOW_FULLSCREEN, SDL_WINDOW
 use sdl3_ttf_sys::ttf::{
     TTF_CreateRendererTextEngine, TTF_DestroyRendererTextEngine, TTF_Init, TTF_TextEngine,
 };
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::ptr::{null, null_mut};
 
@@ -76,7 +76,9 @@ impl Renderer {
 
         if !unsafe {
             SDL_CreateWindowAndRenderer(
-                c"Luola II".as_ptr(),
+                CString::new(format!("Luola II {}", env!("CARGO_PKG_VERSION")))
+                    .unwrap()
+                    .as_ptr(),
                 1024,
                 768,
                 flags,
