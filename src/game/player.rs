@@ -16,7 +16,8 @@
 
 use serde::Deserialize;
 
-use crate::math::Rect;
+use crate::gfx::AnimatedTexture;
+use crate::math::{Rect, Vec2};
 
 #[derive(Deserialize)]
 pub struct GameInitConfig {
@@ -61,6 +62,40 @@ impl Player {
             weapon: String::new(),
             wins: 0,
             viewport: Rect::new(0, 0, 1, 1),
+        }
+    }
+}
+
+/// Ingame state of a player
+pub struct PlayerState {
+    pub camera_pos: Vec2,
+    pub hud: PlayerHud,
+
+    /// Draw fadeout between 0..1
+    pub fadeout: f32,
+}
+
+#[derive(Clone, Copy)]
+pub enum PlayerHud {
+    Ship { health: f32, ammo: f32 },
+    None,
+}
+
+pub struct HudOverlayTex {
+    tex: AnimatedTexture,
+    pos: Vec2,
+    rotation: f32,
+    lifetime: f32,
+    fadein: f32,
+    fadeout: f32,
+}
+
+impl PlayerState {
+    pub fn new() -> Self {
+        Self {
+            camera_pos: Vec2::ZERO,
+            hud: PlayerHud::None,
+            fadeout: 0.0,
         }
     }
 }

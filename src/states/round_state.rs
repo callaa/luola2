@@ -58,7 +58,7 @@ impl GameRoundState {
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
     ) -> Result<Self> {
-        let world = World::new(level, renderer.clone())?;
+        let world = World::new(&players, level, renderer.clone())?;
         let lua = world.scripting().lua();
 
         // Call game init script

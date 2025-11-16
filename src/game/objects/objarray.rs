@@ -91,6 +91,10 @@ impl<T: GameObject> GameObjectArray<T> {
         self.0.clear();
     }
 
+    pub fn last_mut(&mut self) -> &mut T {
+        self.0.last_mut().unwrap()
+    }
+
     /**
      * Sort the game object array for broadphase collision checks.
      * Also removes destroyed objects.

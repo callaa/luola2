@@ -21,7 +21,7 @@ use log::error;
 
 use crate::{
     game::{
-        PlayerId,
+        Player, PlayerId, PlayerState,
         hud::draw_hud,
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
         objects::{Critter, FixedObject, GameObjectArray, TerrainParticle},
@@ -77,6 +77,8 @@ pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
 
+    players: Vec<PlayerState>,
+
     /// Double buffered ships so we can access them in lua at any time
     ships: Rc<RefCell<GameObjectArray<Ship>>>, // ships that (may) be piloted by a player
     ships_work: RefCell<GameObjectArray<Ship>>,
@@ -124,7 +126,11 @@ enum DebugMode {
 }
 
 impl World {
-    pub fn new(levelinfo: &LevelInfo, renderer: Rc<RefCell<Renderer>>) -> Result<Self> {
+    pub fn new(
+        players: &[Player],
+        levelinfo: &LevelInfo,
+        renderer: Rc<RefCell<Renderer>>,
+    ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
             &renderer.borrow(),
             levelinfo,
@@ -147,9 +153,8 @@ impl World {
             scripting.load_level_specific_script(&levelscript)?;
         }
 
-        // TODO load level init script if specified
-
         Ok(World {
+            players: players.iter().map(|_| PlayerState::new()).collect(),
             scripting,
             level,
             ships,
@@ -197,7 +202,12 @@ impl World {
         let mut level_editor = LevelEditor::new(&mut level);
         for fx in effects {
             match fx {
-                WorldEffect::AddShip(s) => self.ships.borrow_mut().push(s),
+                WorldEffect::AddShip(s) => {
+                    if s.player_id() > 0 && s.controller() > 0 {
+                        self.players.borrow_mut()[s.player_id() as usize - 1].camera_pos = s.pos();
+                    }
+                    self.ships.borrow_mut().push(s);
+                }
                 WorldEffect::AddBullet(b) => self.bullets.push(b),
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
@@ -246,6 +256,15 @@ impl World {
      * Returns the ID of the winning player, if a win was decided in this step.
      */
     pub fn step(&mut self, controllers: &[GameController], timestep: f32) -> Option<PlayerId> {
+        // Player state reset
+        for ps in self.players.iter_mut() {
+            if ps.fadeout < 1.0 {
+                ps.fadeout += timestep;
+            }
+            // this will get replaced with the right HUD type if the player is still in the game
+            ps.hud = super::PlayerHud::None;
+        }
+
         let level = self.level.borrow();
 
         //
@@ -266,6 +285,19 @@ impl World {
                     self.scripting.lua(),
                     timestep,
                 ));
+
+                if ship.player_id() > 0 && ship.controller() > 0 {
+                    let ps = &mut self.players[ship.player_id() as usize - 1];
+                    let ship = work.last_mut();
+                    ps.hud = super::PlayerHud::Ship {
+                        health: ship.health(),
+                        ammo: ship.ammo(),
+                    };
+                    // camera inertia for an enhanced feeling of motion
+                    // TODO rather than trailing behind the ship, the camera should look ahead?
+                    ps.camera_pos = ps.camera_pos + (ship.pos() - ps.camera_pos) / 5.0;
+                    ps.fadeout = -1.0;
+                }
             }
 
             work.sort();
@@ -471,17 +503,6 @@ impl World {
         self.winner
     }
 
-    //fn find_player(&self, id: i32) -> Option<Ref<'_, Ship>> {
-    fn find_player(&self, id: i32) -> Option<Ship> {
-        for s in self.ships.borrow().iter() {
-            if s.player_id() == id {
-                return Some(s.clone());
-                //return Some(Ref::map(self.ships.borrow(), |ships| &ships.get_at(idx)));
-            }
-        }
-        None
-    }
-
     /**
      * Render a viewport for a specific player
      */
@@ -490,10 +511,12 @@ impl World {
             error!("Couldn't set viewport: {}", err);
         }
 
-        if let Some(player) = self.find_player(player_id) {
+        let player = &self.players[player_id as usize - 1];
+
+        if player.fadeout < 1.0 {
             let level = self.level.borrow();
             let camera_rect =
-                level.camera_rect(player.pos(), viewport.w() as f32, viewport.h() as f32);
+                level.camera_rect(player.camera_pos, viewport.w() as f32, viewport.h() as f32);
             let camera_pos = camera_rect.topleft();
 
             // Level background artwork
@@ -545,12 +568,15 @@ impl World {
             }
 
             // Player HUD
-            draw_hud(renderer, &player);
-        } else {
+            draw_hud(renderer, player.hud);
+        }
+
+        if player.fadeout > 0.0 {
             self.noise_texture.render(
                 renderer,
                 &RenderOptions {
                     mode: RenderMode::Tiled(6.0),
+                    color: Color::new_rgba(1.0, 1.0, 1.0, player.fadeout.min(1.0)),
                     ..Default::default()
                 },
             );

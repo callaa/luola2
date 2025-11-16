@@ -14,10 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::objects::Ship;
-use crate::{gfx::Color, gfx::Renderer, math::RectF};
+use crate::{
+    game::PlayerHud,
+    gfx::{Color, Renderer},
+    math::RectF,
+};
 
-pub fn draw_hud(renderer: &Renderer, ship: &Ship) {
+pub fn draw_hud(renderer: &Renderer, hud: PlayerHud) {
+    match hud {
+        PlayerHud::Ship { health, ammo } => draw_ship_hud(renderer, health, ammo),
+        PlayerHud::None => {}
+    }
+}
+
+fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32) {
     let bar_height = 3.0 + 4.0 * 2.0;
     let bar_width = renderer.width() as f32 - bar_height * 2.0;
 
@@ -29,7 +39,7 @@ pub fn draw_hud(renderer: &Renderer, ship: &Ship) {
     );
     renderer.draw_filled_rectangle(bar_rect, &Color::new(0.1, 0.1, 0.1));
 
-    let health = ship.health();
+    let health = health;
     let health_rect = RectF::new(
         bar_rect.x() + 1.0,
         bar_rect.y() + 1.0,
@@ -50,7 +60,7 @@ pub fn draw_hud(renderer: &Renderer, ship: &Ship) {
     let ammo_rect = RectF::new(
         bar_rect.x() + 1.0,
         bar_rect.y() + 2.0 + 4.0,
-        (bar_rect.w() - 2.0) * ship.ammo(),
+        (bar_rect.w() - 2.0) * ammo,
         4.0,
     );
 
