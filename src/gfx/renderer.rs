@@ -16,6 +16,7 @@
 
 use anyhow::{Result, anyhow};
 use sdl3_sys::blendmode::SDL_BLENDMODE_BLEND;
+use sdl3_sys::mouse::{SDL_HideCursor, SDL_ShowCursor};
 use sdl3_sys::rect::SDL_FPoint;
 use sdl3_sys::render::{
     SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint,
@@ -106,6 +107,12 @@ impl Renderer {
             return Err(SdlError::get_error("Couldn't create text engine"));
         }
 
+        if fullscreen {
+            unsafe {
+                SDL_HideCursor();
+            }
+        }
+
         Ok(Self {
             window,
             renderer,
@@ -122,6 +129,11 @@ impl Renderer {
         self.fullscreen = !self.fullscreen;
         unsafe {
             SDL_SetWindowFullscreen(self.window, self.fullscreen);
+            if self.fullscreen {
+                SDL_HideCursor();
+            } else {
+                SDL_ShowCursor();
+            }
         }
     }
 
