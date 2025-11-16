@@ -3,7 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     game::MenuButton,
-    gfx::{Color, Renderer, Text},
+    gfx::{Color, RenderTextOptions, Renderer, Text},
+    math::Vec2,
     menu::{Menu, MenuItem},
     states::{StackableState, StackableStateResult},
 };
@@ -54,7 +55,10 @@ impl PauseState {
         let renderer = self.renderer.borrow();
         renderer.clear();
 
-        self.title.render_hcenter(renderer.width() as f32, 10.0);
+        self.title.render(&RenderTextOptions {
+            dest: crate::gfx::RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            ..Default::default()
+        });
         self.menu.render(&renderer);
         renderer.present();
     }

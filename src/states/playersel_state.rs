@@ -19,7 +19,10 @@ use std::{cell::RefCell, rc::Rc};
 use super::{StackableState, StackableStateResult};
 use crate::{
     game::{GameControllerSet, MenuButton, Player},
-    gfx::{Color, RenderDest, RenderOptions, Renderer, Text, Texture, make_controller_icon},
+    gfx::{
+        Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
+        Texture, make_controller_icon,
+    },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
     states::{GameState, game_assets::GameAssets},
@@ -121,10 +124,10 @@ impl PlayerSelection {
 
         // Player list
         if self.players.is_empty() {
-            self.prompt_text.render(Vec2(
-                (w - self.prompt_text.width()) / 2.0,
-                (h - self.prompt_text.height()) / 2.0,
-            ));
+            self.prompt_text.render(&RenderTextOptions {
+                dest: RenderTextDest::Centered(Vec2(w / 2.0, h / 2.0)),
+                ..Default::default()
+            });
         } else {
             for p in &self.players {
                 let rect = p.rect.offset(((1.0 - fadeout) * w).powf(1.2), 0.0);
@@ -137,9 +140,13 @@ impl PlayerSelection {
                     },
                 );
 
-                p.text.render(
-                    rect.bottomleft() + Vec2((rect.w() - p.text.width()) / 2.0, -p.text.height()),
-                );
+                p.text.render(&RenderTextOptions {
+                    dest: RenderTextDest::BottomCenter(Vec2(
+                        rect.x() + rect.w() / 2.0,
+                        rect.bottom(),
+                    )),
+                    ..Default::default()
+                });
             }
         }
 
@@ -147,22 +154,25 @@ impl PlayerSelection {
         let offset_x = ((1.0 - fadeout) * w).powf(1.2);
         let offset_y = 10.0;
 
-        self.rounds_to_win_text.render(Vec2(
-            (w - self.rounds_to_win_text.width()) / 2.0 - offset_x,
-            h - self.rounds_to_win_text.height() - self.rounds_text.height() - offset_y,
-        ));
+        self.rounds_to_win_text.render(&RenderTextOptions {
+            dest: RenderTextDest::BottomCenter(Vec2(
+                w / 2.0 - offset_x,
+                h - self.rounds_text.height() - offset_y,
+            )),
+            ..Default::default()
+        });
 
-        self.rounds_text.render(Vec2(
-            (w - self.rounds_text.width()) / 2.0 - offset_x,
-            h - self.rounds_text.height() - offset_y,
-        ));
+        self.rounds_text.render(&RenderTextOptions {
+            dest: RenderTextDest::BottomCenter(Vec2(w / 2.0 - offset_x, h - offset_y)),
+            ..Default::default()
+        });
 
         // Start game prompt
         if !self.players.is_empty() {
-            self.start_text.render(Vec2(
-                (w - self.start_text.width()) / 2.0 - offset_x,
-                offset_y,
-            ));
+            self.start_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopCenter(Vec2(w / 2.0 - offset_x, offset_y)),
+                ..Default::default()
+            });
         }
         renderer.present();
     }
@@ -253,7 +263,8 @@ impl StackableState for PlayerSelection {
                         .for_each(|(idx, (rect, p))| {
                             p.target_rect = *rect;
                             p.text.set_text(&format!("P{}", idx + 1));
-                            p.text.set_color(Color::player_color(idx as i32 + 1));
+                            p.text
+                                .set_default_color(Color::player_color(idx as i32 + 1));
                         });
                 } else {
                     // Add a player

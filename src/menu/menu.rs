@@ -22,7 +22,7 @@ use sdl3_sys::keyboard::SDL_GetKeyName;
 use crate::{
     events,
     game::{GameControllerSet, MenuButton},
-    gfx::{Color, Renderer, Text},
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
     math::{RectF, Vec2},
 };
 
@@ -159,10 +159,7 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
             })
             .collect::<Result<Vec<MenuLine<T>>>>()?;
 
-        let key_grab_text = font
-            .create_text(renderer, "Press a key")?
-            .with_color(Color::new(1.0, 0.0, 0.0));
-
+        let key_grab_text = font.create_text(renderer, "Press a key")?;
         let mut menu = Self {
             items,
             current: 0,
@@ -384,7 +381,10 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
     pub fn render(&self, renderer: &Renderer) {
         for item in &self.items {
             if let Some(text) = &item.text {
-                text.render(item.rect.topleft());
+                text.render(&RenderTextOptions {
+                    dest: crate::gfx::RenderTextDest::TopLeft(item.rect.topleft()),
+                    ..Default::default()
+                });
             }
 
             if item.value_text.borrow().is_none() {
@@ -419,13 +419,20 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
             }
 
             if let Some(value_text) = item.value_text.borrow().as_ref() {
-                value_text.render(item.rect.topright() + Vec2(10.0, 0.0));
+                value_text.render(&RenderTextOptions {
+                    dest: RenderTextDest::TopLeft(item.rect.topright() + Vec2(10.0, 0.0)),
+                    ..Default::default()
+                });
             }
         }
 
         if let MenuState::Normal = self.state {
-            self.cursor
-                .render(self.cursorpos - Vec2(self.sine.sin() * self.cursor.width() / 2.0, 0.0));
+            self.cursor.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(
+                    self.cursorpos - Vec2(self.sine.sin() * self.cursor.width() / 2.0, 0.0),
+                ),
+                ..Default::default()
+            });
         }
 
         if self.key_grabbing {
@@ -435,7 +442,8 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
                 self.key_grab_text.width() + 16.0,
                 self.key_grab_text.height() + 16.0,
             );
-            renderer.draw_filled_rectangle(rect, &Color::new(0.8, 0.0, 0.0));
+            let color = Color::new(0.8, 0.0, 0.0);
+            renderer.draw_filled_rectangle(rect, &color);
             renderer.draw_filled_rectangle(
                 RectF::new(
                     rect.x() + 1.0,
@@ -445,7 +453,11 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
                 ),
                 &Color::new(0.0, 0.0, 0.0),
             );
-            self.key_grab_text.render(rect.topleft() + Vec2(8.0, 8.0));
+            self.key_grab_text.render(&RenderTextOptions {
+                dest: RenderTextDest::Centered(rect.center()),
+                color: Some(color),
+                ..Default::default()
+            });
         }
     }
 }

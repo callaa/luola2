@@ -32,6 +32,12 @@ pub struct ColorDiff {
     pub ad: f32,
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Self::WHITE
+    }
+}
+
 impl Color {
     pub const PLAYER_COLORS: [Color; 4] = [
         Color::new(0.2, 0.2, 1.0),

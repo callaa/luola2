@@ -22,7 +22,10 @@ use log::warn;
 use super::{StackableState, StackableStateResult};
 use crate::{
     game::MenuButton,
-    gfx::{Color, RenderDest, RenderOptions, Renderer, Text, Texture},
+    gfx::{
+        Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
+        Texture,
+    },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
     states::game_assets::GameAssets,
@@ -118,8 +121,10 @@ impl LevelSelection {
         self.starfield.borrow().render(renderer);
 
         // Round number
-        self.round_text
-            .render_hcenter(renderer.width() as f32, 10.0);
+        self.round_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            ..Default::default()
+        });
 
         // Render selection outline
         if let Some(lb) = self.levelboxes.get(self.selection) {
@@ -161,10 +166,10 @@ impl LevelSelection {
 
         // Selection title
         if let Some(lb) = self.levelboxes.get(self.selection) {
-            lb.title.render(Vec2(
-                10.0,
-                renderer.height() as f32 - (Self::BOTTOM_MARGIN - lb.title.height()) / 2.0,
-            ));
+            lb.title.render(&RenderTextOptions {
+                dest: RenderTextDest::BottomLeft(Vec2(10.0, renderer.height() as f32)),
+                ..Default::default()
+            });
         }
 
         renderer.present();

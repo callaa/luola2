@@ -20,7 +20,7 @@ use anyhow::Result;
 
 use crate::{
     game::{MenuButton, Player, PlayerId},
-    gfx::{Color, Renderer, Text},
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
     math::Vec2,
     menu::AnimatedStarfield,
     states::{StackableState, StackableStateResult},
@@ -42,6 +42,7 @@ pub struct GameResultsState {
     results_box_size: (f32, f32),
     timer: f32,
     exit_timer: Option<f32>,
+    alpha_mod: f32,
 }
 
 impl GameResultsState {
@@ -137,6 +138,7 @@ impl GameResultsState {
             results_shown_anim: 0,
             timer: 0.0,
             exit_timer: None,
+            alpha_mod: 1.0,
         })
     }
 
@@ -151,7 +153,11 @@ impl GameResultsState {
 
         // Heading
         if self.results_shown_anim <= self.player_results.len() {
-            self.gameover_text.render_hcenter(r.width() as f32, SPACING);
+            self.gameover_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopCenter(Vec2(r.width() as f32 / 2.0, SPACING)),
+                alpha: self.alpha_mod,
+                ..Default::default()
+            });
         }
 
         // Round result table
@@ -162,9 +168,13 @@ impl GameResultsState {
         let rounds_y = self.gameover_text.height() + SPACING * 3.0;
 
         for r in self.round_winners.iter().take(self.rounds_shown_anim) {
-            let tex = &self.player_numbers[*r as usize];
-            tex.render(Vec2(rounds_x, rounds_y));
-            rounds_x += tex.width() + SPACING;
+            let text = &self.player_numbers[*r as usize];
+            text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(Vec2(rounds_x, rounds_y)),
+                alpha: self.alpha_mod,
+                ..Default::default()
+            });
+            rounds_x += text.width() + SPACING;
         }
 
         // Player ranking
@@ -177,12 +187,21 @@ impl GameResultsState {
             .rev()
             .take(self.results_shown_anim)
         {
-            res.render(Vec2(x, y));
+            res.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(Vec2(x, y)),
+                alpha: self.alpha_mod,
+                ..Default::default()
+            });
+
             y -= res.height() + SPACING;
         }
 
         if self.results_shown_anim == self.player_results.len() + 1 {
-            self.winner_text.render_hcenter(r.width() as f32, SPACING);
+            self.winner_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopCenter(Vec2(r.width() as f32 / 2.0, SPACING)),
+                alpha: self.alpha_mod,
+                ..Default::default()
+            });
         }
 
         r.present();
@@ -224,17 +243,7 @@ impl StackableState for GameResultsState {
                 return StackableStateResult::Return(Box::new(self.starfield.clone()));
             }
             self.exit_timer = Some(exit);
-
-            let alpha = exit;
-
-            self.gameover_text.set_alpha(alpha);
-            self.winner_text.set_alpha(alpha);
-            for t in self.player_numbers.iter_mut() {
-                t.set_alpha(alpha);
-            }
-            for t in self.player_results.iter_mut() {
-                t.2.set_alpha(alpha);
-            }
+            self.alpha_mod = exit;
         }
 
         self.render();

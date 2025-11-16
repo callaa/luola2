@@ -25,12 +25,13 @@ use mlua::{
 };
 
 use crate::fs::find_datafile_path;
-use crate::game::PlayerId;
+use crate::game::hud::HudOverlay;
 use crate::game::level::{DynamicTerrainCell, Forcefield, Level};
 use crate::game::objects::{
     Critter, FixedObject, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
+use crate::game::{PlayerId, PlayerState};
 use crate::gfx::{Color, Renderer};
 use crate::math::{LineF, RectF, Vec2};
 
@@ -53,10 +54,30 @@ impl ScriptEnvironment {
             .set("path", format!("{}/?.lua", script_path.to_str().unwrap()))?;
 
         let texapi = lua.create_table()?;
+        let r1 = renderer.clone();
         texapi.set(
             "get",
             lua.create_function(move |_, name: String| {
-                Ok(renderer.borrow().texture_store().find_texture(&name)?)
+                Ok(r1.borrow().texture_store().find_texture(&name)?)
+            })?,
+        )?;
+
+        texapi.set(
+            "font",
+            lua.create_function(move |_, (font, text): (LuaString, LuaString)| {
+                let r = renderer.borrow();
+                let font = match font.as_bytes().deref() {
+                    b"menu" => &r.fontset().menu,
+                    b"menu_big" => &r.fontset().menu_big,
+                    b"flavortext" => &r.fontset().flavotext,
+                    unknown => {
+                        return Err(
+                            anyhow!("Unknown font: {}", str::from_utf8(unknown).unwrap()).into(),
+                        );
+                    }
+                };
+
+                Ok(font.create_text(&r, &text.to_str().expect("valid utf-8 string"))?)
             })?,
         )?;
 
@@ -97,6 +118,7 @@ impl ScriptEnvironment {
 
     pub fn init_game(
         &mut self,
+        players: Rc<RefCell<Vec<PlayerState>>>,
         level: Rc<RefCell<Level>>,
         ship_list: Rc<RefCell<GameObjectArray<Ship>>>,
         mine_list: Rc<RefCell<GameObjectArray<Projectile>>>,
@@ -290,6 +312,37 @@ impl ScriptEnvironment {
 
                     Ok(())
                 })?,
+        )?;
+
+        // Player effects
+        api.set(
+            "player_effect",
+            self.lua.create_function(
+                move |lua, (effect_type, player_id, props): (LuaString, i32, Value)| {
+                    match effect_type.as_bytes().deref() {
+                        b"hud_overlay" => {
+                            if let Some(plr) =
+                                players.borrow_mut().get_mut((player_id - 1) as usize)
+                            {
+                                plr.overlays.push(HudOverlay::from_lua(props, lua)?);
+                            } else {
+                                return Err(
+                                    anyhow!("hud_overlay requires a valid player index").into()
+                                );
+                            }
+                        }
+                        unknown => {
+                            return Err(anyhow!(
+                                "Unknown user effect type: {}",
+                                str::from_utf8(unknown).unwrap()
+                            )
+                            .into());
+                        }
+                    }
+
+                    Ok(())
+                },
+            )?,
         )?;
 
         // Global timer

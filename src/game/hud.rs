@@ -15,15 +15,94 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    game::PlayerHud,
-    gfx::{Color, Renderer},
-    math::RectF,
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
+    math::{RectF, Vec2},
 };
 
-pub fn draw_hud(renderer: &Renderer, hud: PlayerHud) {
+#[derive(Clone, Copy)]
+pub enum PlayerHud {
+    Ship { health: f32, ammo: f32 },
+    None,
+}
+
+pub struct HudOverlay {
+    text: Text,
+    pos: HudOverlayPosition,
+    color: Option<Color>,
+    lifetime: f32,
+    fadein: f32,
+    fadeout: f32,
+    age: f32,
+}
+
+pub enum HudOverlayPosition {
+    Centered(Vec2),
+}
+
+impl mlua::FromLua for HudOverlay {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        if let mlua::Value::Table(table) = value {
+            let text: Text = table.get("text")?;
+            let posv: Vec2 = table.get("pos")?;
+            Ok(Self {
+                text,
+                pos: HudOverlayPosition::Centered(posv),
+                color: table
+                    .get::<Option<u32>>("color")?
+                    .map(|c| Color::from_argb_u32(c)),
+                lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(0.0),
+                fadein: table.get::<Option<f32>>("fadein")?.unwrap_or(0.0),
+                fadeout: table.get::<Option<f32>>("fadeout")?.unwrap_or(0.0),
+                age: 0.0,
+            })
+        } else {
+            Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "HudOverlay".to_string(),
+                message: Some("expected a table describing a HUD overlay".to_string()),
+            })
+        }
+    }
+}
+
+impl HudOverlay {
+    fn draw(&self, renderer: &Renderer) {
+        let a = if self.fadein > 0.0 && self.age < self.fadein {
+            self.age / self.fadein
+        } else if self.fadeout > 0.0 && (self.lifetime - self.age) < self.fadeout {
+            ((self.lifetime - self.age) / self.fadeout).max(0.0)
+        } else {
+            1.0
+        };
+
+        match self.pos {
+            HudOverlayPosition::Centered(p) => {
+                self.text.render(&RenderTextOptions {
+                    dest: RenderTextDest::Centered(Vec2(
+                        renderer.width() as f32 * p.0,
+                        renderer.height() as f32 * p.1,
+                    )),
+                    color: self.color,
+                    alpha: a,
+                });
+            }
+        }
+    }
+
+    pub fn age(&mut self, timestep: f32) -> bool {
+        self.age += timestep;
+        self.age < self.lifetime
+    }
+}
+
+pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay]) {
     match hud {
         PlayerHud::Ship { health, ammo } => draw_ship_hud(renderer, health, ammo),
         PlayerHud::None => {}
+    }
+
+    for overlay in overlays {
+        overlay.draw(renderer);
     }
 }
 

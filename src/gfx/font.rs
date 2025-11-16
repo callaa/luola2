@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{ffi::c_int, path::PathBuf, ptr::null_mut};
+use std::{ffi::c_int, path::PathBuf};
 
 use anyhow::Result;
 use sdl3_ttf_sys::ttf::{
     TTF_CloseFont, TTF_CopyFont, TTF_CreateText, TTF_DestroyText, TTF_DrawRendererText, TTF_Font,
-    TTF_GetTextColorFloat, TTF_GetTextSize, TTF_OpenFont, TTF_SetTextColorFloat, TTF_SetTextString,
-    TTF_SetTextWrapWidth, TTF_Text,
+    TTF_GetTextSize, TTF_OpenFont, TTF_SetTextColorFloat, TTF_SetTextString, TTF_SetTextWrapWidth,
+    TTF_Text,
 };
 
 use crate::{
@@ -43,8 +43,35 @@ impl Drop for Font {
 
 pub struct Text {
     text: *mut TTF_Text,
+    default_color: Color,
     width: f32,
     height: f32,
+}
+
+#[derive(Clone, Copy)]
+pub enum RenderTextDest {
+    TopLeft(Vec2),
+    TopCenter(Vec2),
+    BottomLeft(Vec2),
+    BottomCenter(Vec2),
+    Centered(Vec2),
+}
+
+#[derive(Clone)]
+pub struct RenderTextOptions {
+    pub dest: RenderTextDest,
+    pub color: Option<Color>,
+    pub alpha: f32, // alpha modifier, color alpha is multiplied with this
+}
+
+impl Default for RenderTextOptions {
+    fn default() -> Self {
+        Self {
+            dest: RenderTextDest::TopLeft(Vec2(0.0, 0.0)),
+            color: None,
+            alpha: 1.0,
+        }
+    }
 }
 
 impl Drop for Text {
@@ -62,6 +89,21 @@ impl Clone for Font {
             panic!("Font copy failed!");
         }
         Self { font }
+    }
+}
+
+impl mlua::UserData for Text {}
+
+impl mlua::FromLua for Text {
+    fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::UserData(ud) => Ok(ud.take()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "Text".to_owned(),
+                message: Some("expected Text".to_string()),
+            }),
+        }
     }
 }
 
@@ -101,6 +143,7 @@ impl Font {
 
         Ok(Text {
             text,
+            default_color: Color::WHITE,
             width: width as f32,
             height: height as f32,
         })
@@ -134,45 +177,40 @@ impl Text {
     }
 
     pub fn with_color(mut self, color: Color) -> Self {
-        self.set_color(color);
+        self.default_color = color;
         self
     }
 
     pub fn set_text(&mut self, text: &str) {
-        unsafe {
-            TTF_SetTextString(self.text, text.as_ptr() as *const i8, text.len());
-        }
-    }
-    pub fn set_color(&mut self, color: Color) {
         let mut width: c_int = 0;
         let mut height: c_int = 0;
+
         unsafe {
-            TTF_SetTextColorFloat(self.text, color.r, color.g, color.b, color.a);
+            TTF_SetTextString(self.text, text.as_ptr() as *const i8, text.len());
             TTF_GetTextSize(self.text, &mut width, &mut height);
         }
-
         self.width = width as f32;
         self.height = height as f32;
     }
 
-    pub fn set_alpha(&mut self, a: f32) {
-        let mut r: f32 = 0.0;
-        let mut g: f32 = 0.0;
-        let mut b: f32 = 0.0;
-
-        unsafe {
-            TTF_GetTextColorFloat(self.text, &mut r, &mut g, &mut b, null_mut());
-        }
-
-        self.set_color(Color::new_rgba(r, g, b, a));
+    pub fn set_default_color(&mut self, color: Color) {
+        self.default_color = color;
     }
 
-    pub fn render_hcenter(&self, w: f32, y: f32) {
-        self.render(Vec2((w - self.width) / 2.0, y));
-    }
-    pub fn render(&self, pos: Vec2) {
+    pub fn render(&self, opts: &RenderTextOptions) {
+        let pos = match opts.dest {
+            RenderTextDest::TopLeft(p) => p,
+            RenderTextDest::Centered(p) => p - Vec2(self.width / 2.0, self.height / 2.0),
+            RenderTextDest::TopCenter(p) => p - Vec2(self.width / 2.0, 0.0),
+            RenderTextDest::BottomLeft(p) => p - Vec2(0.0, self.height),
+            RenderTextDest::BottomCenter(p) => p - Vec2(self.width / 2.0, self.height),
+        };
+
+        let color = opts.color.unwrap_or(self.default_color);
+
         unsafe {
             TTF_DrawRendererText(self.text, pos.0, pos.1);
+            TTF_SetTextColorFloat(self.text, color.r, color.g, color.b, color.a * opts.alpha);
         }
     }
 }

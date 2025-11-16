@@ -29,6 +29,15 @@ function luola_init_game(settings)
 				on_fire_secondary = luola_secondary_weapons[p.weapon].fire_func,
 			})
 		)
+
+		game.player_effect("hud_overlay", p.player, {
+			text = textures.font("menu", "Get ready!"),
+			pos = Vec2(0.5, 0.1),
+			color = game.player_color(p.player),
+			lifetime = 3,
+			fadeout = 1,
+		})
+
 	end
 
 	luola_init_level(settings.level)

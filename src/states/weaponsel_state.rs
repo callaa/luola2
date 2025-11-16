@@ -21,7 +21,10 @@ use anyhow::Result;
 use super::{StackableState, StackableStateResult};
 use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId},
-    gfx::{Color, RenderMode, RenderOptions, Renderer, Text, Texture, TextureId, make_button_icon},
+    gfx::{
+        Color, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
+        Texture, TextureId, make_button_icon,
+    },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
     states::game_assets::{GameAssets, SelectableWeapon},
@@ -179,7 +182,10 @@ impl WeaponSelection {
     fn render_player_box(&self, player: &PlayerWeaponChoice, rect: RectF) {
         let renderer = &self.renderer.borrow();
 
-        player.player_text.render(Vec2(rect.x() + 8.0, rect.y()));
+        player.player_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopLeft(Vec2(rect.x() + 8.0, rect.y())),
+            ..Default::default()
+        });
 
         let rect = RectF::new(
             rect.x(),
@@ -204,20 +210,29 @@ impl WeaponSelection {
         let weapon_title_x = rect.x() + (rect.w() - title_text.width()) / 2.0;
 
         if player.decided {
-            title_text.render(Vec2(
-                weapon_title_x,
-                rect.y() + (rect.h() - title_text.height()) / 2.0,
-            ));
+            title_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(Vec2(
+                    weapon_title_x,
+                    rect.y() + (rect.h() - title_text.height()) / 2.0,
+                )),
+                ..Default::default()
+            });
         } else {
             let y = rect.y() + 8.0;
-            title_text.render(Vec2(
-                weapon_title_x,
-                y + (title_text.height().max(player.left_button_icon.height())
-                    - title_text.height())
-                    / 2.0,
-            ));
+            title_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(Vec2(
+                    weapon_title_x,
+                    y + (title_text.height().max(player.left_button_icon.height())
+                        - title_text.height())
+                        / 2.0,
+                )),
+                ..Default::default()
+            });
 
-            flavor_text.render(Vec2(rect.x() + 8.0, y + title_text.height() + 16.0));
+            flavor_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopLeft(Vec2(rect.x() + 8.0, y + title_text.height() + 16.0)),
+                ..Default::default()
+            });
 
             player.left_button_icon.render_simple(
                 renderer,
@@ -260,8 +275,10 @@ impl WeaponSelection {
         self.starfield.borrow().render(renderer);
 
         // Round number
-        self.round_text
-            .render_hcenter(renderer.width() as f32, 10.0);
+        self.round_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            ..Default::default()
+        });
 
         // Player weapon selection boxes
         let player_box_w = renderer.width() as f32 * (3.0 / 4.0);

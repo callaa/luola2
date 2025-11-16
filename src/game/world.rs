@@ -22,7 +22,7 @@ use log::error;
 use crate::{
     game::{
         Player, PlayerId, PlayerState,
-        hud::draw_hud,
+        hud::{PlayerHud, draw_hud},
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
         objects::{Critter, FixedObject, GameObjectArray, TerrainParticle},
     },
@@ -77,7 +77,7 @@ pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
 
-    players: Vec<PlayerState>,
+    players: Rc<RefCell<Vec<PlayerState>>>,
 
     /// Double buffered ships so we can access them in lua at any time
     ships: Rc<RefCell<GameObjectArray<Ship>>>, // ships that (may) be piloted by a player
@@ -137,12 +137,16 @@ impl World {
         )?));
         let mut scripting = ScriptEnvironment::new(renderer.clone())?;
 
+        let players = Rc::new(RefCell::new(
+            players.iter().map(|_| PlayerState::new()).collect(),
+        ));
         let ships = Rc::new(RefCell::new(GameObjectArray::new()));
         let mines = Rc::new(RefCell::new(GameObjectArray::new()));
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
 
         scripting.init_game(
+            players.clone(),
             level.clone(),
             ships.clone(),
             mines.clone(),
@@ -154,7 +158,7 @@ impl World {
         }
 
         Ok(World {
-            players: players.iter().map(|_| PlayerState::new()).collect(),
+            players,
             scripting,
             level,
             ships,
@@ -257,12 +261,15 @@ impl World {
      */
     pub fn step(&mut self, controllers: &[GameController], timestep: f32) -> Option<PlayerId> {
         // Player state reset
-        for ps in self.players.iter_mut() {
+        for ps in self.players.borrow_mut().iter_mut() {
             if ps.fadeout < 1.0 {
                 ps.fadeout += timestep;
             }
             // this will get replaced with the right HUD type if the player is still in the game
-            ps.hud = super::PlayerHud::None;
+            ps.hud = PlayerHud::None;
+
+            // Overlay animations
+            ps.overlays.retain_mut(|o| o.age(timestep));
         }
 
         let level = self.level.borrow();
@@ -287,9 +294,9 @@ impl World {
                 ));
 
                 if ship.player_id() > 0 && ship.controller() > 0 {
-                    let ps = &mut self.players[ship.player_id() as usize - 1];
+                    let ps = &mut self.players.borrow_mut()[ship.player_id() as usize - 1];
                     let ship = work.last_mut();
-                    ps.hud = super::PlayerHud::Ship {
+                    ps.hud = PlayerHud::Ship {
                         health: ship.health(),
                         ammo: ship.ammo(),
                     };
@@ -511,7 +518,7 @@ impl World {
             error!("Couldn't set viewport: {}", err);
         }
 
-        let player = &self.players[player_id as usize - 1];
+        let player = &self.players.borrow()[player_id as usize - 1];
 
         if player.fadeout < 1.0 {
             let level = self.level.borrow();
@@ -568,7 +575,7 @@ impl World {
             }
 
             // Player HUD
-            draw_hud(renderer, player.hud);
+            draw_hud(renderer, player.hud, &player.overlays);
         }
 
         if player.fadeout > 0.0 {

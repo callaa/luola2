@@ -23,7 +23,6 @@ use anyhow::Error;
 use crate::{
     game::MenuButton,
     gfx::{Renderer, Text},
-    math::Vec2,
     states::{StackableState, StackableStateResult},
 };
 
@@ -88,7 +87,7 @@ impl StackableState for ErrorScreenState {
                 .iter()
                 .enumerate()
                 .for_each(|(i, line)| renderer.draw_debug_text(line, 0.0, i as f32 * 8.0)),
-            Either::Right(text) => text.render(Vec2::ZERO),
+            Either::Right(text) => text.render(&Default::default()),
         }
 
         renderer.present();
