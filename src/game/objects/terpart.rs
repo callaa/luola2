@@ -120,7 +120,13 @@ impl TerrainParticle {
             self.destroyed = true;
 
             if self.terrain != 0 || self.stain {
-                if terrain::is_level_boundary(ter) {
+                if terrain::is_level_boundary(ter) || terrain::is_base(ter) {
+                    // Don't accumulate on level boundaries or bases.
+                    // We don't want any new terrain sticking to the sides or top of the level.
+                    // Bottom would be OK in most cases, but the bottom is typically already covered
+                    // by water or a thick layer of terrain.
+                    // Bases we don't want covered because it could make them easily unusable by
+                    // accident. (Lore explanation: the pit crew keeps cleaning them up.)
                     return None;
                 }
 
