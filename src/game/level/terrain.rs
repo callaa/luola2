@@ -35,6 +35,11 @@ pub fn is_space(t: Terrain) -> bool {
     t & (TER_BIT_WATER | TER_MASK_SOLID) == 0
 }
 
+/// Can a walking critter walk through this type of terrain
+pub fn can_walk_through(t: Terrain) -> bool {
+    is_space(t) || (t & TER_MASK_SOLID) == TER_TYPE_WALKWAY
+}
+
 /// Is this terrain point open water?
 pub fn is_water(t: Terrain) -> bool {
     t & (TER_BIT_WATER | TER_MASK_SOLID) == TER_BIT_WATER

@@ -220,7 +220,7 @@ impl Critter {
             if terrain::is_solid(level.terrain_at(new_pos)) {
                 // pixel above must be free
                 let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
-                if terrain::is_space(level.terrain_at(new_pos)) {
+                if terrain::can_walk_through(level.terrain_at(new_pos)) {
                     return (new_pos, false);
                 }
             }
@@ -230,7 +230,7 @@ impl Critter {
             if terrain::is_solid(level.terrain_at(new_pos)) {
                 // pixel above must be free
                 let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
-                if terrain::is_space(level.terrain_at(new_pos)) {
+                if terrain::can_walk_through(level.terrain_at(new_pos)) {
                     return (new_pos, false);
                 }
             }
