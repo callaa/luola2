@@ -125,10 +125,13 @@ impl<'a> LevelEditor<'a> {
                                 match scripting.get_function("luola_explosive_terrain") {
                                     Ok(f) => {
                                         if let Err(err) = f.call::<()>((
-                                            (tile_rect.x() + rect_in_tile.x() + row_x as i32)
-                                                as f32
-                                                * LEVEL_SCALE,
-                                            (tile_rect.y() + y as i32) as f32 * LEVEL_SCALE,
+                                            Vec2(
+                                                (tile_rect.x() + rect_in_tile.x() + row_x as i32)
+                                                    as f32
+                                                    * LEVEL_SCALE,
+                                                (tile_rect.y() + y as i32) as f32 * LEVEL_SCALE,
+                                            ),
+                                            *art,
                                         )) {
                                             log::error!(
                                                 "Call to luola_explosive_terrain failed: {err}"

@@ -75,15 +75,14 @@ end
 -- Terrain explosion handler
 -- This is called with a certain probability for each explosive pixel
 -- when making a hole in the terrain.
-function luola_explosive_terrain(x, y)
+function luola_explosive_terrain(pos, color)
 	local tex = textures.get("pewpew")
-	local pos = Vec2(x, y)
 
 	for a = 0, 360, (360 / 5) do
 		game.effect("AddBullet", {
 			pos = pos,
 			vel = Vec2_for_angle(a + math.random(-30, 30), 1000.0),
-			color = 0xffffa672,
+			color = color,
 			texture = tex,
 			on_impact = Impacts.bullet,
 		})
