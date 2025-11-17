@@ -118,11 +118,11 @@ fn do_glob(
     let count = count as usize;
     for i in 0..count {
         let f = unsafe { CStr::from_ptr(*files.add(i) as *const c_char) };
-        if let Ok(f) = f.to_str() {
-            if !filenames.contains(f) {
-                filenames.insert(f.to_owned());
-                paths.push([basepath, Path::new(f)].iter().collect());
-            }
+        if let Ok(f) = f.to_str()
+            && !filenames.contains(f)
+        {
+            filenames.insert(f.to_owned());
+            paths.push([basepath, Path::new(f)].iter().collect());
         }
     }
 
@@ -161,14 +161,14 @@ pub fn glob_datafiles(path: &str, pattern: &str) -> Result<Vec<PathBuf>> {
 
     if cfg!(unix) {
         do_glob(
-            &[&LOCAL_SHARE_PATH, path].iter().collect(),
+            &[LOCAL_SHARE_PATH, path].iter().collect(),
             &pattern,
             &mut filenames,
             &mut paths,
         )?;
 
         do_glob(
-            &[&SHARE_PATH, path].iter().collect(),
+            &[SHARE_PATH, path].iter().collect(),
             &pattern,
             &mut filenames,
             &mut paths,

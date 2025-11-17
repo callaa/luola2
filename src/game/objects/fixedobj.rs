@@ -28,7 +28,9 @@ pub struct FixedObject {
 impl mlua::FromLua for FixedObject {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
-            let texture = table.get::<Option<TextureId>>("texture")?.map(|t| AnimatedTexture::new(t));
+            let texture = table
+                .get::<Option<TextureId>>("texture")?
+                .map(AnimatedTexture::new);
             Ok(FixedObject {
                 id: table.get("id")?,
                 pos: table.get("pos")?,
@@ -57,9 +59,11 @@ impl mlua::UserData for FixedObject {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("pos", |_, this| Ok(this.pos));
 
-        fields.add_field_method_get("texture", |_, this| Ok(this.texture.as_ref().map(|t| t.id())));
+        fields.add_field_method_get("texture", |_, this| {
+            Ok(this.texture.as_ref().map(|t| t.id()))
+        });
         fields.add_field_method_set("texture", |_, this, t: Option<TextureId>| {
-            this.texture = t.map(|id| AnimatedTexture::new(id));
+            this.texture = t.map(AnimatedTexture::new);
             Ok(())
         });
         fields.add_field_method_get("id", |_, this| Ok(this.id));

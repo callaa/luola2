@@ -99,16 +99,11 @@ pub enum TextureScaleMode {
     Linear,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone, Copy, Default)]
 pub enum BlendMode {
+    #[default]
     AlphaBlend,
     Add,
-}
-
-impl Default for BlendMode {
-    fn default() -> Self {
-        BlendMode::AlphaBlend
-    }
 }
 
 #[derive(Clone, Copy)]

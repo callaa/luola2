@@ -47,9 +47,7 @@ impl mlua::FromLua for HudOverlay {
             Ok(Self {
                 text,
                 pos: HudOverlayPosition::Centered(posv),
-                color: table
-                    .get::<Option<u32>>("color")?
-                    .map(|c| Color::from_argb_u32(c)),
+                color: table.get::<Option<u32>>("color")?.map(Color::from_argb_u32),
                 lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(0.0),
                 fadein: table.get::<Option<f32>>("fadein")?.unwrap_or(0.0),
                 fadeout: table.get::<Option<f32>>("fadeout")?.unwrap_or(0.0),
@@ -119,7 +117,6 @@ fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32) {
     );
     renderer.draw_filled_rectangle(bar_rect, &Color::new(0.1, 0.1, 0.1));
 
-    let health = health;
     let health_rect = RectF::new(
         bar_rect.x() + 1.0,
         bar_rect.y() + 1.0,
