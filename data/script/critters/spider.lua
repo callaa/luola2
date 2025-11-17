@@ -20,10 +20,13 @@ end
 -- Check if there is a ceiling low enough to hang from
 function Spider._try_ceiling(critter)
 	local pos, t, hit = game.terrain_line(critter.pos, critter.pos + Vec2(0, -200))
-	if hit then
+	local thread_len = critter.pos.y - pos.y
+	if hit and thread_len > 50 then
 		critter.walking = 0
 		critter.texture = textures.get("spider_hanging")
 		critter.state.slinging = true
+		critter.state.max_len = thread_len - 10
+		critter.state.climb_dir = -1
 		critter:attach_rope(pos)
 		Scheduler.add_to_object(critter, 0.2, Spider._climb_thread)
 		return
@@ -33,10 +36,34 @@ end
 
 -- Climb the rope up and down
 function Spider._climb_thread(critter)
-	if critter.rope_length < 40 then
-		return nil
+	if critter.state.climb_dir < 0 then
+		if critter.rope_length <= 40 then
+			critter.state.climb_dir = 0
+		else
+			critter:climb_rope(-2)
+		end
+	elseif critter.state.climb_dir > 0 then
+		if critter.rope_length >= critter.state.max_len then
+			critter.state.climb_dir = 0
+		else
+			critter:climb_rope(3)
+		end
 	end
-	critter:climb_rope(-3)
+
+	-- occasionally change direction or detach
+	if math.random() < 0.1 then
+		local r = math.random(1, 20)
+		if r == 1 then
+			critter:detach_rope()
+			return nil
+		elseif r <= 5 then
+			critter.state.climb_dir = 0
+		elseif r <= 15 then
+			critter.state.climb_dir = -1
+		else
+			critter.state.climb_dir = 1
+		end
+	end
 
 	return 0.1
 end
