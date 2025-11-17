@@ -507,6 +507,11 @@ impl World {
         // Apply accumulated effects
         self.apply_accumulated_effects();
 
+        // Continuous garbage collection to avoid big pauses
+        if let Err(err) = self.scripting.lua().gc_step() {
+            log::error!("GC error: {}", err);
+        }
+
         self.winner
     }
 

@@ -136,6 +136,8 @@ impl AppState {
             unsafe {
                 SDL_DelayNS(NANOSECONDS_PER_FRAME - dticks);
             }
+        } else if dticks > 33_000_000 {
+            log::warn!("Tick took {} milliseconds!", dticks / 1_000_000);
         }
 
         result
