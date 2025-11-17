@@ -14,7 +14,7 @@ pub struct FixedObject {
     pos: Vec2,
     radius: f32,
     destroyed: bool,
-    texture: AnimatedTexture,
+    texture: Option<AnimatedTexture>,
     color: Color,
     state: mlua::Table,
 
@@ -28,11 +28,12 @@ pub struct FixedObject {
 impl mlua::FromLua for FixedObject {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
+            let texture = table.get::<Option<TextureId>>("texture")?.map(|t| AnimatedTexture::new(t));
             Ok(FixedObject {
                 id: table.get("id")?,
                 pos: table.get("pos")?,
                 radius: table.get::<Option<f32>>("radius")?.unwrap_or(1.0),
-                texture: AnimatedTexture::new(table.get("texture")?),
+                texture,
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
@@ -56,9 +57,9 @@ impl mlua::UserData for FixedObject {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("pos", |_, this| Ok(this.pos));
 
-        fields.add_field_method_get("texture", |_, this| Ok(this.texture.id()));
-        fields.add_field_method_set("texture", |_, this, t: TextureId| {
-            this.texture = AnimatedTexture::new(t);
+        fields.add_field_method_get("texture", |_, this| Ok(this.texture.as_ref().map(|t| t.id())));
+        fields.add_field_method_set("texture", |_, this, t: Option<TextureId>| {
+            this.texture = t.map(|id| AnimatedTexture::new(id));
             Ok(())
         });
         fields.add_field_method_get("id", |_, this| Ok(this.id));
@@ -98,7 +99,9 @@ impl FixedObject {
     }
 
     pub fn step_mut(&mut self, lua: &mlua::Lua, timestep: f32) {
-        self.texture.step(timestep);
+        if let Some(tex) = &mut self.texture {
+            tex.step(timestep);
+        }
 
         if let Some(timer) = self.timer.as_mut() {
             *timer -= timestep;
@@ -125,11 +128,13 @@ impl FixedObject {
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
-        let options = RenderOptions {
-            dest: RenderDest::Centered(self.pos - camera_pos),
-            ..Default::default()
-        };
-        self.texture.render(renderer, &options);
+        if let Some(tex) = &self.texture {
+            let options = RenderOptions {
+                dest: RenderDest::Centered(self.pos - camera_pos),
+                ..Default::default()
+            };
+            tex.render(renderer, &options);
+        }
     }
 }
 
