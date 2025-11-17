@@ -37,6 +37,7 @@ pub struct TerrainParticle {
     phys: PhysicalObject,
     texture: Option<TextureId>,
     color: Color,
+    wind: bool,       // does wind and jitter affect this particle
     stain: bool,      // if true, recolor an existing pixel rather than creating a new one
     terrain: Terrain, // if zero, this particle won't turn into real terrain (unused in stain mode)
     destroyed: bool,
@@ -66,6 +67,7 @@ impl mlua::FromLua for TerrainParticle {
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
+                wind: table.get::<Option<bool>>("wind")?.unwrap_or(false),
                 destroyed: false,
             })
         } else {
@@ -94,6 +96,7 @@ impl TerrainParticle {
             terrain,
             color,
             stain: false,
+            wind: true,
             destroyed: false,
         }
     }
@@ -111,9 +114,12 @@ impl TerrainParticle {
     }
 
     pub fn step_mut(&mut self, level: &Level, timestep: f32) -> Option<(Vec2, Terrain, Color)> {
-        let jitter = (-0.5 + fastrand::f32()) * 0.5;
-        self.phys
-            .add_impulse(Vec2(level.windspeed() / 10.0 + jitter, 0.0));
+        if self.wind {
+            let jitter = (-0.5 + fastrand::f32()) * 0.5;
+            self.phys
+                .add_impulse(Vec2(level.windspeed() / 10.0 + jitter, 0.0));
+        }
+
         let (_, ter) = self.phys.step(level, timestep);
 
         if !terrain::is_space(ter) {
