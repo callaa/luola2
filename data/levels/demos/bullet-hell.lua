@@ -1,7 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local tableutils = require("utils.table")
 
-local function bullet_hell_impact(this, terrain, ship)
+local function bullet_hell_impact(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBulletHole", this.pos)
 	game.effect("AddParticle", {
@@ -9,8 +9,8 @@ local function bullet_hell_impact(this, terrain, ship)
 		texture = textures.get("boom"),
 	})
 
-	if ship ~= nil then
-		ship:damage(0.1)
+	if obj ~= nil and obj.damage ~=nil then
+		obj:damage(0.1)
 	end
 end
 
