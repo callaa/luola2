@@ -17,7 +17,6 @@
 use std::{cell::RefCell, rc::Rc};
 
 use anyhow::Result;
-use log::warn;
 
 use super::{StackableState, StackableStateResult};
 use crate::{
@@ -87,20 +86,8 @@ impl LevelSelection {
         let renderer = &self.renderer.borrow();
         let level = &self.assets.levels[self.levelboxes.len()];
         self.levelboxes.push({
-            let thumbnail = match Texture::from_file(renderer, level.thumbnail_path()) {
-                Ok(t) => Some(t),
-                Err(err) => {
-                    warn!(
-                        "Couldn't load thumbnail {:?}: {}",
-                        level.thumbnail_path(),
-                        err
-                    );
-                    None
-                }
-            };
-
             LevelBox {
-                thumbnail,
+                thumbnail: level.thumbnail().cloned(),
                 title: renderer
                     .fontset()
                     .menu

@@ -68,7 +68,7 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
         .load_textures(&find_datafile_path("textures/textures.toml")?)?;
 
     // Load list of levels
-    let mut levels = LevelInfo::load_level_packs()?;
+    let mut levels = LevelInfo::load_level_packs(&renderer.borrow())?;
 
     if levels.is_empty() {
         return Err(anyhow!("No levels found!"));

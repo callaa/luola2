@@ -28,7 +28,10 @@ use toml;
 use anyhow::{Result, anyhow};
 
 use super::terrain::*;
-use crate::fs::glob_datafiles;
+use crate::{
+    fs::glob_datafiles,
+    gfx::{Renderer, Texture},
+};
 
 #[derive(Clone)]
 pub struct LevelInfo {
@@ -37,7 +40,7 @@ pub struct LevelInfo {
     title: String,
     artwork_file: String,
     terrain_file: String,
-    thumbnail_file: String,
+    thumbnail: Option<Texture>,
     background_file: Option<String>,
     script_file: Option<String>,
     terrain_palette: TerrainPalette,
@@ -78,9 +81,13 @@ struct TerrainColors {
 }
 
 impl LevelInfo {
-    pub fn load(path: &Path) -> Result<LevelInfo> {
+    pub fn load(path: &Path, renderer: &Renderer) -> Result<LevelInfo> {
         let content = fs::read_to_string(path)?;
         let info: LevelInfoToml = toml::from_str(&content)?;
+        let root = path
+            .parent()
+            .expect("level info file path has no parent?")
+            .to_owned();
 
         let terrain_palette = parse_palette_mapping(&info.terrain_palette)?;
         // Find the first color mapped to free space. This will be used
@@ -91,16 +98,21 @@ impl LevelInfo {
             .find(|(_, p)| **p == 0)
             .map(|(idx, _)| idx as u8);
 
+        let thumbnail = match Texture::from_file(renderer, root.join(info.thumbnail)) {
+            Ok(t) => Some(t),
+            Err(err) => {
+                log::warn!("Couldn't load thumbnail: {}", err);
+                None
+            }
+        };
+
         Ok(LevelInfo {
-            root: path
-                .parent()
-                .expect("level info file path has no parent?")
-                .to_owned(),
+            root,
             name: path.file_stem().unwrap().to_str().unwrap().to_owned(),
             title: info.title,
             artwork_file: info.artwork,
             terrain_file: info.terrain,
-            thumbnail_file: info.thumbnail,
+            thumbnail,
             background_file: info.background,
             script_file: info.script,
             terrain_palette,
@@ -111,12 +123,12 @@ impl LevelInfo {
         })
     }
 
-    pub fn load_level_packs() -> Result<Vec<LevelInfo>> {
+    pub fn load_level_packs(renderer: &Renderer) -> Result<Vec<LevelInfo>> {
         let files = glob_datafiles("levels", "*/*.toml")?;
 
         Ok(files
             .iter()
-            .filter_map(|f| match LevelInfo::load(f) {
+            .filter_map(|f| match LevelInfo::load(f, renderer) {
                 Ok(l) => Some(l),
                 Err(err) => {
                     error!("Couldn't load level info: {}", err);
@@ -150,8 +162,8 @@ impl LevelInfo {
         self.terrain_file == self.artwork_file
     }
 
-    pub fn thumbnail_path(&self) -> PathBuf {
-        self.root.join(&self.thumbnail_file)
+    pub fn thumbnail(&self) -> Option<&Texture> {
+        self.thumbnail.as_ref()
     }
 
     pub fn background_path(&self) -> Option<PathBuf> {
