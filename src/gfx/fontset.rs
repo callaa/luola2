@@ -31,6 +31,8 @@ pub struct FontSet {
 struct FontOptions {
     file: String,
     size: f32,
+    #[serde(default)]
+    outline: i32,
 }
 
 #[derive(Deserialize)]
@@ -59,6 +61,10 @@ impl FontSet {
 
 impl FontOptions {
     fn load(&self, root: &Path) -> Result<Font> {
-        Font::from_file([root, Path::new(&self.file)].iter().collect(), self.size)
+        Font::from_file(
+            [root, Path::new(&self.file)].iter().collect(),
+            self.size,
+            self.outline,
+        )
     }
 }

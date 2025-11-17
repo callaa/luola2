@@ -21,7 +21,7 @@ use crate::{
     game::{GameControllerSet, MenuButton, Player},
     gfx::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
-        Texture, make_controller_icon,
+        TextOutline, Texture, make_controller_icon,
     },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
@@ -71,7 +71,10 @@ impl PlayerSelection {
         let font = &r.fontset().menu;
         let red = Color::new(0.9, 0.2, 0.2);
 
-        let prompt_text = font.create_text(&r, "Press Fire to join!").unwrap();
+        let prompt_text = font
+            .create_text(&r, "Press Fire to join!")
+            .unwrap()
+            .with_outline_color(Color::new(0.2, 0.2, 0.4));
         let rounds_text = r
             .fontset()
             .menu
@@ -126,6 +129,7 @@ impl PlayerSelection {
         if self.players.is_empty() {
             self.prompt_text.render(&RenderTextOptions {
                 dest: RenderTextDest::Centered(Vec2(w / 2.0, h / 2.0)),
+                outline: TextOutline::Shadow,
                 ..Default::default()
             });
         } else {

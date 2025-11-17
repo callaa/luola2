@@ -22,7 +22,7 @@ use sdl3_sys::keyboard::SDL_GetKeyName;
 use crate::{
     events,
     game::{GameControllerSet, MenuButton},
-    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
     math::{RectF, Vec2},
 };
 
@@ -107,6 +107,8 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
             .cloned()
             .next();
 
+        let outline_color = Color::new(0.2, 0.2, 0.4);
+
         let items = items
             .iter()
             .map(|item| {
@@ -124,7 +126,9 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
                         }
                     }
                     MenuItem::Link(s, id) | MenuItem::Escape(s, id) => {
-                        let text = font.create_text(renderer, s)?;
+                        let text = font
+                            .create_text(renderer, s)?
+                            .with_outline_color(outline_color);
                         let (w, h) = text.size();
                         MenuLine {
                             text: Some(text),
@@ -136,7 +140,10 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
                         }
                     }
                     MenuItem::Value(s, id) => {
-                        let text = font.create_text(renderer, s)?;
+                        let text = font
+                            .create_text(renderer, s)?
+                            .with_outline_color(outline_color);
+
                         let (w, h) = text.size();
                         MenuLine {
                             text: Some(text),
@@ -382,7 +389,8 @@ impl<T: Copy + PartialEq + Debug> Menu<T> {
         for item in &self.items {
             if let Some(text) = &item.text {
                 text.render(&RenderTextOptions {
-                    dest: crate::gfx::RenderTextDest::TopLeft(item.rect.topleft()),
+                    dest: RenderTextDest::TopLeft(item.rect.topleft()),
+                    outline: TextOutline::Shadow,
                     ..Default::default()
                 });
             }

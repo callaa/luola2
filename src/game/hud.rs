@@ -15,7 +15,7 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
     math::{RectF, Vec2},
 };
 
@@ -84,6 +84,7 @@ impl HudOverlay {
                     )),
                     color: self.color,
                     alpha: a,
+                    outline: TextOutline::Outline,
                 });
             }
         }

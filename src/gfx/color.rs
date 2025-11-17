@@ -47,6 +47,7 @@ impl Color {
     ];
 
     pub const WHITE: Color = Color::new(1.0, 1.0, 1.0);
+    pub const BLACK: Color = Color::new(0.0, 0.0, 0.0);
 
     pub const fn new(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b, a: 1.0 }

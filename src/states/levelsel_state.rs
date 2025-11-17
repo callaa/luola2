@@ -24,7 +24,7 @@ use crate::{
     game::MenuButton,
     gfx::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
-        Texture,
+        TextOutline, Texture,
     },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
@@ -106,7 +106,7 @@ impl LevelSelection {
                     .menu
                     .create_text(renderer, level.title())
                     .unwrap()
-                    .with_color(Self::SELECTION_COLOR),
+                    .with_outline_color(Color::new(0.2, 0.2, 0.4)),
                 target_rect: RectF::new(0.0, 0.0, 0.0, 0.0),
                 rect: RectF::new(0.0, 0.0, 0.0, 0.0),
             }
@@ -168,6 +168,7 @@ impl LevelSelection {
         if let Some(lb) = self.levelboxes.get(self.selection) {
             lb.title.render(&RenderTextOptions {
                 dest: RenderTextDest::BottomLeft(Vec2(10.0, renderer.height() as f32)),
+                outline: TextOutline::Shadow,
                 ..Default::default()
             });
         }
@@ -284,6 +285,7 @@ impl StackableState for LevelSelection {
             if let Some(last) = self.levelboxes.last_mut() {
                 last.rect = last.target_rect;
             }
+            self.timer = 0.05;
         } else {
             self.timer -= timestep;
         }
