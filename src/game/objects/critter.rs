@@ -1,16 +1,16 @@
 use crate::{
+    call_state_method,
     game::{
         PlayerId,
         level::{LEVEL_SCALE, Level, terrain},
         objects::{GameObject, PhysicalObject, Projectile, Rope, TerrainCollisionMode},
     },
+    gameobject_timer, get_state_method,
     gfx::{
         AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId,
     },
     math::Vec2,
 };
-
-static mut LAST_CRITTER_ID: u32 = 0;
 
 #[derive(Clone, Debug)]
 pub struct Critter {
@@ -43,22 +43,11 @@ pub struct Critter {
 
     /// Extra state for scripting.
     /// Most critter state lives here.
-    state: mlua::Table,
+    state: Option<mlua::Table>,
 
     /// Rope for attaching to things
     /// Used by spiders.
     rope: Option<Rope>,
-
-    /// Callback to handle bullet hits. (Typically critters are one shotted by any projectile)
-    /// The callback may return "false" to indicate it has performed special handling
-    /// and the bullet's normal impact handler should not be run.
-    /// function (this, bullet) -> Option<bool>
-    on_bullet_hit: mlua::Function,
-
-    on_touch_ground: Option<mlua::Function>,
-
-    /// Called when a walking critter can't walk any further
-    on_touch_ledge: Option<mlua::Function>,
 
     /// Object scheduler
     timer: Option<f32>,
@@ -145,12 +134,7 @@ impl mlua::UserData for Critter {
 }
 
 impl mlua::FromLua for Critter {
-    fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<Self> {
-        unsafe {
-            // we're not multithreaded so fine for now
-            LAST_CRITTER_ID += 1;
-        }
-
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
             Ok(Critter {
                 phys: PhysicalObject {
@@ -162,7 +146,7 @@ impl mlua::FromLua for Critter {
                     impulse: Vec2::ZERO,
                     terrain_collision_mode: TerrainCollisionMode::Simple,
                 },
-                id: unsafe { LAST_CRITTER_ID },
+                id: table.get::<Option<u32>>("id")?.unwrap_or(0),
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),
                 waterproof: table.get::<Option<bool>>("waterproof")?.unwrap_or(true),
                 walking: table.get::<Option<i8>>("walking")?.unwrap_or(0),
@@ -170,13 +154,8 @@ impl mlua::FromLua for Critter {
                 walkspeed: table.get::<Option<f32>>("walkspeed")?.unwrap_or(0.03),
                 step_timer: 0.0,
                 rope: None,
-                state: table
-                    .get::<Option<mlua::Table>>("state")?
-                    .unwrap_or_else(|| lua.create_table().unwrap()),
+                state: table.get("state")?,
                 texture: AnimatedTexture::new(table.get("texture")?),
-                on_bullet_hit: table.get("on_bullet_hit")?,
-                on_touch_ledge: table.get("on_touch_ledge")?,
-                on_touch_ground: table.get("on_touch_ground")?,
                 destroyed: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -249,14 +228,8 @@ impl Critter {
             rope.physics_step(&mut critter.phys);
         }
 
-        if (terrain::is_solid(ter) || (terrain::is_water(ter) && !critter.waterproof))
-            && let Some(callback) = critter.on_touch_ground.clone()
-            && let Err(err) = lua.scope(|scope| {
-                callback.call::<()>((scope.create_userdata_ref_mut(&mut critter)?, ter))
-            })
-        {
-            log::error!("Critter on_touch_ground: {err}");
-            critter.timer = None;
+        if terrain::is_solid(ter) || (terrain::is_water(ter) && !critter.waterproof) {
+            call_state_method!(critter, lua, "on_touch_ground", ter);
         }
 
         if critter.walking != 0 {
@@ -264,14 +237,8 @@ impl Critter {
                 let (pos, stopped) = critter.walk(level);
                 critter.phys.pos = pos;
                 critter.step_timer = self.walkspeed;
-                if stopped
-                    && let Some(callback) = critter.on_touch_ledge.clone()
-                    && let Err(err) = lua.scope(|scope| {
-                        callback.call::<()>(scope.create_userdata_ref_mut(&mut critter)?)
-                    })
-                {
-                    log::error!("Critter on_touch_ledge: {err}");
-                    critter.timer = None;
+                if stopped {
+                    call_state_method!(critter, lua, "on_touch_ledge");
                 }
             } else {
                 critter.step_timer -= timestep;
@@ -280,28 +247,7 @@ impl Critter {
 
         critter.texture.step(timestep);
 
-        if let Some(timer) = critter.timer.as_mut() {
-            *timer -= timestep;
-            critter.timer_accumulator += timestep;
-            let acc = critter.timer_accumulator;
-
-            if *timer <= 0.0 {
-                critter.timer_accumulator = 0.0;
-                match lua.scope(|scope| {
-                    lua.globals()
-                        .get::<mlua::Function>("luola_on_object_timer")?
-                        .call::<Option<f32>>((scope.create_userdata_ref_mut(&mut critter)?, acc))
-                }) {
-                    Ok(rerun) => {
-                        critter.timer = rerun;
-                    }
-                    Err(err) => {
-                        log::error!("Critter timer : {err}");
-                        critter.timer = None;
-                    }
-                };
-            }
-        }
+        gameobject_timer!(critter, lua, timestep);
 
         critter
     }
@@ -341,19 +287,13 @@ impl Critter {
     /// Execute bullet hit callback.
     /// Returns true if bullet impact callback should be processed as usual too.
     pub fn bullet_hit(&mut self, bullet: &mut Projectile, lua: &mlua::Lua) -> bool {
-        let cb = self.on_bullet_hit.clone();
-        match lua.scope(|scope| {
-            cb.call::<Option<bool>>((
+        get_state_method!(self, lua, "on_bullet_hit", (f, scope) => {
+            f.call::<Option<bool>>((
                 scope.create_userdata_ref_mut(self)?,
                 scope.create_userdata_ref_mut(bullet)?,
             ))
-        }) {
-            Ok(ret) => ret.unwrap_or(true),
-            Err(err) => {
-                log::error!("Critter bullet hit callback: {err}");
-                true
-            }
-        }
+        })
+        .unwrap_or(true)
     }
 }
 

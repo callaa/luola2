@@ -22,6 +22,7 @@ use crate::game::controller::GameController;
 use crate::game::level::{Level, terrain};
 use crate::gfx::{Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId};
 use crate::math::Vec2;
+use crate::{call_state_method, gameobject_timer};
 
 /**
  * A ship that can be piloted by a player.
@@ -81,43 +82,6 @@ pub struct Ship {
     /// Timer for damage effect
     damage_effect: f32,
 
-    /**
-     * Function to call when firing the primary weapon
-     *
-     * The function takes a mutable reference to the ship as a parameter.
-     * It should set the primary weapon's cooldown.
-     */
-    on_fire_primary: Option<Function>,
-
-    /**
-     * Function to call when firing the secondary weapon
-     *
-     * The function takes a mutable reference to the ship as a parameter.
-     * It should set the secondary weapon's cooldown and remaining ammo.
-     * The function is called regardless of how much ammo remains.
-     */
-    on_fire_secondary: Option<Function>,
-
-    /**
-     * Function to call on every tick while ship is thrusting
-     *
-     * This is typically used to play a sound effect and create exhaust particle
-     * effects.
-     */
-    on_thrust: Option<Function>,
-
-    /**
-     * Function to call when the ship is destroyed.
-     */
-    on_destroyed: Option<Function>,
-
-    /**
-     * Function to call while ship is sitting on a base
-     *
-     * Signature: function(ship, timestep, is_underwater)
-     */
-    on_base: Option<Function>,
-
     /// Ship object ready to be deleted
     /// Ship destruction typically triggers an end-of-level condition check
     destroyed: bool,
@@ -138,8 +102,8 @@ pub struct Ship {
     timer: Option<f32>,
     timer_accumulator: f32,
 
-    /// Extra state for scripting
-    state: Table,
+    /// Lua object state
+    state: Option<Table>,
 
     /// Texture to draw the ship with
     texture: TextureId,
@@ -216,7 +180,7 @@ impl UserData for Ship {
 }
 
 impl mlua::FromLua for Ship {
-    fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<Self> {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
             let hitpoints = table.get::<Option<f32>>("hitpoints")?.unwrap_or(100.0);
             let ammo = table.get::<Option<f32>>("ammo")?.unwrap_or(100.0);
@@ -238,18 +202,11 @@ impl mlua::FromLua for Ship {
                 hitpoints,
                 max_hitpoints: hitpoints,
                 primary_weapon_cooldown: 0.0,
-                on_fire_primary: table.get("on_fire_primary")?,
                 secondary_weapon_cooldown: 0.0,
-                on_fire_secondary: table.get("on_fire_secondary")?,
-                on_thrust: table.get("on_thrust")?,
-                on_destroyed: table.get("on_destroyed")?,
-                on_base: table.get("on_base")?,
                 ammo_remaining: ammo,
                 max_ammo: ammo,
                 damage_effect: 0.0,
-                state: table
-                    .get::<Option<Table>>("state")?
-                    .unwrap_or_else(|| lua.create_table().unwrap()),
+                state: table.get("state")?,
                 texture: table.get("texture")?,
                 destroyed: false,
                 engine_active: false,
@@ -321,14 +278,7 @@ impl Ship {
     pub fn destroy(&mut self, lua: &Lua) {
         if !self.destroyed {
             self.destroyed = true;
-            if let Some(func) = self.on_destroyed.as_ref() {
-                let func = func.clone();
-                if let Err(err) =
-                    lua.scope(|scope| func.call::<()>(scope.create_userdata_ref_mut(self).unwrap()))
-                {
-                    error!("Ship on_destroyed callback: {err}");
-                }
-            }
+            call_state_method!(*self, lua, "on_destroyed");
         }
     }
 
@@ -371,24 +321,17 @@ impl Ship {
         let impact_speed_squared = ship.phys.vel.magnitude_squared();
 
         let (prev_ter, ter) = ship.phys.step(level, timestep);
+        let is_underwater = terrain::is_underwater(ter);
 
-        if ship.engine_active
-            && let Some(func) = self.on_thrust.as_ref()
-            && let Err(err) = lua.scope(|scope| {
-                func.call::<()>((
-                    scope.create_userdata_ref_mut(&mut ship).unwrap(),
-                    terrain::is_underwater(ter),
-                ))
-            })
-        {
-            error!("Ship on_thrust callback: {err}");
+        if ship.engine_active {
+            call_state_method!(ship, lua, "on_thrust", is_underwater);
         }
 
         if ship.damage_effect > 0.0 {
             ship.damage_effect -= timestep;
         }
 
-        if terrain::is_underwater(prev_ter) != terrain::is_underwater(ter) {
+        if terrain::is_underwater(prev_ter) != is_underwater {
             // Water/air transition
             match lua.globals().get::<Function>("luola_splash") {
                 Ok(func) => {
@@ -413,17 +356,7 @@ impl Ship {
 
             // Repair/resupply logic is implemented in scripts to allow
             // for differences between ship types and so we can do special effects.
-            if let Some(func) = self.on_base.as_ref()
-                && let Err(err) = lua.scope(|scope| {
-                    func.call::<()>((
-                        scope.create_userdata_ref_mut(&mut ship).unwrap(),
-                        timestep,
-                        terrain::is_underwater(ter),
-                    ))
-                })
-            {
-                error!("Ship on_base callback: {err}");
-            }
+            call_state_method!(ship, lua, "on_base", timestep, is_underwater);
         }
 
         if terrain::is_solid(ter) && impact_speed_squared > 100000.0 {
@@ -456,49 +389,16 @@ impl Ship {
                 ship.secondary_weapon_cooldown -= timestep;
             }
 
-            if controller.fire_primary
-                && ship.primary_weapon_cooldown <= 0.0
-                && let Some(func) = self.on_fire_primary.as_ref()
-                && let Err(err) = lua.scope(|scope| {
-                    func.call::<()>(scope.create_userdata_ref_mut(&mut ship).unwrap())
-                })
-            {
-                error!("Ship on_primary_fire callback: {err}");
+            if controller.fire_primary && ship.primary_weapon_cooldown <= 0.0 {
+                call_state_method!(ship, lua, "on_fire_primary");
             }
 
-            if controller.fire_secondary
-                && ship.secondary_weapon_cooldown <= 0.0
-                && let Some(func) = self.on_fire_secondary.as_ref()
-                && let Err(err) = lua.scope(|scope| {
-                    func.call::<()>(scope.create_userdata_ref_mut(&mut ship).unwrap())
-                })
-            {
-                error!("Ship on_secondary_fire callback: {err}",);
+            if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
+                call_state_method!(ship, lua, "on_fire_secondary");
             }
         }
 
-        if let Some(timer) = ship.timer.as_mut() {
-            *timer -= timestep;
-            ship.timer_accumulator += timestep;
-            let acc = ship.timer_accumulator;
-
-            if *timer <= 0.0 {
-                ship.timer_accumulator = 0.0;
-                match lua.scope(|scope| {
-                    lua.globals()
-                        .get::<mlua::Function>("luola_on_object_timer")?
-                        .call::<Option<f32>>((scope.create_userdata_ref_mut(&mut ship)?, acc))
-                }) {
-                    Ok(rerun) => {
-                        ship.timer = rerun;
-                    }
-                    Err(err) => {
-                        error!("Ship timer : {err}");
-                        ship.timer = None;
-                    }
-                };
-            }
-        }
+        gameobject_timer!(ship, lua, timestep);
 
         ship
     }

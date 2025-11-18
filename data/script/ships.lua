@@ -88,7 +88,9 @@ local function on_ship_destroyed(ship)
 	Impacts.make_shrapnell(36, ship.pos, {
 		color = 0xffff6666,
 		texture = textures.get("pewpew"),
-		on_impact = Impacts.bullet,
+		state = {
+			on_impact = Impacts.bullet,
+		}
 	})
 end
 
@@ -103,10 +105,12 @@ local ships = {
 			thrust = 40,
 			turn_speed = 260,
 			hitpoints = 100,
-			on_fire_primary = weapons.cannon,
-			on_destroyed = on_ship_destroyed,
-			on_base = ship_on_base,
-			on_thrust = ship_thrust_effect,
+			state = {
+				on_fire_primary = weapons.cannon,
+				on_destroyed = on_ship_destroyed,
+				on_base = ship_on_base,
+				on_thrust = ship_thrust_effect,
+			}
 		},
 	},
 }

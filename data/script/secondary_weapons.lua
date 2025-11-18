@@ -18,7 +18,9 @@ function weapons.grenade(ship)
 			drag = 0.0025,
 			owner = ship.player,
 			texture = textures.get("pewpew"),
-			on_impact = Impacts.grenade,
+			state = {
+				on_impact = Impacts.grenade,
+			}
 		})
 	end
 end
@@ -33,7 +35,9 @@ function weapons.megabomb(ship)
 			drag = 0.0025,
 			owner = ship.player,
 			texture = textures.get("megabomb"),
-			on_impact = Impacts.megabomb,
+			state = {
+				on_impact = Impacts.megabomb,
+			},
 		})
 	end
 end
@@ -164,7 +168,9 @@ function weapons.foam_grenade(ship)
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xffbc990f,
-			on_impact = Impacts.foam_grenade,
+			state = {
+				on_impact = Impacts.foam_grenade,
+			}
 		})
 	end
 end
@@ -180,7 +186,9 @@ function weapons.greygoo(ship)
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xffcccccc,
-			on_impact = Impacts.greygoo,
+			state = {
+				on_impact = Impacts.greygoo,
+			}
 		})
 	end
 end
@@ -196,7 +204,9 @@ function weapons.freezer(ship)
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xffb7f5fc,
-			on_impact = Impacts.freezer,
+			state = {
+				on_impact = Impacts.freezer,
+			}
 		})
 	end
 end
@@ -212,9 +222,9 @@ function weapons.nitroglycerin(ship)
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xfffc2292,
-			on_impact = Impacts.nitroglycerin,
 			state = {
 				is_nitro = true,
+				on_impact = Impacts.nitroglycerin,
 			},
 		})
 	end

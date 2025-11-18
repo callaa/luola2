@@ -12,7 +12,9 @@ function weapons.cannon(ship)
 		radius = 5,
 		owner = ship.player,
 		texture = textures.get("pewpew"),
-		on_impact = Impacts.bullet,
+		state = {
+			on_impact = Impacts.bullet,
+		},
 	})
 end
 

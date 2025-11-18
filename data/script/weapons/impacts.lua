@@ -33,9 +33,9 @@ function impacts.make_firestarters(count, pos)
 			terrain_collision = "passthrough",
 			color = 0,
 			texture = tex,
-			on_impact = impacts.firestarter,
 			state = {
 				scheduler = Scheduler:new():add(0.3, Scheduler.destroy_this),
+				on_impact = impacts.firestarter,
 			},
 			timer = 0.3,
 		})
@@ -82,7 +82,9 @@ function impacts.grenade(this, terrain, ship)
 	impacts.make_shrapnell(36, this.pos, {
 		color = 0xffff6666,
 		texture = textures.get("pewpew"),
-		on_impact = impacts.bullet,
+		state = {
+			on_impact = impacts.bullet,
+		},
 	})
 
 	impacts.make_firestarters(8, this.pos)
@@ -105,7 +107,9 @@ function impacts.megabomb(this, terrain, obj)
 		mass = 300,
 		radius = 5,
 		texture = textures.get("pewpew"),
-		on_impact = impacts.grenade,
+		state = {
+			on_impact = impacts.grenade,
+		}
 	})
 
 	impacts.make_firestarters(8, this.pos)
@@ -126,7 +130,9 @@ function impacts.rocket(this, terrain, obj)
 
 	impacts.make_shrapnell(4, this.pos, {
 		texture = textures.get("pewpew"),
-		on_impact = impacts.grenade,
+		state = {
+			on_impact = impacts.grenade,
+		}
 	})
 	impacts.make_firestarters(8, this.pos)
 end
@@ -147,7 +153,9 @@ function impacts.missile(this, terrain, obj)
 	impacts.make_shrapnell(20, this.pos, {
 		color = 0xffff6666,
 		texture = textures.get("pewpew"),
-		on_impact = impacts.bullet,
+		state = {
+			on_impact = impacts.bullet,
+		}
 	})
 	impacts.make_firestarters(8, this.pos)
 end

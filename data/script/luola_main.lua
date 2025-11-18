@@ -20,13 +20,16 @@ local Level = require("level")
 function luola_init_game(settings)
 	-- Create a ship for each player
 	for _, p in ipairs(settings.players) do
+		local tpl = ships["vwing"].template
 		game.effect(
 			"AddShip",
-			tableutils.combined(ships["vwing"].template, {
+			tableutils.combined(tpl, {
 				pos = game.find_spawnpoint(),
 				controller = p.controller,
 				player = p.player,
-				on_fire_secondary = luola_secondary_weapons[p.weapon].fire_func,
+				state = tableutils.combined(tpl.state, {
+					on_fire_secondary = luola_secondary_weapons[p.weapon].fire_func,
+				})
 			})
 		)
 
@@ -84,7 +87,9 @@ function luola_explosive_terrain(pos, color)
 			vel = Vec2_for_angle(a + math.random(-30, 30), 1000.0),
 			color = color,
 			texture = tex,
-			on_impact = Impacts.bullet,
+			state = {
+				on_impact = Impacts.bullet,
+			},
 		})
 	end
 

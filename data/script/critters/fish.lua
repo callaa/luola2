@@ -17,12 +17,12 @@ function Fish._timer_swim(critter)
 	return 0.3
 end
 
-function Fish._on_touch_ground(critter)
+function Fish.on_touch_ground(critter)
 	critter.state.east = not critter.state.east
 	critter.vel = critter.vel * -1
 end
 
-function Fish._on_bullet_hit(critter, bullet)
+function Fish.on_bullet_hit(critter, bullet)
 	if bullet.state ~= nil and bullet.state.is_nitro then
 		bullet:destroy()
 		critter.state.explosive = true
@@ -68,8 +68,6 @@ function Fish.create(pos)
 		drag = 1 / 60.0, -- neutral buoyancy
 		texture = textures.get("shark"),
 		state = Fish:new(pos),
-		on_bullet_hit = Fish._on_bullet_hit,
-		on_touch_ground = Fish._on_touch_ground,
 		timer = 0,
 	})
 end

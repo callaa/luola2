@@ -4,11 +4,11 @@ local Level = require("level")
 
 local Spider = {}
 
-function Spider._on_touch_ledge(critter)
+function Spider.on_touch_ledge(critter)
 	critter.walking = -critter.walking
 end
 
-function Spider._on_touch_ground(critter)
+function Spider.on_touch_ground(critter)
 	if critter.state.slinging and not critter.rope_attached then
 		critter.state.slinging = false
 		critter.walking = 1
@@ -68,7 +68,7 @@ function Spider._climb_thread(critter)
 	return 0.1
 end
 
-function Spider._on_bullet_hit(critter, bullet)
+function Spider.on_bullet_hit(critter, bullet)
 	if bullet.state ~= nil and bullet.state.is_nitro then
 		bullet:destroy()
 		critter.state.explosive = true
@@ -112,14 +112,11 @@ function Spider.create(pos)
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 50,
-		radius = 6,
+		radius = 8,
 		walking = 1,
 		drag = 0.1,
 		texture = textures.get("spider"),
 		state = Spider:new(pos),
-		on_bullet_hit = Spider._on_bullet_hit,
-		on_touch_ledge = Spider._on_touch_ledge,
-		on_touch_ground = Spider._on_touch_ground,
 		timer = 0,
 	})
 end

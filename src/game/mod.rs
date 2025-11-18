@@ -19,6 +19,7 @@ mod hud;
 pub mod level;
 pub mod objects;
 mod player;
+pub mod script_macros;
 pub mod scripting;
 pub mod world;
 

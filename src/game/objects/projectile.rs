@@ -15,7 +15,6 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use core::ops::Deref;
-use log::error;
 use mlua::{self, Table};
 
 use crate::{
@@ -26,6 +25,7 @@ use crate::{
         },
         objects::{GameObject, TerrainCollisionMode},
     },
+    gameobject_timer, get_state_method,
     gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
     math::Vec2,
 };
@@ -53,11 +53,6 @@ pub struct Projectile {
     owner: i32,
     destroyed: bool,
     state: Option<Table>,
-
-    /// Callback function called when the bullet hits something.
-    /// function on_impact(this, terrain, ship|nil)
-    on_impact: Option<mlua::Function>,
-
     timer: Option<f32>,
     timer_accumulator: f32,
 }
@@ -102,7 +97,6 @@ impl mlua::FromLua for Projectile {
                 ),
                 destroyed: false,
                 state: table.get("state")?,
-                on_impact: table.get("on_impact")?,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
             })
@@ -184,21 +178,16 @@ impl Projectile {
         obj: Option<&mut T>,
         lua: &mlua::Lua,
     ) {
-        if let Some(func) = self.on_impact.as_ref() {
-            let func = func.clone();
-            if let Err(err) = lua.scope(|scope| {
-                func.call::<()>((
-                    scope.create_userdata_ref_mut(self)?,
-                    ter,
-                    match obj {
-                        Some(s) => mlua::Value::UserData(scope.create_userdata_ref_mut(s)?),
-                        None => mlua::Value::Nil,
-                    },
-                ))
-            }) {
-                error!("Projectile impact script error: {}", err);
-            }
-        }
+        get_state_method!(self, lua, "on_impact", (f, scope) => {
+            f.call::<Option<bool>>((
+                scope.create_userdata_ref_mut(self)?,
+                ter,
+                match obj {
+                    Some(s) => mlua::Value::UserData(scope.create_userdata_ref_mut(s)?),
+                    None => mlua::Value::Nil,
+                },
+            ))
+        });
     }
 
     pub fn step_mut(&mut self, level: &Level, lua: &mlua::Lua, timestep: f32) {
@@ -210,28 +199,7 @@ impl Projectile {
 
         self.texture.step(timestep);
 
-        if let Some(timer) = self.timer.as_mut() {
-            *timer -= timestep;
-            self.timer_accumulator += timestep;
-            let acc = self.timer_accumulator;
-
-            if *timer <= 0.0 {
-                self.timer_accumulator = 0.0;
-                match lua.scope(|scope| {
-                    lua.globals()
-                        .get::<mlua::Function>("luola_on_object_timer")?
-                        .call::<Option<f32>>((scope.create_userdata_ref_mut(self)?, acc))
-                }) {
-                    Ok(rerun) => {
-                        self.timer = rerun;
-                    }
-                    Err(err) => {
-                        error!("Projectile timer: {err}");
-                        self.timer = None;
-                    }
-                };
-            }
-        }
+        gameobject_timer!(*self, lua, timestep);
     }
 
     pub fn step(&self, level: &Level, lua: &mlua::Lua, timestep: f32) -> Projectile {

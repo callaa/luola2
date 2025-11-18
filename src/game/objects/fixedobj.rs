@@ -1,4 +1,5 @@
 use crate::{
+    call_state_method, gameobject_timer,
     gfx::{AnimatedTexture, Color, RenderDest, RenderOptions, Renderer, TextureId},
     math::Vec2,
 };
@@ -16,9 +17,7 @@ pub struct FixedObject {
     destroyed: bool,
     texture: Option<AnimatedTexture>,
     color: Color,
-    state: mlua::Table,
-
-    on_destroy: Option<mlua::Function>,
+    state: Option<mlua::Table>,
 
     /// Object scheduler
     timer: Option<f32>,
@@ -40,7 +39,6 @@ impl mlua::FromLua for FixedObject {
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
                 destroyed: false,
-                on_destroy: table.get("on_destroy")?,
                 state: table.get("state")?,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -92,13 +90,7 @@ impl FixedObject {
     pub fn destroy(&mut self, lua: &mlua::Lua) {
         if !self.destroyed {
             self.destroyed = true;
-
-            if let Some(callback) = self.on_destroy.as_ref()
-                && let Err(err) =
-                    lua.scope(|scope| callback.call::<()>(scope.create_userdata_ref(self)?))
-            {
-                log::error!("FixedObject on_destroy: {err}");
-            }
+            call_state_method!(*self, lua, "on_destroy");
         }
     }
 
@@ -107,28 +99,7 @@ impl FixedObject {
             tex.step(timestep);
         }
 
-        if let Some(timer) = self.timer.as_mut() {
-            *timer -= timestep;
-            self.timer_accumulator += timestep;
-            let acc = self.timer_accumulator;
-
-            if *timer <= 0.0 {
-                self.timer_accumulator = 0.0;
-                match lua.scope(|scope| {
-                    lua.globals()
-                        .get::<mlua::Function>("luola_on_object_timer")?
-                        .call::<Option<f32>>((scope.create_userdata_ref_mut(self)?, acc))
-                }) {
-                    Ok(rerun) => {
-                        self.timer = rerun;
-                    }
-                    Err(err) => {
-                        log::error!("FixedObject timer : {err}");
-                        self.timer = None;
-                    }
-                };
-            }
-        }
+        gameobject_timer!(*self, lua, timestep);
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {

@@ -74,7 +74,9 @@ function Drone._timer_shoot(critter)
 			radius = 5,
 			owner = critter.owner,
 			texture = textures.get("pewpew"),
-			on_impact = Impacts.bullet,
+			state = {
+				on_impact = Impacts.bullet,
+			},
 		})
 	else
 		return nil
@@ -87,7 +89,7 @@ function Drone._timer_shoot(critter)
 	end
 end
 
-function Drone._on_bullet_hit(critter, bullet)
+function Drone.on_bullet_hit(critter, bullet)
 	critter:destroy()
 	game.effect("AddParticle", {
 		pos = critter.pos,
@@ -116,7 +118,6 @@ function Drone.create(pos, owner)
 		owner = owner,
 		texture = textures.get("drone"),
 		state = Drone:new(pos),
-		on_bullet_hit = Drone._on_bullet_hit,
 		timer = 0,
 	})
 end

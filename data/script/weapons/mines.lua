@@ -20,8 +20,8 @@ function mines.create_mine(pos, owner)
 		drag = drag,
 		owner = owner,
 		texture = textures.get("mine"),
-		on_impact = Impacts.grenade,
 		state = {
+			on_impact = Impacts.grenade,
 			scheduler = Scheduler:new():add(1, function(this)
 				this.texture = textures.get("mine_armed")
 				this:disown()
@@ -69,8 +69,8 @@ function mines.create_magmine(pos, owner)
 		drag = drag,
 		owner = owner,
 		texture = textures.get("magmine"),
-		on_impact = Impacts.grenade,
 		state = {
+			on_impact = Impacts.grenade,
 			scheduler = Scheduler:new()
 				:add(1, function(this)
 					this.texture = textures.get("magmine_armed")
@@ -96,7 +96,9 @@ local function detonate_landmine(mine)
 			pos = mine.pos + Vec2_for_angle(mine.state.angle + a, 1.0),
 			vel = Vec2_for_angle(mine.state.angle + a, 1500.0),
 			texture = tex,
-			on_impact = Impacts.bullet,
+			state = {
+				on_impact = Impacts.bullet,
+			}
 		})
 	end
 end

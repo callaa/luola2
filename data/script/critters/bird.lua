@@ -1,5 +1,6 @@
 local Scheduler = require("utils.scheduler")
 local Impacts = require("weapons.impacts")
+local UniqID = require("utils.uniqid")
 
 local Bird = {}
 
@@ -42,7 +43,7 @@ function Bird._timer_flock(critter)
 	return 0.2
 end
 
-function Bird._on_bullet_hit(critter, bullet)
+function Bird.on_bullet_hit(critter, bullet)
 	if bullet.state ~= nil and bullet.state.is_nitro then
 		bullet:destroy()
 		critter.state.explosive = true
@@ -91,6 +92,7 @@ end
 
 function Bird.create(pos)
 	game.effect("AddCritter", {
+		id = UniqID.new(),
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 50,
@@ -98,7 +100,6 @@ function Bird.create(pos)
 		drag = 1 / 1.2, -- neutral buoyancy
 		texture = textures.get("bird"),
 		state = Bird:new(pos),
-		on_bullet_hit = Bird._on_bullet_hit,
 		timer = 0,
 	})
 end

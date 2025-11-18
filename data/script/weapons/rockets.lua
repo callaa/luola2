@@ -25,8 +25,8 @@ function Rockets.rocket(pos, vel, angle, owner)
 		radius = 5,
 		owner = owner,
 		texture = textures.get("rocket"),
-		on_impact = Impacts.rocket,
 		state = {
+			on_impact = Impacts.rocket,
 			impulse = Vec2_for_angle(angle, 8000.0),
 			scheduler = Scheduler:new():add(0, rocket_thrust),
 		},
@@ -83,8 +83,8 @@ function Rockets.homing_missile(pos, vel, launch_angle, owner)
 		radius = 5,
 		owner = owner,
 		texture = textures.get("rocket"),
-		on_impact = Impacts.missile,
 		state = {
+			on_impact = Impacts.missile,
 			angle = launch_angle,
 			scheduler = Scheduler:new():add(0, homing_missile_targeting),
 		},
@@ -101,8 +101,8 @@ function Rockets.mini_homing_missile(pos, vel, launch_angle, owner)
 		drag = 0.0025,
 		owner = owner,
 		texture = textures.get("rocket"),
-		on_impact = Impacts.minimissile,
 		state = {
+			on_impact = Impacts.minimissile,
 			angle = launch_angle,
 			scheduler = Scheduler:new():add(0, homing_missile_targeting),
 		},

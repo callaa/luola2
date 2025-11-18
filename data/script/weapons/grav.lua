@@ -12,8 +12,8 @@ function Grav.create_gravmine(pos)
 		state = {
 			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(30, Scheduler.destroy_this),
 			a,
+			on_destroy = Grav.on_destroy,
 		},
-		on_destroy = Grav._on_destroy,
 		timer = 1,
 	})
 end
@@ -25,7 +25,7 @@ function Grav._activate_mine(obj)
 	})
 end
 
-function Grav._on_destroy(obj)
+function Grav.on_destroy(obj)
 	if obj.state.forcefield ~= nil then
 		game.effect("RemoveForcefield", obj.state.forcefield)
 	end
