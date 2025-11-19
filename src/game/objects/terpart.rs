@@ -67,7 +67,7 @@ impl mlua::FromLua for TerrainParticle {
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
-                wind: table.get::<Option<bool>>("wind")?.unwrap_or(false),
+                wind: table.get::<Option<bool>>("wind")?.unwrap_or(true),
                 destroyed: false,
             })
         } else {
