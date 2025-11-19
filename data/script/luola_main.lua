@@ -156,9 +156,9 @@ luola_secondary_weapons = {
 		description = "A mine augmented with a short range magnetic target seeking system.",
 	},
 	landmine = {
-		title = "Landmine",
+		title = "Claymore",
 		fire_func = sweapons.landmine,
-		description = "A remote detonable directional charge that can be placed on hard terrain.",
+		description = "A remote detonable directional charge that can be placed on hard terrain. First trigger pull fires the mine from a rear facing launcher, second detonates.",
 	},
 	gravmine = {
 		title = "Gravity mine",

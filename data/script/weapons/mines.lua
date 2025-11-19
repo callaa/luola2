@@ -92,15 +92,30 @@ local function detonate_landmine(mine)
 
 	local tex = textures.get("pewpew")
 	for a = -15, 15, 2 do
+		local av = Vec2_for_angle(mine.state.angle + a, 10.0)
 		game.effect("AddBullet", {
-			pos = mine.pos + Vec2_for_angle(mine.state.angle + a, 1.0),
-			vel = Vec2_for_angle(mine.state.angle + a, 1500.0),
+			-- Starting position is inside the hole we just made.
+			-- This is so that the bullets can hit a ship sitting right on top of the mine
+			pos = mine.pos - av,
+			vel = av * 150,
 			texture = tex,
 			state = {
 				on_impact = Impacts.bullet,
 			}
 		})
 	end
+end
+
+local function _landmine_reminder(mine)
+	game.player_effect("hud_overlay", mine.owner, {
+	texture = textures.get("explosive_icon"),
+		pos = Vec2(0, 0),
+		align = "topleft",
+		color = 0xffff5500,
+		lifetime = 0.5,
+		fadeout = 0.4
+	})
+	return 0.7
 end
 
 function mines.detonate_landmine(player)
@@ -125,12 +140,14 @@ function mines.create_landmine(pos, angle, owner)
 		radius = 0,
 		drag = drag,
 		owner = owner,
-		-- terrain_collision = "simple",
 		texture = textures.get("dot3x3"),
+		color = 0x80808080,
 		state = {
 			angle = -angle,
 			is_landmine = true,
+			scheduler = Scheduler:new():add(0, _landmine_reminder)
 		},
+		timer = 0
 	})
 end
 

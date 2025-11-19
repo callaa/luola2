@@ -21,6 +21,7 @@ use crate::{
     },
     math::{RectF, Vec2},
 };
+use core::ops::Deref;
 
 #[derive(Clone, Copy)]
 pub enum PlayerHud {
@@ -30,7 +31,8 @@ pub enum PlayerHud {
 
 pub struct HudOverlay {
     content: HudOverlayContent,
-    pos: HudOverlayPosition,
+    pos: Vec2,
+    align: HudOverlayAlignment,
     /// Scale factor for texture. 1.0 means width of the viewport
     scale: Option<f32>,
     /// Rotation angle (currently only works for textures)
@@ -47,8 +49,9 @@ pub enum HudOverlayContent {
     Texture(TextureId),
 }
 
-pub enum HudOverlayPosition {
-    Centered(Vec2),
+pub enum HudOverlayAlignment {
+    TopLeft,
+    Centered,
 }
 
 impl mlua::FromLua for HudOverlay {
@@ -56,7 +59,26 @@ impl mlua::FromLua for HudOverlay {
         if let mlua::Value::Table(table) = value {
             let text = table.get::<Option<Text>>("text")?;
             let texture = table.get::<Option<TextureId>>("texture")?;
-            let posv: Vec2 = table.get("pos")?;
+            let pos: Vec2 = table.get("pos")?;
+
+            let align = if let Some(align) = table.get::<Option<mlua::String>>("align")? {
+                match align.as_bytes().deref() {
+                    b"topleft" => HudOverlayAlignment::TopLeft,
+                    b"center" => HudOverlayAlignment::Centered,
+                    unknown => {
+                        return Err(mlua::Error::FromLuaConversionError {
+                            from: "string",
+                            to: "HudOverlayAlignment".to_string(),
+                            message: Some(format!(
+                                "unknown alignment: {}",
+                                str::from_utf8(unknown).unwrap()
+                            )),
+                        });
+                    }
+                }
+            } else {
+                HudOverlayAlignment::Centered
+            };
 
             let content = match (text, texture) {
                 (Some(t), None) => HudOverlayContent::Text(t),
@@ -74,7 +96,8 @@ impl mlua::FromLua for HudOverlay {
 
             Ok(Self {
                 content,
-                pos: HudOverlayPosition::Centered(posv),
+                pos,
+                align,
                 scale: table.get("scale")?,
                 angle: table.get("angle")?,
                 color: table.get::<Option<u32>>("color")?.map(Color::from_argb_u32),
@@ -103,12 +126,10 @@ impl HudOverlay {
             1.0
         };
 
-        let pos = match self.pos {
-            HudOverlayPosition::Centered(p) => Vec2(
-                renderer.width() as f32 * p.0,
-                renderer.height() as f32 * p.1,
-            ),
-        };
+        let pos = Vec2(
+            renderer.width() as f32 * self.pos.0,
+            renderer.height() as f32 * self.pos.1,
+        );
 
         let scale_factor = if let Some(s) = self.scale
             && let HudOverlayContent::Texture(id) = self.content
@@ -123,24 +144,39 @@ impl HudOverlay {
         match &self.content {
             HudOverlayContent::Text(t) => {
                 t.render(&RenderTextOptions {
-                    dest: RenderTextDest::Centered(pos),
+                    dest: match self.align {
+                        HudOverlayAlignment::Centered => RenderTextDest::Centered(pos),
+                        HudOverlayAlignment::TopLeft => RenderTextDest::TopLeft(pos),
+                    },
                     color: self.color,
                     alpha: a,
                     outline: TextOutline::Outline,
                 });
             }
-            HudOverlayContent::Texture(tex) => renderer.texture_store().get_texture(*tex).render(
-                renderer,
-                &RenderOptions {
-                    dest: RenderDest::CenterScaled(pos, scale_factor),
-                    color: self.color.unwrap_or(Color::WHITE).with_alpha(a),
-                    mode: match self.angle {
-                        Some(a) => RenderMode::Rotated(a, false),
-                        None => RenderMode::Normal,
+            HudOverlayContent::Texture(id) => {
+                let tex = renderer.texture_store().get_texture(*id);
+                let w = tex.width() * scale_factor;
+                let h = tex.height() * scale_factor;
+                let dest = match self.align {
+                    HudOverlayAlignment::Centered => {
+                        RectF::new(pos.0 - w / 2.0, pos.1 - h / 2.0, w, h)
+                    }
+                    HudOverlayAlignment::TopLeft => RectF::new(pos.0, pos.1, w, h),
+                };
+
+                tex.render(
+                    renderer,
+                    &RenderOptions {
+                        dest: RenderDest::Rect(dest),
+                        color: self.color.unwrap_or(Color::WHITE).with_alpha(a),
+                        mode: match self.angle {
+                            Some(a) => RenderMode::Rotated(a, false),
+                            None => RenderMode::Normal,
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                },
-            ),
+                );
+            }
         }
     }
 

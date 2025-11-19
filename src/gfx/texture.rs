@@ -117,11 +117,18 @@ pub enum RenderMode {
 
 #[derive(Clone, Copy)]
 pub enum RenderDest {
+    /// Fill the viewport
     Fill,
+
+    /// Fill the rectangle
     Rect(RectF),
+
     /// Fit inside this rectangle, maintaining aspect ratio
     FitIn(RectF),
+
+    /// Center on this point
     Centered(Vec2),
+
     /// Center and apply uniform scaling factor
     CenterScaled(Vec2, f32),
 }

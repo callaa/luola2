@@ -159,3 +159,7 @@ file = "gamepad-buttons.png"
 
 [box_border]
 file = "box-border.png"
+
+[explosive_icon]
+file = "weapon-icons.png"
+subrect = [0, 0, 32, 32]
