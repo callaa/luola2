@@ -122,6 +122,8 @@ pub enum RenderDest {
     /// Fit inside this rectangle, maintaining aspect ratio
     FitIn(RectF),
     Centered(Vec2),
+    /// Center and apply uniform scaling factor
+    CenterScaled(Vec2, f32),
 }
 
 #[derive(Clone)]
@@ -379,6 +381,9 @@ impl Texture {
         let dest = match options.dest {
             RenderDest::Fill => None,
             RenderDest::Centered(pos) => Some(self.centered_rect(pos)),
+            RenderDest::CenterScaled(pos, scale) => {
+                Some(self.centered_rect(pos).scale_centered(scale))
+            }
             RenderDest::FitIn(rect) => {
                 let scale = if rect.w() < self.width || rect.h() < self.height {
                     (rect.w() / self.width).min(rect.h() / self.height)

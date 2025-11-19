@@ -15,7 +15,10 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
+    gfx::{
+        Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
+        Text, TextOutline, TextureId,
+    },
     math::{RectF, Vec2},
 };
 
@@ -26,13 +29,22 @@ pub enum PlayerHud {
 }
 
 pub struct HudOverlay {
-    text: Text,
+    content: HudOverlayContent,
     pos: HudOverlayPosition,
+    /// Scale factor for texture. 1.0 means width of the viewport
+    scale: Option<f32>,
+    /// Rotation angle (currently only works for textures)
+    angle: Option<f32>,
     color: Option<Color>,
     lifetime: f32,
     fadein: f32,
     fadeout: f32,
     age: f32,
+}
+
+pub enum HudOverlayContent {
+    Text(Text),
+    Texture(TextureId),
 }
 
 pub enum HudOverlayPosition {
@@ -42,11 +54,29 @@ pub enum HudOverlayPosition {
 impl mlua::FromLua for HudOverlay {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
-            let text: Text = table.get("text")?;
+            let text = table.get::<Option<Text>>("text")?;
+            let texture = table.get::<Option<TextureId>>("texture")?;
             let posv: Vec2 = table.get("pos")?;
+
+            let content = match (text, texture) {
+                (Some(t), None) => HudOverlayContent::Text(t),
+                (None, Some(id)) => HudOverlayContent::Texture(id),
+                _ => {
+                    return Err(mlua::Error::FromLuaConversionError {
+                        from: "table",
+                        to: "HudOverlay".to_string(),
+                        message: Some(
+                            "both texture and text cannot be set at the same time".to_string(),
+                        ),
+                    });
+                }
+            };
+
             Ok(Self {
-                text,
+                content,
                 pos: HudOverlayPosition::Centered(posv),
+                scale: table.get("scale")?,
+                angle: table.get("angle")?,
                 color: table.get::<Option<u32>>("color")?.map(Color::from_argb_u32),
                 lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(0.0),
                 fadein: table.get::<Option<f32>>("fadein")?.unwrap_or(0.0),
@@ -73,18 +103,44 @@ impl HudOverlay {
             1.0
         };
 
-        match self.pos {
-            HudOverlayPosition::Centered(p) => {
-                self.text.render(&RenderTextOptions {
-                    dest: RenderTextDest::Centered(Vec2(
-                        renderer.width() as f32 * p.0,
-                        renderer.height() as f32 * p.1,
-                    )),
+        let pos = match self.pos {
+            HudOverlayPosition::Centered(p) => Vec2(
+                renderer.width() as f32 * p.0,
+                renderer.height() as f32 * p.1,
+            ),
+        };
+
+        let scale_factor = if let Some(s) = self.scale
+            && let HudOverlayContent::Texture(id) = self.content
+        {
+            let w = renderer.texture_store().get_texture(id).width();
+
+            renderer.width() as f32 / w * s
+        } else {
+            1.0
+        };
+
+        match &self.content {
+            HudOverlayContent::Text(t) => {
+                t.render(&RenderTextOptions {
+                    dest: RenderTextDest::Centered(pos),
                     color: self.color,
                     alpha: a,
                     outline: TextOutline::Outline,
                 });
             }
+            HudOverlayContent::Texture(tex) => renderer.texture_store().get_texture(*tex).render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::CenterScaled(pos, scale_factor),
+                    color: self.color.unwrap_or(Color::WHITE).with_alpha(a),
+                    mode: match self.angle {
+                        Some(a) => RenderMode::Rotated(a, false),
+                        None => RenderMode::Normal,
+                    },
+                    ..Default::default()
+                },
+            ),
         }
     }
 

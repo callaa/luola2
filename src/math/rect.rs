@@ -100,6 +100,14 @@ impl RectF {
         Vec2(self.0.x + self.0.w / 2.0, self.0.y + self.0.h / 2.0)
     }
 
+    pub fn scale_centered(&self, scale: f32) -> Self {
+        let w = self.w() * scale;
+        let h = self.h() * scale;
+        let xoff = (w - self.w()) / 2.0;
+        let yoff = (h - self.h()) / 2.0;
+        Self::new(self.x() - xoff, self.y() - yoff, w, h)
+    }
+
     pub fn size(&self) -> (f32, f32) {
         (self.0.w, self.0.h)
     }
