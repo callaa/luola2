@@ -196,21 +196,23 @@ impl Critter {
         for i in 0..MAX_SLOPE {
             // uphill
             let new_pos = Vec2(new_x, self.phys.pos.1 + i as f32 * LEVEL_SCALE);
-            if terrain::is_solid(level.terrain_at(new_pos)) {
+            let ter_at = level.terrain_at(new_pos);
+            if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
-                let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
-                if terrain::can_walk_through(level.terrain_at(new_pos)) {
-                    return (new_pos, false);
+                let above = new_pos - Vec2(0.0, LEVEL_SCALE);
+                if terrain::can_walk_through(level.terrain_at(above)) {
+                    return (above, false);
                 }
             }
 
             // downhill
             let new_pos = Vec2(new_x, self.phys.pos.1 - i as f32 * LEVEL_SCALE);
-            if terrain::is_solid(level.terrain_at(new_pos)) {
+            let ter_at = level.terrain_at(new_pos);
+            if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
-                let new_pos = new_pos - Vec2(0.0, LEVEL_SCALE);
-                if terrain::can_walk_through(level.terrain_at(new_pos)) {
-                    return (new_pos, false);
+                let above = new_pos - Vec2(0.0, LEVEL_SCALE);
+                if terrain::can_walk_through(level.terrain_at(above)) {
+                    return (above, false);
                 }
             }
         }

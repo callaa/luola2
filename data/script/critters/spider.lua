@@ -21,7 +21,7 @@ end
 function Spider._try_ceiling(critter)
 	local pos, t, hit = game.terrain_line(critter.pos, critter.pos + Vec2(0, -200))
 	local thread_len = critter.pos.y - pos.y
-	if hit and thread_len > 50 then
+	if hit and thread_len > 60 then
 		critter.walking = 0
 		critter.texture = textures.get("spider_hanging")
 		critter.state.slinging = true
