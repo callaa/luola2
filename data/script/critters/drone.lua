@@ -19,7 +19,7 @@ function Drone._timer_targeting(critter)
 	local nearest_enemy_dist2 = PURSUE_DIST2
 
 	game.ships_iter(function(ship)
-		if ship.player ~= critter.owner then
+		if ship.player ~= critter.owner and not ship.cloaked then
 			local dist2 = ship.pos:dist_squared(critter.pos)
 			if dist2 < nearest_enemy_dist2 then
 				nearest_enemy_pos = ship.pos

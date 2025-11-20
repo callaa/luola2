@@ -22,7 +22,7 @@ function Tank._seek_target(critter)
 	local nearest_enemy_dist2 = FIRING_DIST2
 
 	game.ships_iter(function(ship)
-		if ship.player ~= critter.owner then
+		if ship.player ~= critter.owner and not ship.cloaked then
 			if ship.pos.y <= critter.pos.y then
 				local angle = (ship.pos - critter.pos):angle()
 				if angle > 35 and angle < 145 then
