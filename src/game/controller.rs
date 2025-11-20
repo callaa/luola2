@@ -20,12 +20,13 @@ use sdl3_sys::{
     events::SDL_KeyboardEvent,
     gamepad::{
         SDL_CloseGamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_LEFTX,
-        SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN,
-        SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP,
-        SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START, SDL_Gamepad,
-        SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
-        SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
-        SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
+        SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_BUTTON_BACK,
+        SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
+        SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH,
+        SDL_GAMEPAD_BUTTON_START, SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType,
+        SDL_GetGamepadAxis, SDL_GetGamepadButton, SDL_GetGamepadGUIDForID,
+        SDL_GetGamepadStringForType, SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED,
+        SDL_SetGamepadPlayerIndex,
     },
     guid::SDL_GUID,
     joystick::{SDL_JOYSTICK_AXIS_MAX, SDL_JoystickID},
@@ -371,11 +372,29 @@ impl GameControllerSet {
         let value = Self::axis_value(value);
 
         if axis == SDL_GAMEPAD_AXIS_LEFTX {
-            state.turn = -value;
+            // Buff turning speed for gamepad users, since the thumb stick requires a bigger
+            // motion compared to a key press
+            state.turn = value * -1.15;
         }
 
-        if axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
-            state.thrust = value > 0.0;
+        if axis == SDL_GAMEPAD_AXIS_LEFTY || axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
+            let (thumb, shoulder) = if axis == SDL_GAMEPAD_AXIS_LEFTY {
+                (
+                    value,
+                    Self::axis_value(unsafe {
+                        SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
+                    }),
+                )
+            } else {
+                (
+                    Self::axis_value(unsafe {
+                        SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFTY)
+                    }),
+                    value,
+                )
+            };
+
+            state.thrust = thumb < -0.7 || shoulder > 0.0;
         }
 
         if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
