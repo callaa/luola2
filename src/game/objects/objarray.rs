@@ -62,13 +62,14 @@ impl<T: GameObject> GameObjectArray<T> {
         &self.0[start..end]
     }
 
-    pub fn collider_slice_mut(&mut self, obj: &impl GameObject) -> &mut [T] {
-        let left = obj.pos().0 - obj.radius();
-        let right = obj.pos().0 + obj.radius();
-
+    pub fn range_slice_mut(&mut self, left: f32, right: f32) -> &mut [T] {
         let (start, end) = self.find_potential_collider_slice(left, right);
 
         &mut self.0[start..end]
+    }
+
+    pub fn collider_slice_mut(&mut self, obj: &impl GameObject) -> &mut [T] {
+        self.range_slice_mut(obj.pos().0 - obj.radius(), obj.pos().0 + obj.radius())
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, T> {

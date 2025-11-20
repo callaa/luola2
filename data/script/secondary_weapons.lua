@@ -5,6 +5,7 @@ local Tank = require("critters.tank")
 local Mines = require("weapons.mines")
 local Rockets = require("weapons.rockets")
 local Grav = require("weapons.grav")
+local Hitscan = require("weapons.hitscan")
 
 local weapons = {}
 
@@ -227,6 +228,13 @@ function weapons.nitroglycerin(ship)
 				on_impact = Impacts.nitroglycerin,
 			},
 		})
+	end
+end
+
+function weapons.laser(ship)
+	if ship:consume_ammo(0.5, 0.15) then
+		-- note: hitscan is performed on the next frame
+		Hitscan.laser(ship.pos + Vec2_for_angle(-ship.angle, 16) + ship.vel / 60, ship.angle, ship.player)
 	end
 end
 

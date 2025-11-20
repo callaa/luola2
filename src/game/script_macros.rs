@@ -25,7 +25,7 @@ macro_rules! call_state_method {
 #[macro_export]
 macro_rules! get_state_method {
     ($obj:ident, $lua:ident, $name:literal, ($f:ident, $scope:ident) => $block:block) => {
-        if let Some(state) = $obj.state.as_mut() {
+        if let Some(state) = $obj.state.as_ref() {
             match state.get::<Option<mlua::Function>>($name) {
                 Ok(Some($f)) => match $lua.scope(|$scope| $block) {
                     Ok(o) => o,

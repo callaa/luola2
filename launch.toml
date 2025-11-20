@@ -13,12 +13,12 @@ rounds = 10
 [[player]]
 controller = 1
 ship = "vwing"
-weapon = "nitroglycerin"
+weapon = "laser"
 
 [[player]]
 controller = 2
 ship = "vwing"
-weapon = "greygoo"
+weapon = "mine"
 
 #[[player]]
 #controller = 3

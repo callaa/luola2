@@ -16,7 +16,7 @@ function mines.create_mine(pos, owner)
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 300,
-		radius = 3,
+		radius = 5,
 		drag = drag,
 		owner = owner,
 		texture = textures.get("mine"),

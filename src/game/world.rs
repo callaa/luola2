@@ -24,7 +24,7 @@ use crate::{
         Player, PlayerId, PlayerState,
         hud::{PlayerHud, draw_hud},
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
-        objects::{Critter, FixedObject, GameObjectArray, TerrainParticle},
+        objects::{Critter, FixedObject, GameObjectArray, HitscanProjectile, TerrainParticle},
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
     math::{Rect, Vec2},
@@ -46,6 +46,7 @@ pub enum WorldEffect {
     AddTerrainParticle(TerrainParticle),
     AddDynamicTerrain(Vec2, DynamicTerrainCell),
     AddFixedObject(FixedObject),
+    AddHitscan(HitscanProjectile),
     AddPixel(Vec2, Terrain, Color),
     ColorPixel(Vec2, Color),
     MakeBulletHole(Vec2),
@@ -90,6 +91,9 @@ pub struct World {
     /// Mines are (typically) slow moving projectiles that may be collide with each other
     /// No double buffering because mines do not need to reference each other in their callbacks
     mines: Rc<RefCell<GameObjectArray<Projectile>>>,
+
+    /// Hitscan projectiles. These live for only one tick
+    hitscans: Vec<HitscanProjectile>,
 
     /// Critters are creatures that fly, swim, or walk around the game world.
     /// They can be hostile or neutral.
@@ -165,6 +169,7 @@ impl World {
             ships_work: RefCell::new(GameObjectArray::new()),
             bullets: GameObjectArray::new(),
             mines,
+            hitscans: Vec::new(),
             critters,
             critters_work: Rc::new(RefCell::new(GameObjectArray::new())),
             terrainparticles: GameObjectArray::new(),
@@ -222,6 +227,7 @@ impl World {
                     objs.push(o);
                     objs.sort();
                 }
+                WorldEffect::AddHitscan(hs) => self.hitscans.push(hs),
                 WorldEffect::ColorPixel(pos, color) => {
                     level_editor.color_point(pos, color);
                 }
@@ -352,8 +358,9 @@ impl World {
         self.terrainparticles.sort();
 
         // Decorative particle simulation step
+        let windspeed = level.windspeed();
         for p in self.particles.iter_mut() {
-            p.step_mut(timestep);
+            p.step_mut(timestep, windspeed);
         }
 
         self.particles.sort();
@@ -370,7 +377,6 @@ impl World {
                 objects.sort();
             }
         }
-        drop(level);
 
         //
         // Collision check phase
@@ -493,12 +499,73 @@ impl World {
             }
         }
 
+        // Hitscans
+        for hs in self.hitscans.iter_mut() {
+            hs.hit_level(&level);
+
+            let left = hs.left();
+            let right = hs.right();
+
+            enum Nearest<'a> {
+                None,
+                Ship(&'a mut Ship),
+                Mine(&'a mut Projectile),
+                Critter(&'a mut Critter),
+            }
+            let mut nearest_object = Nearest::None;
+
+            let mut ships_work = self.ships_work.borrow_mut();
+            for ship in ships_work.range_slice_mut(left, right) {
+                if (hs.owner() != ship.player_id()) && hs.do_hit_object(self.scripting.lua(), ship)
+                {
+                    nearest_object = Nearest::Ship(ship);
+                }
+            }
+
+            let mut mines_work = self.mines.borrow_mut();
+            for mine in mines_work.range_slice_mut(left, right) {
+                if (hs.owner() == 0 || hs.owner() != mine.owner())
+                    && hs.do_hit_object(self.scripting.lua(), mine)
+                {
+                    nearest_object = Nearest::Mine(mine);
+                }
+            }
+
+            let mut critters_work = self.critters_work.borrow_mut();
+            for critter in critters_work.range_slice_mut(left, right) {
+                if (hs.owner() == 0 || hs.owner() != critter.owner())
+                    && hs.do_hit_object(self.scripting.lua(), critter)
+                {
+                    nearest_object = Nearest::Critter(critter);
+                }
+            }
+
+            match nearest_object {
+                Nearest::None => {}
+                Nearest::Ship(s) => {
+                    hs.on_hit_object(self.scripting.lua(), s);
+                }
+                Nearest::Mine(m) => {
+                    hs.on_hit_object(self.scripting.lua(), m);
+                }
+                Nearest::Critter(c) => {
+                    hs.on_hit_object(self.scripting.lua(), c);
+                }
+            }
+
+            hs.on_done(self.scripting.lua());
+        }
+
+        drop(level);
+
         // Rotate working sets
         self.ships.swap(&self.ships_work);
         self.ships_work.borrow_mut().clear();
 
         self.critters.swap(&self.critters_work);
         self.critters_work.borrow_mut().clear();
+
+        self.hitscans.clear();
 
         // Global timers
         self.noise_texture.step(timestep);

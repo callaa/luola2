@@ -16,6 +16,7 @@
 
 mod critter;
 mod fixedobj;
+mod hitscan;
 mod objarray;
 mod particle;
 mod physicalobj;
@@ -26,6 +27,7 @@ mod terpart;
 
 pub use critter::*;
 pub use fixedobj::*;
+pub use hitscan::*;
 pub use objarray::*;
 pub use particle::*;
 pub use physicalobj::*;

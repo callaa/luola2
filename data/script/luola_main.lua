@@ -210,4 +210,9 @@ luola_secondary_weapons = {
 		fire_func = sweapons.nitroglycerin,
 		description = "A glass sphere filled with nitroglyserin. The soaked ground may detonate if disturbed by a sufficiently large shock.",
 	},
+	laser = {
+		title = "Laser cannon",
+		fire_func = sweapons.laser,
+		description = "A directed energy weapon that hits targets at the speed of light.",
+	}
 }

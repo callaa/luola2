@@ -28,7 +28,8 @@ use crate::fs::find_datafile_path;
 use crate::game::hud::HudOverlay;
 use crate::game::level::{DynamicTerrainCell, Forcefield, Level};
 use crate::game::objects::{
-    Critter, FixedObject, GameObject, GameObjectArray, Particle, Projectile, Ship, TerrainParticle,
+    Critter, FixedObject, GameObject, GameObjectArray, HitscanProjectile, Particle, Projectile,
+    Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
 use crate::game::{PlayerId, PlayerState};
@@ -278,6 +279,9 @@ impl ScriptEnvironment {
                         b"AddParticle" => WorldEffect::AddParticle(Particle::from_lua(props, lua)?),
                         b"AddTerrainParticle" => {
                             WorldEffect::AddTerrainParticle(TerrainParticle::from_lua(props, lua)?)
+                        }
+                        b"AddHitscan" => {
+                            WorldEffect::AddHitscan(HitscanProjectile::from_lua(props, lua)?)
                         }
                         b"AddDynamicTerrain" => {
                             let table = props.as_table().ok_or(anyhow!("Expected table"))?;

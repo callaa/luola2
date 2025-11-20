@@ -56,6 +56,15 @@ function Bird.on_bullet_hit(critter, bullet)
 		Impacts.grenade(critter, 0, nil)
 	end
 
+	if bullet.state ~= nil and bullet.state.is_laser then
+		-- TODO fire effect
+		game.effect("AddParticle", {
+			pos = critter.pos,
+			texture = textures.get("bigboom"),
+		})
+		return
+	end
+
 	local hit_angle = bullet.vel:normalized():angle()
 
 	-- blood splatter

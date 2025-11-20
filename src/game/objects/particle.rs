@@ -40,15 +40,20 @@ pub struct Particle {
     color: Color,
     target_color: Color,
     dcolor: ColorDiff,
+    wind: bool,
 }
 
 impl Particle {
-    pub fn step_mut(&mut self, timestep: f32) {
+    pub fn step_mut(&mut self, timestep: f32, windspeed: f32) {
         if self.reveal_in > 0.0 {
             self.reveal_in -= timestep;
             return;
         }
 
+        if self.wind {
+            let jitter = (-0.5 + fastrand::f32()) * 0.5;
+            self.vel = self.vel + Vec2((windspeed / 20.0 + jitter) / timestep, 0.0);
+        }
         self.vel = self.vel + self.a * timestep;
         self.pos = self.pos + self.vel * timestep;
         self.lifetime -= timestep;
@@ -113,6 +118,7 @@ impl mlua::FromLua for Particle {
                 color,
                 target_color,
                 dcolor,
+                wind: table.get::<Option<bool>>("wind")?.unwrap_or(false),
             })
         } else {
             Err(mlua::Error::FromLuaConversionError {
