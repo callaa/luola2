@@ -19,6 +19,9 @@ pub struct FixedObject {
     color: Color,
     state: Option<mlua::Table>,
 
+    /// Flag that is set when the object is moved via scripting
+    moved: bool,
+
     /// Object scheduler
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -39,6 +42,7 @@ impl mlua::FromLua for FixedObject {
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
                 destroyed: false,
+                moved: false,
                 state: table.get("state")?,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -56,6 +60,11 @@ impl mlua::FromLua for FixedObject {
 impl mlua::UserData for FixedObject {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("pos", |_, this| Ok(this.pos));
+        fields.add_field_method_set("pos", |_, this, p: Vec2| {
+            this.pos = p;
+            this.moved = true;
+            Ok(())
+        });
 
         fields.add_field_method_get("texture", |_, this| {
             Ok(this.texture.as_ref().map(|t| t.id()))
@@ -94,12 +103,17 @@ impl FixedObject {
         }
     }
 
-    pub fn step_mut(&mut self, lua: &mlua::Lua, timestep: f32) {
+    pub fn step_mut(&mut self, lua: &mlua::Lua, timestep: f32) -> bool {
         if let Some(tex) = &mut self.texture {
             tex.step(timestep);
         }
 
         gameobject_timer!(*self, lua, timestep);
+
+        let changed = self.moved | self.destroyed;
+        self.moved = false;
+
+        changed
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {

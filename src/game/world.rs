@@ -367,13 +367,12 @@ impl World {
 
         // Fixed object simulation step
         {
-            let mut any_destroyed = false;
+            let mut any_moved = false;
             let mut objects = self.fixedobjects.borrow_mut();
             for o in objects.iter_mut() {
-                o.step_mut(self.scripting.lua(), timestep);
-                any_destroyed |= o.is_destroyed();
+                any_moved |= o.step_mut(self.scripting.lua(), timestep);
             }
-            if any_destroyed {
+            if any_moved {
                 objects.sort();
             }
         }

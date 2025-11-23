@@ -11,8 +11,22 @@ function Grav.create_gravmine(pos)
 		id = UniqID.new(),
 		state = {
 			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(15, Scheduler.destroy_this),
-			a,
 			on_destroy = Grav.on_destroy,
+		},
+		timer = 1,
+	})
+end
+
+function Grav.create_moving_gravmine(pos, angle)
+	game.effect("AddFixedObject", {
+		pos = pos,
+		texture = textures.get("dot8x8"), -- TODO nicer texture
+		id = UniqID.new(),
+		state = {
+			scheduler = Scheduler:new():add(0.3, Grav._move_mine):add(20, Scheduler.destroy_this),
+			on_destroy = Grav.on_destroy,
+			angle = angle,
+			ff_id = UniqID.new(),
 		},
 		timer = 1,
 	})
@@ -24,6 +38,19 @@ function Grav._activate_mine(obj)
 		point = 70,
 	})
 end
+
+function Grav._move_mine(obj)
+	local pos = obj.pos + Vec2_for_angle(obj.state.angle, 5)
+	obj.pos = pos
+	obj.state.forcefield = Forcefields.update({
+		id = obj.state.ff_id,
+		bounds = { pos.x - 500, pos.y - 500, 1000, 1000 },
+		point = 60,
+	})
+
+	return 1/60
+end
+
 
 function Grav.on_destroy(obj)
 	if obj.state.forcefield ~= nil then

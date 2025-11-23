@@ -175,6 +175,12 @@ function weapons.gravmine(ship)
 	end
 end
 
+function weapons.moving_gravmine(ship)
+	if ship:consume_ammo(33, 2.0) then
+		Grav.create_moving_gravmine(ship.pos, -ship.angle + 180)
+	end
+end
+
 function weapons.shield(ship)
 	ship.secondary_weapon_cooldown = 0.2
 	if ship.state.forcefield ~= nil then

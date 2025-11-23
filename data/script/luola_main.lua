@@ -165,6 +165,12 @@ luola_secondary_weapons = {
 		fire_func = sweapons.gravmine,
 		description = "Generates a short-lived artificial gravity well far deeper than the device's own mass-energy would permit according to classical physics.",
 	},
+	moving_gravmine = {
+		title = "Gravity mine (unbalanced)",
+		fire_func = sweapons.moving_gravmine,
+		description = "A variant of the gravity mine. A deliberately engineered inbalance in the field causes the anomaly to move in a straight line.",
+	},
+
 	drone = {
 		title = "Drone (flying)",
 		fire_func = sweapons.drone,
