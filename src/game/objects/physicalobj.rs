@@ -89,9 +89,8 @@ impl PhysicalObject {
                     if dist > 3.0 {
                         let normal = delta / dist;
 
-                        // Make the gravity field less realistic and more fun.
-                        let fudged_dist = 2.0 * dist / ff.bounds.w() + 1.0;
-                        let force = ff.point_force / fudged_dist.powf(1.5);
+                        // Not phyiscally realistic but more fun
+                        let force = ff.point_force * (1.0 - (dist / ff.radius).powf(2.0)).max(0.0);
                         a = a + normal * (force * SCALE_FACTOR);
                     }
                 }

@@ -170,7 +170,7 @@ function weapons.ghostship(ship)
 end
 
 function weapons.gravmine(ship)
-	if ship:consume_ammo(20, 2.0) then
+	if ship:consume_ammo(33, 2.0) then
 		Grav.create_gravmine(ship.pos)
 	end
 end

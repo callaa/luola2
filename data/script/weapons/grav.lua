@@ -10,7 +10,7 @@ function Grav.create_gravmine(pos)
 		texture = textures.get("dot8x8"), -- TODO nicer texture
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(30, Scheduler.destroy_this),
+			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(15, Scheduler.destroy_this),
 			a,
 			on_destroy = Grav.on_destroy,
 		},
@@ -20,8 +20,8 @@ end
 
 function Grav._activate_mine(obj)
 	obj.state.forcefield = Forcefields.update({
-		bounds = { obj.pos.x - 400, obj.pos.y - 400, 800, 800 },
-		point = 60,
+		bounds = { obj.pos.x - 700, obj.pos.y - 700, 1400, 1400 },
+		point = 70,
 	})
 end
 

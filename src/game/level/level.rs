@@ -66,6 +66,9 @@ pub struct Forcefield {
     /// The area (in world coordinates) of the field
     pub bounds: RectF,
 
+    /// Radius (min(w, h)/2) used by point force type fields
+    pub radius: f32,
+
     /// A uniform force applied to physical objects inside the field
     pub uniform_force: Vec2,
 
@@ -104,8 +107,10 @@ pub struct Level {
 impl mlua::FromLua for Forcefield {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
+            let bounds = table.get("bounds")?;
             Ok(Self {
-                bounds: table.get("bounds")?,
+                bounds,
+                radius: bounds.w().min(bounds.h()) / 2.0,
                 uniform_force: table.get::<Option<Vec2>>("uniform")?.unwrap_or_default(),
                 point_force: table.get::<Option<f32>>("point")?.unwrap_or_default(),
                 id: table.get("id")?,
