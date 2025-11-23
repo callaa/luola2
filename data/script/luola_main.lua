@@ -166,14 +166,14 @@ luola_secondary_weapons = {
 		description = "Generates a short-lived artificial gravity well far deeper than the device's own mass-energy would permit according to classical physics.",
 	},
 	drone = {
-		title = "Drones",
+		title = "Drone (flying)",
 		fire_func = sweapons.drone,
-		description = "Autonomous target seeking drones equipped with a rapid-fire cannon.",
+		description = "An autonomous target seeking drone equipped with a rapid-fire cannon and a payload capacity of up to 30 armor piercing rounds. Due to signal interference, only a limited number of drones can be deployed in an area.",
 	},
 	tank = {
-		title = "Tank",
+		title = "Drone (wheeled)",
 		fire_func = sweapons.tank,
-		description = "A wheeled autonomous destruction delivery platform. Compared to the flying drone, this ground based unit can carry much heavier weaponry.",
+		description = "A wheeled autonomous munition delivery platform. Compared to flying drones, these ground based units can carry much heavier weaponry.",
 	},
 	cloak = {
 		title = "Chameleon skin",

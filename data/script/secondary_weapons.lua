@@ -79,14 +79,40 @@ function weapons.landmine(ship)
 end
 
 function weapons.drone(ship)
-	if ship:consume_ammo(20, 0.4) then
-		Drone.create(ship.pos, ship.player)
+	ship.secondary_weapon_cooldown = 0.4
+	local ammo = ship.ammo - 20
+	if ammo >= 0 then
+		if Drone.count(ship.player, ship.pos) < 3 then
+			ship.ammo = ammo
+			Drone.create(ship.pos, ship.player)
+		else
+			game.player_effect("hud_overlay", ship.player, {
+				text = textures.font("menu", "Cannot deploy more drones here!"),
+				pos = Vec2(0.5, 0.1),
+				color = 0xffff0000,
+				lifetime = 2,
+				fadeout = 1,
+			})
+		end
 	end
 end
 
 function weapons.tank(ship)
-	if ship:consume_ammo(20, 0.4) then
-		Tank.create(ship.pos, ship.player)
+	ship.secondary_weapon_cooldown = 0.4
+	local ammo = ship.ammo - 20
+	if ammo >= 0 then
+		if Tank.count(ship.player, ship.pos) < 3 then
+			ship.ammo = ammo
+			Tank.create(ship.pos, ship.player)
+		else
+			game.player_effect("hud_overlay", ship.player, {
+				text = textures.font("menu", "Cannot deploy more tanks here!"),
+				pos = Vec2(0.5, 0.1),
+				color = 0xffff0000,
+				lifetime = 2,
+				fadeout = 1,
+			})
+		end
 	end
 end
 
@@ -232,7 +258,7 @@ function weapons.nitroglycerin(ship)
 end
 
 function weapons.laser(ship)
-	if ship:consume_ammo(0.5, 0.15) then
+	if ship:consume_ammo(0.8, 0.2) then
 		-- note: hitscan is performed on the next frame
 		Hitscan.laser(ship.pos + Vec2_for_angle(-ship.angle, 16) + ship.vel / 60, ship.angle, ship.player)
 	end

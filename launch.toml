@@ -13,7 +13,7 @@ rounds = 10
 [[player]]
 controller = 1
 ship = "vwing"
-weapon = "laser"
+weapon = "drone"
 
 [[player]]
 controller = 2

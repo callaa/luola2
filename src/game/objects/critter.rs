@@ -35,6 +35,9 @@ pub struct Critter {
     /// If zero, phys.vel.0 is used
     facing: i8,
 
+    /// In action state (action_texture animation is run)
+    action: bool,
+
     /// How many seconds to take one step
     walkspeed: f32,
 
@@ -54,6 +57,10 @@ pub struct Critter {
     timer_accumulator: f32,
 
     texture: AnimatedTexture,
+
+    /// Special action animation
+    /// on_action_complete callback will be called when action animation completes
+    action_texture: Option<AnimatedTexture>,
 }
 
 impl mlua::UserData for Critter {
@@ -66,6 +73,17 @@ impl mlua::UserData for Critter {
             this.phys.vel = v;
             Ok(())
         });
+        fields.add_field_method_set("drag", |_, this, d: f32| {
+            this.phys.drag = d;
+            Ok(())
+        });
+
+        fields.add_field_method_get("action", |_, this| Ok(this.action));
+        fields.add_field_method_set("action", |_, this, a: bool| {
+            this.action = a;
+            Ok(())
+        });
+
         fields.add_field_method_get("walking", |_, this| Ok(this.walking));
         fields.add_field_method_set("walking", |_, this, dir: i8| {
             this.walking = dir;
@@ -100,8 +118,8 @@ impl mlua::UserData for Critter {
     }
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut("destroy", |_, this, _: ()| {
-            this.destroyed = true;
+        methods.add_method_mut("destroy", |lua, this, _: ()| {
+            this.destroy(lua);
             Ok(())
         });
 
@@ -154,8 +172,12 @@ impl mlua::FromLua for Critter {
                 walkspeed: table.get::<Option<f32>>("walkspeed")?.unwrap_or(0.03),
                 step_timer: 0.0,
                 rope: None,
+                action: false,
                 state: table.get("state")?,
                 texture: AnimatedTexture::new(table.get("texture")?),
+                action_texture: table
+                    .get::<Option<TextureId>>("action_texture")?
+                    .map(|id| AnimatedTexture::new(id)),
                 destroyed: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -185,6 +207,13 @@ impl Critter {
 
     pub fn owner(&self) -> PlayerId {
         self.owner
+    }
+
+    pub fn destroy(&mut self, lua: &mlua::Lua) {
+        if !self.destroyed {
+            self.destroyed = true;
+            call_state_method!(*self, lua, "on_destroy");
+        }
     }
 
     // Take a step to the right or left
@@ -217,7 +246,10 @@ impl Critter {
             }
         }
 
-        (self.pos(), true)
+        (
+            self.pos(),
+            !terrain::can_walk_through(level.terrain_at(self.phys.pos + Vec2(0.0, LEVEL_SCALE))),
+        )
     }
 
     /// Perform a simulation step and return a new copy of this critter
@@ -247,7 +279,16 @@ impl Critter {
             }
         }
 
-        critter.texture.step(timestep);
+        if critter.action
+            && let Some(t) = &mut critter.action_texture
+        {
+            if t.step(timestep) {
+                critter.action = false;
+                call_state_method!(critter, lua, "on_action_complete");
+            }
+        } else {
+            critter.texture.step(timestep);
+        }
 
         gameobject_timer!(critter, lua, timestep);
 
@@ -278,11 +319,18 @@ impl Critter {
             },
             ..Default::default()
         };
-        self.texture.render(renderer, &options);
+        let t = if self.action
+            && let Some(t) = &self.action_texture
+        {
+            t
+        } else {
+            &self.texture
+        };
+        t.render(renderer, &options);
 
         if self.owner != 0 {
             options.color = Color::player_color(self.owner);
-            self.texture.render_alt(renderer, TexAlt::Decal, &options);
+            t.render_alt(renderer, TexAlt::Decal, &options);
         }
     }
 

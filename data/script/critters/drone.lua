@@ -1,5 +1,6 @@
 local Scheduler = require("utils.scheduler")
 local Impacts = require("weapons.impacts")
+local UniqID = require("utils.uniqid")
 
 local Drone = {}
 
@@ -86,11 +87,27 @@ function Drone._timer_shoot(critter)
 	if ammo > 0 then
 		critter.state.ammo = ammo
 		return 0.1
+	else
+		critter.state.magazines = critter.state.magazines - 1
+		if critter.state.magazines < 0 then
+			-- out of bullets. Drop out of the sky
+			critter.drag = 0.001
+			critter.state.scheduler = Scheduler:new()
+		end
 	end
 end
 
 function Drone.on_bullet_hit(critter, bullet)
 	critter:destroy()
+end
+
+function Drone.on_touch_ground(critter, ter)
+	if critter.state.magazines <= 0 or ter == 0x80 then
+		critter:destroy()
+	end
+end
+
+function Drone.on_destroy(critter)
 	game.effect("AddParticle", {
 		pos = critter.pos,
 		texture = textures.get("bigboom"),
@@ -99,8 +116,10 @@ end
 
 function Drone:new(pos)
 	local drone = {
+		is_drone = true,
 		target = pos,
 		ammo = 3,
+		magazines = 10,
 		scheduler = Scheduler:new():add(0, Drone._timer_fly):add(1, Drone._timer_targeting),
 	}
 	setmetatable(drone, self)
@@ -110,29 +129,29 @@ end
 
 function Drone.create(pos, owner)
 	game.effect("AddCritter", {
+		id = UniqID.new(),
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 50,
 		radius = 6,
 		drag = 1 / 1.2, -- neutral buoyancy
 		owner = owner,
+		waterproof = false,
 		texture = textures.get("drone"),
 		state = Drone:new(pos),
 		timer = 0,
 	})
 end
 
-function Drone.create_random(count)
-	local flocks = math.ceil(count / 5)
-	local drones_in_flock = count // flocks
-
-	for _ = 0, flocks do
-		local center = game.find_spawnpoint(nil, false)
-		local area = RectF(center.x - 300, center.y - 300, 600, 600)
-		for _ = 0, drones_in_flock do
-			Drone.create(game.find_spawnpoint(area, false), 0)
+-- Count the number of drones deployed by this player in the area
+function Drone.count(player, pos)
+	local count = 0
+	game.critters_iter(pos, 1000, 0, function(c)
+		if c.owner == player and c.state.is_drone then
+			count = count + 1
 		end
-	end
+	end)
+	return count
 end
 
 return Drone

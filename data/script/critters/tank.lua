@@ -2,14 +2,15 @@ local Scheduler = require("utils.scheduler")
 local Level = require("level")
 local Rockets = require("weapons.rockets")
 local maths = require("utils.maths")
+local UniqID = require("utils.uniqid")
 
 local Tank = {}
 
-function Tank._on_touch_ledge(critter)
+function Tank.on_touch_ledge(critter)
 	critter.walking = -critter.walking
 end
 
-function Tank._on_touch_ground(critter, ter)
+function Tank.on_touch_ground(critter, ter)
 	if ter == 0x80 then
 		critter:destroy()
 	end
@@ -39,15 +40,14 @@ function Tank._seek_target(critter)
 	if nearest_enemy_pos ~= nil then
 		critter.walking = 0
 		critter.facing = maths.signum(nearest_enemy_pos.x - critter.pos.x)
-		critter.texture = textures.get("tank_attack")
+		critter.action = true
 
-		Scheduler.add_to_object(critter, 0.045, function(critter)
+		Scheduler.add_to_object(critter, 3/60, function(critter)
 			Tank._fire(critter, nearest_enemy_pos)
 		end)
 
-		return 0.5
+		return 2
 	elseif critter.walking == 0 then
-		critter.texture = textures.get("tank")
 		critter.walking = critter.facing
 	end
 
@@ -57,10 +57,19 @@ end
 function Tank._fire(critter, target_pos)
 	local firing_angle = (target_pos - critter.pos):angle()
 	Rockets.mini_homing_missile(critter.pos + Vec2(0, -8), Vec2(0, -10), -firing_angle, critter.owner)
+	local ammo = critter.state.ammo - 1
+	if ammo < 0 then
+		critter:destroy()
+	else
+		critter.state.ammo = ammo
+	end
 end
 
-function Tank._on_bullet_hit(critter, bullet)
+function Tank.on_bullet_hit(critter, bullet)
 	critter:destroy()
+end
+
+function Tank.on_destroy(critter)
 	game.effect("AddParticle", {
 		pos = critter.pos,
 		texture = textures.get("bigboom"),
@@ -70,6 +79,8 @@ end
 function Tank:new(pos)
 	local tank = {
 		scheduler = Scheduler:new():add(1, Tank._seek_target),
+		is_tank = true,
+		ammo = 5,
 	}
 	setmetatable(tank, self)
 	self.__index = self
@@ -78,20 +89,30 @@ end
 
 function Tank.create(pos, owner)
 	game.effect("AddCritter", {
+		id = UniqID.new(),
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 100,
 		radius = 6,
 		walking = 1,
 		texture = textures.get("tank"),
+		action_texture = textures.get("tank_attack"),
 		state = Tank:new(pos),
 		owner = owner,
 		waterproof = false,
-		on_bullet_hit = Tank._on_bullet_hit,
-		on_touch_ledge = Tank._on_touch_ledge,
-		on_touch_ground = Tank._on_touch_ground,
 		timer = 0,
 	})
+end
+
+-- Count the number of tanks deployed by this player in the area
+function Tank.count(player, pos)
+	local count = 0
+	game.critters_iter(pos, 1000, 0, function(c)
+		if c.owner == player and c.state.is_tank then
+			count = count + 1
+		end
+	end)
+	return count
 end
 
 return Tank
