@@ -37,7 +37,7 @@ pub struct GameState {
     starfield: Rc<RefCell<AnimatedStarfield>>,
     players: Vec<Player>,
     level: Option<LevelInfo>,
-    rounds_to_win: i32,
+    rounds: i32,
     round_winners: Vec<PlayerId>,
     substate: GameSubState,
     controllers: Rc<RefCell<GameControllerSet>>,
@@ -56,7 +56,7 @@ impl GameState {
     pub fn new(
         assets: Rc<GameAssets>,
         players: Vec<Player>,
-        rounds_to_win: i32,
+        rounds: i32,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
@@ -65,7 +65,7 @@ impl GameState {
             assets,
             starfield,
             players,
-            rounds_to_win,
+            rounds,
             round_winners: Vec::new(),
             level: None,
             substate: GameSubState::SelectLevel,
@@ -115,14 +115,14 @@ impl GameState {
             substate = GameSubState::PlayRound;
         }
 
-        let rounds_to_win = config.rounds.unwrap_or(1);
+        let rounds = config.rounds.unwrap_or(1);
 
         Ok(Self {
             assets,
             starfield,
             players,
             level,
-            rounds_to_win,
+            rounds,
             round_winners,
             substate,
             controllers,
@@ -142,13 +142,12 @@ impl StackableState for GameState {
             });
             self.substate = GameSubState::PlayRound;
         } else if let Some(winner) = retval.downcast_ref::<RoundWinner>() {
-            self.round_winners.push(winner.0);
             if winner.0 > 0 {
                 let plr = &mut self.players[winner.0 as usize - 1];
                 plr.wins += 1;
             }
-
-            if winner.1 || self.players.iter().any(|p| p.wins >= self.rounds_to_win) {
+            self.round_winners.push(winner.0);
+            if winner.1 || self.round_winners.len() as i32 >= self.rounds {
                 self.substate = GameSubState::GameResults;
             } else {
                 self.substate = GameSubState::SelectLevel;
