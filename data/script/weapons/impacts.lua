@@ -66,6 +66,20 @@ function impacts.bullet(this, terrain, obj)
 	end
 end
 
+-- Digger particle. Doesn't damage ships much
+function impacts.diggerbeam(this, terrain, obj)
+	this:destroy()
+	game.effect("MakeBigHole", {
+		pos = this.pos,
+		r = 2,
+		dust = 0.5
+	})
+
+	if obj ~= nil and obj.is_ship then
+		obj:damage(0.3)
+	end
+end
+
 -- Special weapon grenade
 function impacts.grenade(this, terrain, ship)
 	this:destroy()

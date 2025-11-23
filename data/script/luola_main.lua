@@ -220,5 +220,10 @@ luola_secondary_weapons = {
 		title = "Laser cannon",
 		fire_func = sweapons.laser,
 		description = "A directed energy weapon that hits targets at the speed of light.",
+	},
+	digger = {
+		title = "Sonic chisel",
+		fire_func = sweapons.diggerbeam,
+		description = "Emits an ultrasonic beam that breaks down rock and loosens dirt material. Primarily a digging tool; not very effective against modern armor.",
 	}
 }

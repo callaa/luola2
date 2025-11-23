@@ -72,13 +72,19 @@ impl<'a> LevelEditor<'a> {
      * Make a regular bullet hole
      */
     pub fn make_standard_bullet_hole(&mut self, pos: Vec2, scripting: &mut ScriptEnvironment) {
-        self.make_hole(pos, 3, scripting);
+        self.make_hole(pos, 3, 0.05, scripting);
     }
 
     /**
      * Make an arbitrarily sized hole
      */
-    pub fn make_hole(&mut self, pos: Vec2, r: i32, scripting: &mut ScriptEnvironment) {
+    pub fn make_hole(
+        &mut self,
+        pos: Vec2,
+        r: i32,
+        dust_chance: f32,
+        scripting: &mut ScriptEnvironment,
+    ) {
         if r <= 0 {
             return;
         }
@@ -144,7 +150,7 @@ impl<'a> LevelEditor<'a> {
                                         );
                                     }
                                 }
-                            } else if fastrand::f32() < 0.05 {
+                            } else if fastrand::f32() < dust_chance {
                                 // create dust
                                 let pos = Vec2(
                                     (tile_rect.x() + rect_in_tile.x() + row_x as i32) as f32

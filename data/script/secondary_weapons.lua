@@ -270,4 +270,28 @@ function weapons.laser(ship)
 	end
 end
 
+function weapons.diggerbeam(ship)
+	if ship:consume_ammo(0.5, 0.1) then
+		local state = {
+			on_impact = Impacts.diggerbeam,
+			scheduler = Scheduler:new():add(0, function(obj)
+				obj:destroy()
+				return 0
+			end),
+		}
+		local tex = textures.get("dot3x3")
+		for a = -30, 30, 3 do
+			game.effect("AddBullet", {
+				pos = ship.pos,
+				vel = ship.vel + Vec2_for_angle(-ship.angle + a, 1000.0),
+				color = 0x30ffffff,
+				texture = tex,
+				owner=ship.player,
+				state=state,
+				timer=0.1
+			})
+		end
+	end
+end
+
 return weapons

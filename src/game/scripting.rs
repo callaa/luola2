@@ -270,8 +270,13 @@ impl ScriptEnvironment {
                         b"MakeBigHole" => {
                             if let mlua::Value::Table(t) = props {
                                 let pos = t.get("pos")?;
-                                let r: i32 = t.get("r")?;
-                                WorldEffect::MakeBigHole(pos, r.clamp(1, 999))
+                                let radius = t.get::<i32>("r")?.clamp(1, 999);
+                                let dust_chance: Option<f32> = t.get("dust")?;
+                                WorldEffect::MakeBigHole {
+                                    pos,
+                                    radius,
+                                    dust_chance,
+                                }
                             } else {
                                 return Err(anyhow!("expected {{pos, r}}").into());
                             }

@@ -50,7 +50,11 @@ pub enum WorldEffect {
     AddPixel(Vec2, Terrain, Color),
     ColorPixel(Vec2, Color),
     MakeBulletHole(Vec2),
-    MakeBigHole(Vec2, i32),
+    MakeBigHole {
+        pos: Vec2,
+        radius: i32,
+        dust_chance: Option<f32>,
+    },
     AddCritter(Critter),
     UpdateForcefield(Forcefield),
     RemoveForcefield(i32),
@@ -237,9 +241,16 @@ impl World {
                 WorldEffect::MakeBulletHole(pos) => {
                     level_editor.make_standard_bullet_hole(pos, &mut self.scripting)
                 }
-                WorldEffect::MakeBigHole(pos, r) => {
-                    level_editor.make_hole(pos, r, &mut self.scripting)
-                }
+                WorldEffect::MakeBigHole {
+                    pos,
+                    radius,
+                    dust_chance,
+                } => level_editor.make_hole(
+                    pos,
+                    radius,
+                    dust_chance.unwrap_or(0.05),
+                    &mut self.scripting,
+                ),
                 WorldEffect::AddCritter(critter) => {
                     self.critters.borrow_mut().push(critter);
                 }
