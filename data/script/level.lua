@@ -1,5 +1,25 @@
 local Scheduler = require("utils.scheduler")
-local Level = {}
+
+-- These should be kept in sync with the values in terrain.rs
+local Level = {
+	TER_TYPE_GROUND = 1,
+	TER_TYPE_BURNABLE = 2,
+	TER_TYPE_CINDER = 3,
+	TER_TYPE_EXPLOSIVE = 4,
+	TER_TYPE_HIGH_EXPLOSIVE = 5,
+	TER_TYPE_ICE = 6,
+	TER_TYPE_BASE = 7,
+	TER_TER_TYPE_WALKWAY = 8,
+	TER_TYPE_GREYGOO = 9,
+}
+
+function Level.mask_solid(ter)
+	return ter & 0x3f
+end
+
+function Level.is_water(ter)
+	return ter & 0xbf == 0x80
+end
 
 -- Convert a list of coordinates from level to world coordinates
 function Level.to_world_coordinates(coordinates)

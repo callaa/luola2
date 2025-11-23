@@ -187,21 +187,14 @@ end
 function impacts.greygoo(this, terrain, obj)
 	this:destroy()
 
-	if obj ~= nil and obj.is_ship then
-		obj.state.greygoo = 5
-		-- afflicted ship takes constant damage for a while
-		Scheduler.add_to_object(obj, 0.1, function(ship)
-			ship:damage(2)
-			ship.state.greygoo = ship.state.greygoo - 1
-			if ship.state.greygoo > 0 then
-				return 0.5
-			end
-		end)
+	if obj ~= nil and obj.state ~=nil and obj.state.on_touch_greygoo ~=nil then
+		obj.state.on_touch_greygoo(obj)
+	else
+		game.effect("AddDynamicTerrain", {
+			pos = this.pos,
+			type = "GreyGoo",
+		})
 	end
-	game.effect("AddDynamicTerrain", {
-		pos = this.pos,
-		type = "GreyGoo",
-	})
 end
 
 function impacts.freezer(this, terrain, obj)

@@ -23,8 +23,8 @@ use crate::{
             dynter::{DynamicTerrainCell, DynamicTerrainMap},
             rectiter::MutableRectIterator,
             terrain::{
-                self, TER_BIT_DESTRUCTIBLE, TER_BIT_WATER, TER_MASK_SOLID, TER_TYPE_GROUND,
-                TER_TYPE_HIGH_EXPLOSIVE, TER_TYPE_ICE, Terrain,
+                self, TER_BIT_DESTRUCTIBLE, TER_BIT_WATER, TER_MASK_SOLID, TER_TYPE_GREYGOO,
+                TER_TYPE_GROUND, TER_TYPE_HIGH_EXPLOSIVE, TER_TYPE_ICE, Terrain,
             },
         },
         objects::TerrainParticle,
@@ -320,7 +320,7 @@ impl<'a> LevelEditor<'a> {
                     if counter > 0 {
                         self.replace_point_lc(
                             pos,
-                            TER_TYPE_GROUND,
+                            TER_TYPE_GREYGOO,
                             Color::from_hsv(183.0, 1.0, counter as f32 / 6.0).as_argb_u32(),
                         );
                         new_cells.insert(

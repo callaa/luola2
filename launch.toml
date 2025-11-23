@@ -13,7 +13,7 @@ rounds = 10
 [[player]]
 controller = 1
 ship = "vwing"
-weapon = "drone"
+weapon = "greygoo"
 
 [[player]]
 controller = 2

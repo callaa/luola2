@@ -94,6 +94,46 @@ local function on_ship_destroyed(ship)
 	})
 end
 
+local function ship_touch_greygoo(ship)
+	if ship.state.greygoo == nil then
+		ship.state.greygoo = 15
+		-- afflicted ship takes constant damage for a while and will also radiate short lived grey goo particles
+		Scheduler.add_to_object(ship, 0.1, function(ship)
+			game.player_effect("hud_overlay", ship.player, {
+					text = textures.font("menu", "Nanite intrusion detected!"),
+					pos = Vec2(0.5, 0.1),
+					color = 0xffff0000,
+					lifetime = 0.5,
+					fadeout = 0.5,
+			})
+
+			ship:damage(1)
+			ship.state.greygoo = ship.state.greygoo - 1
+			Impacts.make_shrapnell(5, ship.pos, {
+				mass = 50,
+				radius = 5,
+				drag = 0.0025,
+				owner = ship.player,
+				texture = textures.get("dot3x3"),
+				color = 0x80ffffff,
+				state = {
+					scheduler = Scheduler:new():add(0, function(ctx)
+						ctx:destroy()
+						return 0
+					end),
+					on_impact = Impacts.greygoo,
+				},
+				timer = 2/60,
+			})
+			if ship.state.greygoo > 0 then
+				return 0.5
+			else
+				ship.state.greygoo = nil
+			end
+		end)
+	end
+end
+
 local ships = {
 	vwing = {
 		title = "V-Wing",
@@ -110,6 +150,7 @@ local ships = {
 				on_destroyed = on_ship_destroyed,
 				on_base = ship_on_base,
 				on_thrust = ship_thrust_effect,
+				on_touch_greygoo = ship_touch_greygoo,
 			}
 		},
 	},
