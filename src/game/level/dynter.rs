@@ -72,11 +72,11 @@ impl DynamicTerrainCell {
         let typ = table.get::<mlua::String>("type")?;
         match typ.as_bytes().deref() {
             b"Foam" => Ok(DynamicTerrainCell::Foam {
-                limit: table.get::<Option<i32>>("limit")?.unwrap_or(30),
+                limit: table.get::<Option<i32>>("limit")?.unwrap_or(20),
             }),
             b"GreyGoo" => Ok(DynamicTerrainCell::GreyGoo {
                 counter: table.get::<Option<i32>>("counter")?.unwrap_or(0),
-                limit: table.get::<Option<i32>>("limit")?.unwrap_or(80),
+                limit: table.get::<Option<i32>>("limit")?.unwrap_or(40),
             }),
             b"Freezer" => Ok(DynamicTerrainCell::Freezer {
                 limit: table.get::<Option<i32>>("limit")?.unwrap_or(60), // note: ice spreads only half as far underwater
