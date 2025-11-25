@@ -340,13 +340,12 @@ impl<'a> LevelEditor<'a> {
                         self.replace_point_lc(pos, 0, 0);
                         if limit > 0 {
                             Self::neighbors(&NEIGHBORS4, pos).for_each(|p| {
-                                if terrain::is_destructible(self.level.terrain_at_lc(p))
-                                    && !new_cells.contains_key(&p)
-                                {
+                                let tp = self.level.terrain_at_lc(p);
+                                if terrain::is_destructible(tp) && !terrain::is_greygoo(tp) {
                                     new_cells.insert(
                                         p,
                                         DynamicTerrainCell::GreyGoo {
-                                            counter: fastrand::i32(1..6),
+                                            counter: fastrand::i32(20..40),
                                             limit: limit - 1,
                                         },
                                     );
