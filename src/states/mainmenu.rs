@@ -39,6 +39,7 @@ pub struct MainMenu {
     video_menu: ActionMenu,
     controls_menu: ActionMenu,
     keymap_menu: ActionMenu,
+    gameopts_menu: ActionMenu,
 
     active_keymap: usize,
     background: TextureId,
@@ -67,6 +68,7 @@ enum MenuAction {
     GoToKeys2,
     GoToKeys3,
     GoToKeys4,
+    GoToGameOpts,
     ToggleFullscreen,
     KeyMapThrust,
     KeyMapLeft,
@@ -75,6 +77,8 @@ enum MenuAction {
     KeyMapFire2,
     SaveKeyMap,
     SaveVideoOpts,
+    ToggleMinimap,
+    SaveGameOpts,
 }
 
 impl MainMenu {
@@ -105,6 +109,7 @@ impl MainMenu {
                 MenuItem::Spacer(32.0),
                 MenuItem::Link("Video", MenuAction::GoToVideoOpts),
                 //MenuItem::Link("Audio", 0),
+                MenuItem::Link("Game", MenuAction::GoToGameOpts),
                 MenuItem::Link("Keyboard controls", MenuAction::GoToControls),
                 MenuItem::Spacer(10.0),
                 MenuItem::Escape("Back", MenuAction::GoToMain),
@@ -156,6 +161,19 @@ impl MainMenu {
             ],
         )?;
 
+        let gameopts_menu = Menu::new(
+            &r,
+            &[
+                MenuItem::Spacer(logo_h),
+                MenuItem::Heading("Game options", Color::new(0.3, 1.0, 0.3)),
+                MenuItem::Spacer(32.0),
+                MenuItem::Value("Show minimap: ", MenuAction::ToggleMinimap),
+                MenuItem::Spacer(10.0),
+                MenuItem::Link("Save", MenuAction::SaveGameOpts),
+                MenuItem::Escape("Cancel", MenuAction::GoToOptions),
+            ],
+        )?;
+
         main_menu.appear();
 
         let background = r.texture_store().find_texture("menubackground")?;
@@ -172,6 +190,7 @@ impl MainMenu {
             video_menu,
             controls_menu,
             keymap_menu,
+            gameopts_menu,
             active_keymap: 0,
             background,
             logo,
@@ -260,11 +279,33 @@ impl MainMenu {
         self.controls_menu.appear();
     }
 
+    fn init_gameopts(&mut self) {
+        let config = GAME_CONFIG.read().unwrap();
+
+        self.gameopts_menu.appear();
+        self.gameopts_menu.set_value(
+            MenuAction::ToggleMinimap,
+            MenuValue::Toggle(config.game.minimap),
+        );
+    }
+
+    fn save_gameopts(&mut self) {
+        let mut config = GAME_CONFIG.read().unwrap().clone();
+
+        config.game.minimap = self
+            .gameopts_menu
+            .get_toggle_value(MenuAction::ToggleMinimap);
+
+        save_user_config(config);
+        self.options_menu.appear();
+    }
+
     pub fn render(&self) {
         let menus = [
             &self.main_menu,
             &self.options_menu,
             &self.video_menu,
+            &self.gameopts_menu,
             &self.controls_menu,
             &self.keymap_menu,
         ];
@@ -360,6 +401,7 @@ impl StackableState for MainMenu {
             &mut self.main_menu,
             &mut self.options_menu,
             &mut self.video_menu,
+            &mut self.gameopts_menu,
             &mut self.controls_menu,
             &mut self.keymap_menu,
         ];
@@ -375,6 +417,7 @@ impl StackableState for MainMenu {
             &mut self.main_menu,
             &mut self.options_menu,
             &mut self.video_menu,
+            &mut self.gameopts_menu,
             &mut self.controls_menu,
             &mut self.keymap_menu,
         ];
@@ -407,12 +450,14 @@ impl StackableState for MainMenu {
                 MenuAction::GoToMain => self.main_menu.appear(),
                 MenuAction::GoToVideoOpts => self.init_video_menu(),
                 MenuAction::GoToControls => self.controls_menu.appear(),
+                MenuAction::GoToGameOpts => self.init_gameopts(),
                 MenuAction::GoToKeys1 => self.init_keymap(0),
                 MenuAction::GoToKeys2 => self.init_keymap(1),
                 MenuAction::GoToKeys3 => self.init_keymap(2),
                 MenuAction::GoToKeys4 => self.init_keymap(3),
                 MenuAction::SaveKeyMap => self.save_keymap(),
                 MenuAction::SaveVideoOpts => self.save_video_opts(),
+                MenuAction::SaveGameOpts => self.save_gameopts(),
                 MenuAction::Quit => {
                     self.intro_outro_anim = 0.0;
                     self.anim_state = AnimState::Outro(StackableStateResult::Pop)
@@ -429,6 +474,7 @@ impl StackableState for MainMenu {
             &mut self.main_menu,
             &mut self.options_menu,
             &mut self.video_menu,
+            &mut self.gameopts_menu,
             &mut self.controls_menu,
             &mut self.keymap_menu,
         ];

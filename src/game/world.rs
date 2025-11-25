@@ -662,18 +662,20 @@ impl World {
             // Player HUD
             draw_hud(renderer, player.hud, &player.overlays);
 
-            let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
-            let levelscale = self.level.borrow().size_scale();
-            for ship in self.ships.borrow().iter() {
-                if ship.controller() > 0 && !ship.is_cloaked() {
-                    markers.push((
-                        Color::player_color(ship.player_id()),
-                        ship.pos().element_wise_product(levelscale),
-                    ));
+            if let Some(minimap) = self.level.borrow().minimap() {
+                let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
+                let levelscale = self.level.borrow().size_scale();
+                for ship in self.ships.borrow().iter() {
+                    if ship.controller() > 0 && !ship.is_cloaked() {
+                        markers.push((
+                            Color::player_color(ship.player_id()),
+                            ship.pos().element_wise_product(levelscale),
+                        ));
+                    }
                 }
-            }
 
-            draw_minimap(renderer, self.level.borrow().minimap(), &markers);
+                draw_minimap(renderer, minimap, &markers);
+            }
         }
 
         if player.fadeout > 0.0 {

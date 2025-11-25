@@ -30,10 +30,28 @@ pub struct VideoConfig {
     pub fullscreen: bool,
 }
 
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GameOptions {
+    #[serde(default = "default_true")]
+    pub minimap: bool,
+}
+
+impl Default for GameOptions {
+    fn default() -> Self {
+        Self { minimap: true }
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct UserConfig {
     #[serde(default)]
     pub video: VideoConfig,
+    #[serde(default)]
+    pub game: GameOptions,
     pub keymap1: Option<PlayerKeymap>,
     pub keymap2: Option<PlayerKeymap>,
     pub keymap3: Option<PlayerKeymap>,
@@ -42,6 +60,7 @@ pub struct UserConfig {
 
 pub static GAME_CONFIG: RwLock<UserConfig> = RwLock::new(UserConfig {
     video: VideoConfig { fullscreen: false },
+    game: GameOptions { minimap: true },
     keymap1: None,
     keymap2: None,
     keymap3: None,

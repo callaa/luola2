@@ -24,6 +24,7 @@ use super::{
     tileiterator::{MutableTileIterator, TileIterator},
 };
 use crate::{
+    configfile::GAME_CONFIG,
     gfx::{Color, Image, Renderer, Texture, TextureScaleMode},
     math::{Line, LineF, Rect, RectF, Vec2},
 };
@@ -88,9 +89,9 @@ pub struct Forcefield {
  * Internally, the level size must be a multiple of TILE_SIZE.
  */
 pub struct Level {
-    tiles: Vec<TerrainTile>, // length should be tiles_wide * tiles_high
-    artwork: Texture,        // updated from tiles when changed
-    minimap: Texture,        // generated on level load
+    tiles: Vec<TerrainTile>,  // length should be tiles_wide * tiles_high
+    artwork: Texture,         // updated from tiles when changed
+    minimap: Option<Texture>, // generated on level load
     background: Option<Texture>,
     pub(super) dynterrain: Cell<DynamicTerrainMap>,
     width: f32,       // width in world coordinates
@@ -224,9 +225,15 @@ impl Level {
 
         // Create minimap texture
         // Though we could update this as the terrain gets modified, it's probably not worth the effort
-        let minimap = artwork
-            .scaled(64, 64, true)
-            .and_then(|i| Texture::from_image(renderer, &Self::prettify_minimap(i)))?;
+        let minimap = if GAME_CONFIG.read().unwrap().game.minimap {
+            Some(
+                artwork
+                    .scaled(64, 64, true)
+                    .and_then(|i| Texture::from_image(renderer, &Self::prettify_minimap(i)))?,
+            )
+        } else {
+            None
+        };
 
         // Initialize level texture. This will be updated when level is modified
         let mut artwork = Texture::new_streaming(renderer, artwork.width(), artwork.height())?;
@@ -279,8 +286,8 @@ impl Level {
     }
 
     /// Get level minimap texture
-    pub fn minimap(&self) -> &Texture {
-        &self.minimap
+    pub fn minimap(&self) -> Option<&Texture> {
+        self.minimap.as_ref()
     }
 
     pub fn windspeed(&self) -> f32 {
