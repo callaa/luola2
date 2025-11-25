@@ -39,11 +39,15 @@ impl Default for Color {
 }
 
 impl Color {
-    pub const PLAYER_COLORS: [Color; 4] = [
-        Color::new(0.2, 0.2, 1.0),
+    pub const PLAYER_COLORS: [Color; 8] = [
+        Color::new(0.2, 0.35, 1.0),
         Color::new(1.0, 0.2, 0.0),
         Color::new(0.2, 1.0, 0.2),
         Color::new(1.0, 1.0, 0.4),
+        Color::new(1.0, 0.39, 1.0),
+        Color::new(227.0 / 255.0, 119.0 / 255.0, 51.0 / 255.0),
+        Color::new(146.0 / 255.0, 51.0 / 255.0, 227.0 / 255.0),
+        Color::new(51.0 / 255.0, 227.0 / 255.0, 190.0 / 255.0),
     ];
 
     pub const WHITE: Color = Color::new(1.0, 1.0, 1.0);
