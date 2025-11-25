@@ -18,11 +18,12 @@ use std::{cell::RefCell, rc::Rc};
 
 use anyhow::Result;
 use log::error;
+use smallvec::SmallVec;
 
 use crate::{
     game::{
         Player, PlayerId, PlayerState,
-        hud::{PlayerHud, draw_hud},
+        hud::{PlayerHud, draw_hud, draw_minimap},
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
         objects::{Critter, FixedObject, GameObjectArray, HitscanProjectile, TerrainParticle},
     },
@@ -316,6 +317,8 @@ impl World {
                     ps.hud = PlayerHud::Ship {
                         health: ship.health(),
                         ammo: ship.ammo(),
+                        cooling_down: ship.secondary_weapon_cooldown() > 0.0,
+                        pos: ship.pos().element_wise_product(level.size_scale()),
                     };
                     // camera inertia for an enhanced feeling of motion
                     // TODO rather than trailing behind the ship, the camera should look ahead?
@@ -658,6 +661,19 @@ impl World {
 
             // Player HUD
             draw_hud(renderer, player.hud, &player.overlays);
+
+            let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
+            let levelscale = self.level.borrow().size_scale();
+            for ship in self.ships.borrow().iter() {
+                if ship.controller() > 0 && !ship.is_cloaked() {
+                    markers.push((
+                        Color::player_color(ship.player_id()),
+                        ship.pos().element_wise_product(levelscale),
+                    ));
+                }
+            }
+
+            draw_minimap(renderer, self.level.borrow().minimap(), &markers);
         }
 
         if player.fadeout > 0.0 {

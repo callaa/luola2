@@ -251,8 +251,16 @@ impl Ship {
         self.ammo_remaining / self.max_ammo
     }
 
+    pub fn secondary_weapon_cooldown(&self) -> f32 {
+        self.secondary_weapon_cooldown
+    }
+
     pub fn is_wrecked(&self) -> bool {
         self.hitpoints <= 0.0
+    }
+
+    pub fn is_cloaked(&self) -> bool {
+        self.cloaked
     }
 
     /**

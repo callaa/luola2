@@ -110,7 +110,7 @@ local function _landmine_reminder(mine)
 	game.player_effect("hud_overlay", mine.owner, {
 	texture = textures.get("explosive_icon"),
 		pos = Vec2(0, 0),
-		align = "topleft",
+		align = "status",
 		color = 0xffff5500,
 		lifetime = 0.5,
 		fadeout = 0.4

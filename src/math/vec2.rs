@@ -66,6 +66,10 @@ impl Vec2 {
         }
     }
 
+    pub fn element_wise_product(self, other: Self) -> Self {
+        Self(self.0 * other.0, self.1 * other.1)
+    }
+
     pub fn dot(self, other: Self) -> f32 {
         self.0 * other.0 + self.1 * other.1
     }

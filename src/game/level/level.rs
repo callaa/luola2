@@ -90,12 +90,14 @@ pub struct Forcefield {
 pub struct Level {
     tiles: Vec<TerrainTile>, // length should be tiles_wide * tiles_high
     artwork: Texture,        // updated from tiles when changed
+    minimap: Texture,        // generated on level load
     background: Option<Texture>,
     pub(super) dynterrain: Cell<DynamicTerrainMap>,
-    width: f32,      // width in world coordinates
-    height: f32,     // height in world coordinates
-    tiles_wide: i32, // width in tiles
-    tiles_high: i32, // height in tiles
+    width: f32,       // width in world coordinates
+    height: f32,      // height in world coordinates
+    size_scale: Vec2, // multiply a vector with this to get position scaled down to 0..1 range
+    tiles_wide: i32,  // width in tiles
+    tiles_high: i32,  // height in tiles
 
     windspeed: f32, // Wind speed (horizontal)
 
@@ -220,6 +222,12 @@ impl Level {
             }
         }
 
+        // Create minimap texture
+        // Though we could update this as the terrain gets modified, it's probably not worth the effort
+        let minimap = artwork
+            .scaled(64, 64, true)
+            .and_then(|i| Texture::from_image(renderer, &Self::prettify_minimap(i)))?;
+
         // Initialize level texture. This will be updated when level is modified
         let mut artwork = Texture::new_streaming(renderer, artwork.width(), artwork.height())?;
 
@@ -241,11 +249,13 @@ impl Level {
         Ok(Level {
             tiles,
             artwork,
+            minimap,
             background,
             dynterrain: Cell::default(),
             windspeed: 0.0,
             width,
             height,
+            size_scale: Vec2(1.0 / width, 1.0 / height),
             tiles_wide,
             tiles_high,
             forcefields: Vec::new(),
@@ -262,6 +272,15 @@ impl Level {
     /// Level height in world coordinates
     pub fn height(&self) -> f32 {
         self.height
+    }
+
+    pub fn size_scale(&self) -> Vec2 {
+        self.size_scale
+    }
+
+    /// Get level minimap texture
+    pub fn minimap(&self) -> &Texture {
+        &self.minimap
     }
 
     pub fn windspeed(&self) -> f32 {
@@ -594,6 +613,21 @@ impl Level {
             };
             renderer.draw_filled_rectangle(tr.offset(-camera.x(), -camera.y()), &color);
         }
+    }
+
+    fn prettify_minimap(mut image: Image) -> Image {
+        const A: u32 = 0xb4000000;
+        let pixels = image.argb8888_pixels_mut().unwrap();
+        for px in pixels.iter_mut() {
+            let r = (*px & 0x00ff0000) >> 16;
+            let g = (*px & 0x0000ff00) >> 8;
+            let b = *px & 0x000000ff;
+
+            let m = ((r * 4 + g * 4 + b) / 9 + 32).min(255);
+            *px = A | (m << 16) | (m << 8) | m;
+        }
+
+        image
     }
 }
 

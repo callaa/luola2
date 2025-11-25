@@ -17,7 +17,7 @@
 use crate::{
     gfx::{
         Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
-        Text, TextOutline, TextureId,
+        Text, TextOutline, Texture, TextureId,
     },
     math::{RectF, Vec2},
 };
@@ -25,7 +25,12 @@ use core::ops::Deref;
 
 #[derive(Clone, Copy)]
 pub enum PlayerHud {
-    Ship { health: f32, ammo: f32 },
+    Ship {
+        health: f32,
+        ammo: f32,
+        cooling_down: bool,
+        pos: Vec2,
+    },
     None,
 }
 
@@ -52,6 +57,7 @@ pub enum HudOverlayContent {
 pub enum HudOverlayAlignment {
     TopLeft,
     Centered,
+    StatusArea,
 }
 
 impl mlua::FromLua for HudOverlay {
@@ -65,6 +71,7 @@ impl mlua::FromLua for HudOverlay {
                 match align.as_bytes().deref() {
                     b"topleft" => HudOverlayAlignment::TopLeft,
                     b"center" => HudOverlayAlignment::Centered,
+                    b"status" => HudOverlayAlignment::StatusArea,
                     unknown => {
                         return Err(mlua::Error::FromLuaConversionError {
                             from: "string",
@@ -147,6 +154,10 @@ impl HudOverlay {
                     dest: match self.align {
                         HudOverlayAlignment::Centered => RenderTextDest::Centered(pos),
                         HudOverlayAlignment::TopLeft => RenderTextDest::TopLeft(pos),
+                        HudOverlayAlignment::StatusArea => RenderTextDest::BottomLeft(Vec2(
+                            20.0 + ((renderer.width() - 20) as f32 * 0.61).ceil(),
+                            renderer.height() as f32 - 10.0,
+                        )),
                     },
                     color: self.color,
                     alpha: a,
@@ -162,6 +173,12 @@ impl HudOverlay {
                         RectF::new(pos.0 - w / 2.0, pos.1 - h / 2.0, w, h)
                     }
                     HudOverlayAlignment::TopLeft => RectF::new(pos.0, pos.1, w, h),
+                    HudOverlayAlignment::StatusArea => RectF::new(
+                        20.0 + ((renderer.width() - 20) as f32 * 0.61).ceil(),
+                        (renderer.height() - 10) as f32 - h,
+                        w,
+                        h,
+                    ),
                 };
 
                 tex.render(
@@ -188,7 +205,12 @@ impl HudOverlay {
 
 pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay]) {
     match hud {
-        PlayerHud::Ship { health, ammo } => draw_ship_hud(renderer, health, ammo),
+        PlayerHud::Ship {
+            health,
+            ammo,
+            cooling_down,
+            ..
+        } => draw_ship_hud(renderer, health, ammo, cooling_down),
         PlayerHud::None => {}
     }
 
@@ -197,41 +219,94 @@ pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay]) {
     }
 }
 
-fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32) {
-    let bar_height = 3.0 + 4.0 * 2.0;
-    let bar_width = renderer.width() as f32 - bar_height * 2.0;
+pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, Vec2)]) {
+    let w = minimap.width();
+    let h = minimap.height();
+    let x = renderer.width() as f32 - 10.0 - w;
+    let y = renderer.height() as f32 - 10.0 - h;
 
-    let bar_rect = RectF::new(
-        ((renderer.width() as f32 - bar_width) / 2.0).floor(),
-        renderer.height() as f32 - bar_height * 2.0,
-        bar_width,
-        bar_height,
-    );
-    renderer.draw_filled_rectangle(bar_rect, &Color::new(0.1, 0.1, 0.1));
-
-    let health_rect = RectF::new(
-        bar_rect.x() + 1.0,
-        bar_rect.y() + 1.0,
-        (bar_rect.w() - 2.0) * health,
-        4.0,
+    minimap.render(
+        renderer,
+        &RenderOptions {
+            dest: RenderDest::Rect(RectF::new(x, y, w, h)),
+            ..Default::default()
+        },
     );
 
-    let health_color = if health > 0.5 {
-        Color::new(0.31, 0.38, 0.72)
-    } else if health > 0.2 {
-        Color::new(0.78, 0.78, 0.0)
-    } else {
-        Color::new(0.78, 0.0, 0.0)
+    let tex = renderer.texture_store().get_texture(
+        renderer
+            .texture_store()
+            .find_texture("minimap_pointer")
+            .expect("minimap_pointer texture should exist"),
+    );
+    for (color, pointer) in pointers {
+        tex.render(
+            renderer,
+            &RenderOptions {
+                dest: RenderDest::Centered(Vec2(
+                    x + (pointer.0 * w).round(),
+                    y + (pointer.1 * h).round(),
+                )),
+                color: *color,
+                ..Default::default()
+            },
+        );
+    }
+}
+
+fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32, cooling_down: bool) {
+    let barfill = renderer.texture_store().get_texture(
+        renderer
+            .texture_store()
+            .find_texture("bar_fill")
+            .expect("bar_fill texture should exist"),
+    );
+    let barbg = renderer.texture_store().get_texture(
+        renderer
+            .texture_store()
+            .find_texture("bar_bg")
+            .expect("bar_bg texture should exist"),
+    );
+
+    let w = ((renderer.width() - 20) as f32 * 0.61).ceil();
+    let h = barbg.height();
+    let x = 10.0;
+    let y = renderer.height() as f32 - (h * 2.0) - 10.0;
+
+    let mut opts = RenderOptions {
+        dest: RenderDest::Rect(RectF::new(x, y, w, h)),
+        mode: RenderMode::NineGrid(1.0),
+        ..Default::default()
     };
 
-    renderer.draw_filled_rectangle(health_rect, &health_color);
+    // Health bar
+    barbg.render(renderer, &opts);
 
-    let ammo_rect = RectF::new(
-        bar_rect.x() + 1.0,
-        bar_rect.y() + 2.0 + 4.0,
-        (bar_rect.w() - 2.0) * ammo,
-        4.0,
-    );
+    if health > 0.0 {
+        opts.dest = RenderDest::Rect(RectF::new(x, y, w * health, h));
+        opts.color = if health > 0.7 {
+            Color::new(0.31, 0.38, 0.72)
+        } else if health > 0.4 {
+            Color::new(0.78, 0.78, 0.0)
+        } else {
+            Color::new(0.78, 0.0, 0.0)
+        };
+        barfill.render(renderer, &opts);
+    }
 
-    renderer.draw_filled_rectangle(ammo_rect, &Color::new(0.72, 0.76, 0.76));
+    // Ammo bar
+    opts.dest = RenderDest::Rect(RectF::new(x, y + h, w, h));
+    opts.color = Color::WHITE;
+    barbg.render(renderer, &opts);
+
+    if ammo > 0.0 {
+        opts.dest = RenderDest::Rect(RectF::new(x, y + h, w * ammo, h));
+        opts.color = Color {
+            r: 0.72,
+            g: 0.76,
+            b: 0.76,
+            a: if cooling_down { 0.5 } else { 1.0 },
+        };
+        barfill.render(renderer, &opts);
+    }
 }

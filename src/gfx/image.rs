@@ -21,7 +21,8 @@ use sdl3_sys::{
     pixels::{SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX8, SDL_Palette},
     rect::SDL_Rect,
     surface::{
-        SDL_BlitSurface, SDL_ConvertSurface, SDL_DestroySurface, SDL_GetSurfacePalette, SDL_Surface,
+        SDL_BlitSurface, SDL_ConvertSurface, SDL_DestroySurface, SDL_GetSurfacePalette,
+        SDL_SCALEMODE_LINEAR, SDL_SCALEMODE_NEAREST, SDL_ScaleSurface, SDL_Surface,
     },
 };
 use std::path::PathBuf;
@@ -88,6 +89,17 @@ impl Image {
         })
     }
 
+    pub fn argb8888_pixels_mut(&mut self) -> Option<&mut [u32]> {
+        let surface = unsafe { &*self.0 };
+        if surface.format != SDL_PIXELFORMAT_ARGB8888 {
+            return None;
+        }
+
+        Some(unsafe {
+            slice::from_raw_parts_mut(surface.pixels as *mut u32, (surface.w * surface.h) as usize)
+        })
+    }
+
     pub fn indexed_pixels(&self) -> Option<&[u8]> {
         let surface = unsafe { &*self.0 };
         if surface.format != SDL_PIXELFORMAT_INDEX8 {
@@ -120,5 +132,35 @@ impl Image {
                 },
             );
         }
+    }
+
+    pub fn scaled(&self, width: i32, height: i32, smooth: bool) -> Result<Image> {
+        let scalef = if width > self.width() {
+            height as f32 / self.height() as f32
+        } else {
+            width as f32 / self.width() as f32
+        };
+
+        let real_w = (self.width() as f32 * scalef) as i32;
+        let real_h = (self.height() as f32 * scalef) as i32;
+
+        let surface = unsafe {
+            SDL_ScaleSurface(
+                self.0,
+                real_w,
+                real_h,
+                if smooth {
+                    SDL_SCALEMODE_LINEAR
+                } else {
+                    SDL_SCALEMODE_NEAREST
+                },
+            )
+        };
+
+        if surface.is_null() {
+            return Err(SdlError::get_error("IMG_load").into());
+        }
+
+        Ok(Image(surface))
     }
 }

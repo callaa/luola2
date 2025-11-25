@@ -163,3 +163,15 @@ file = "box-border.png"
 [explosive_icon]
 file = "weapon-icons.png"
 subrect = [0, 0, 32, 32]
+
+[bar_fill]
+file = "hud.png"
+subrect = [0, 0, 9, 9]
+
+[bar_bg]
+file = "hud.png"
+subrect = [0, 9, 9, 9]
+
+[minimap_pointer]
+file = "hud.png"
+subrect = [9, 0, 7, 7]

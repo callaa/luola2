@@ -245,6 +245,7 @@ dependencies = [
  "sdl3-sys",
  "sdl3-ttf-sys",
  "serde",
+ "smallvec",
  "toml",
  "winresource",
 ]

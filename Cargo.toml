@@ -28,6 +28,7 @@ sdl3-main = "0.5.4"
 sdl3-sys = { version = "0.5.7"  }
 sdl3-ttf-sys = { version = "0.2.0" }
 serde = { version = "1.0.228", features = ["derive"] }
+smallvec = "1.15.1"
 toml = { version = "0.9.8", default-features=false, features = ["std", "serde", "parse", "display"] }
 
 [dev-dependencies]
