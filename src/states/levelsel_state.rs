@@ -35,7 +35,7 @@ pub struct LevelSelection {
     assets: Rc<GameAssets>,
     levelboxes: Vec<LevelBox>,
     round_text: Text,
-    selection: i32,
+    selection: usize,
     selector_offset: f32,
     selector_offset_target: f32,
     renderer: Rc<RefCell<Renderer>>,
@@ -61,7 +61,9 @@ impl LevelSelection {
         round: i32,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
+        selection: usize,
     ) -> Result<Self> {
+        debug_assert!(selection < assets.levels.len());
         let round_text = renderer
             .borrow()
             .fontset()
@@ -99,14 +101,14 @@ impl LevelSelection {
             })
             .collect();
 
-        let selector_offset = levelboxes[0].xpos + levelboxes[0].w / 2.0;
+        let selector_offset = levelboxes[selection].xpos + levelboxes[selection].w / 2.0;
 
         Ok(Self {
             assets,
             round_text,
             starfield,
             levelboxes,
-            selection: 0,
+            selection,
             selector_offset,
             selector_offset_target: selector_offset,
             renderer,
@@ -136,7 +138,7 @@ impl LevelSelection {
         let offset = center.0 - self.selector_offset; //selected_level.xpos - selected_level.w / 2.0;
         for (i, level) in self.levelboxes.iter().enumerate() {
             if let Some(t) = &level.thumbnail {
-                let d = (self.selection - i as i32).abs() as f32;
+                let d = (self.selection as i32 - i as i32).abs() as f32;
                 t.render(
                     renderer,
                     &RenderOptions {
@@ -172,10 +174,11 @@ impl StackableState for LevelSelection {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
             MenuButton::Right(_) => {
-                self.selection = (self.selection + 1) % self.levelboxes.len() as i32;
+                self.selection = (self.selection + 1) % self.levelboxes.len();
             }
             MenuButton::Left(_) => {
-                self.selection = (self.selection - 1).rem_euclid(self.levelboxes.len() as i32);
+                self.selection =
+                    (self.selection as i32 - 1).rem_euclid(self.levelboxes.len() as i32) as usize;
             }
             MenuButton::Up(_) => {}
             MenuButton::Down(_) => {}

@@ -178,12 +178,22 @@ impl StackableState for GameState {
         match self.substate {
             GameSubState::SelectLevel => {
                 self.substate = GameSubState::GameResults;
+                let selection = if let Some(level) = &self.level {
+                    self.assets.levels.iter().position(|l| {
+                        l.levelpack() == level.levelpack() && l.name() == level.name()
+                    })
+                } else {
+                    None
+                }
+                .unwrap_or(0);
+
                 StackableStateResult::Push(Box::new(
                     match LevelSelection::new(
                         self.assets.clone(),
                         self.round_winners.len() as i32 + 1,
                         self.starfield.clone(),
                         self.renderer.clone(),
+                        selection,
                     ) {
                         Ok(s) => s,
                         Err(err) => {
