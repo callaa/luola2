@@ -279,6 +279,10 @@ impl Texture {
             return Err(SdlError::get_error("Couldn't get texture size").into());
         }
 
+        unsafe {
+            SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+        }
+
         Ok(Texture {
             tex,
             subrect: RectF::new(0.0, 0.0, width, height),

@@ -74,7 +74,13 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
         return Err(anyhow!("No levels found!"));
     }
 
-    levels.sort_by(|a, b| a.title().cmp(b.title()));
+    levels.sort_by(|a, b| {
+        if a.levelpack() == b.levelpack() {
+            a.title().cmp(b.title())
+        } else {
+            a.levelpack().cmp(b.levelpack())
+        }
+    });
 
     // Load scripts and extract weapon list
     // The full API isn't initialized and shouldn't be needed

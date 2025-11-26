@@ -35,17 +35,18 @@ pub struct LevelSelection {
     assets: Rc<GameAssets>,
     levelboxes: Vec<LevelBox>,
     round_text: Text,
-    timer: f32,
-    selection: usize,
-    columns: usize,
+    selection: i32,
+    selector_offset: f32,
+    selector_offset_target: f32,
     renderer: Rc<RefCell<Renderer>>,
 }
 
 struct LevelBox {
     title: Text,
     thumbnail: Option<Texture>,
-    target_rect: RectF,
-    rect: RectF,
+    w: f32,
+    h: f32,
+    xpos: f32,
 }
 
 impl LevelSelection {
@@ -61,8 +62,6 @@ impl LevelSelection {
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
     ) -> Result<Self> {
-        let level_count = assets.levels.len();
-
         let round_text = renderer
             .borrow()
             .fontset()
@@ -70,34 +69,48 @@ impl LevelSelection {
             .create_text(&renderer.borrow(), &format!("Round {}", round))?
             .with_color(Color::new(0.9, 0.2, 0.2));
 
+        let mut last_xpos = 0.0;
+
+        let levelboxes: Vec<LevelBox> = assets
+            .levels
+            .iter()
+            .map(|level| {
+                let (w, h) = if let Some(t) = level.thumbnail() {
+                    (t.width(), t.height())
+                } else {
+                    (512.0, 512.0)
+                };
+
+                let xpos = last_xpos + 40.0;
+                last_xpos = xpos + w;
+                LevelBox {
+                    thumbnail: level.thumbnail().cloned(),
+                    title: renderer
+                        .borrow()
+                        .fontset()
+                        .menu
+                        .create_text(&renderer.borrow(), level.title())
+                        .unwrap()
+                        .with_outline_color(Color::new(0.2, 0.2, 0.4)),
+                    w,
+                    h,
+                    xpos,
+                }
+            })
+            .collect();
+
+        let selector_offset = levelboxes[0].xpos + levelboxes[0].w / 2.0;
+
         Ok(Self {
             assets,
             round_text,
             starfield,
-            levelboxes: Vec::with_capacity(level_count),
-            timer: 0.0,
+            levelboxes,
             selection: 0,
-            columns: 1,
+            selector_offset,
+            selector_offset_target: selector_offset,
             renderer,
         })
-    }
-
-    fn load_another_level(&mut self) {
-        let renderer = &self.renderer.borrow();
-        let level = &self.assets.levels[self.levelboxes.len()];
-        self.levelboxes.push({
-            LevelBox {
-                thumbnail: level.thumbnail().cloned(),
-                title: renderer
-                    .fontset()
-                    .menu
-                    .create_text(renderer, level.title())
-                    .unwrap()
-                    .with_outline_color(Color::new(0.2, 0.2, 0.4)),
-                target_rect: RectF::new(0.0, 0.0, 0.0, 0.0),
-                rect: RectF::new(0.0, 0.0, 0.0, 0.0),
-            }
-        });
     }
 
     fn render(&self) {
@@ -113,147 +126,72 @@ impl LevelSelection {
             ..Default::default()
         });
 
-        // Render selection outline
-        if let Some(lb) = self.levelboxes.get(self.selection) {
-            renderer.draw_filled_rectangle(
-                RectF::new(
-                    lb.rect.x() - 3.0,
-                    lb.rect.y() - 3.0,
-                    lb.rect.w() + 6.0,
-                    lb.rect.h() + 6.0,
-                ),
-                &Self::SELECTION_COLOR,
-            );
-        }
+        let center = Vec2(
+            (renderer.width() / 2) as f32,
+            (renderer.height() / 2) as f32,
+        );
 
-        // Render level selection boxes
-        let bottom_edge = renderer.height() as f32 - Self::BOTTOM_MARGIN;
-        for lb in self.levelboxes.iter() {
-            let a = if lb.rect.y() < 0.0 {
-                1.0 - -lb.rect.y().min(lb.rect.h()) / lb.rect.h()
-            } else if lb.rect.bottom() > bottom_edge {
-                1.0 - (lb.rect.bottom() - bottom_edge).min(lb.rect.h()) / lb.rect.h()
-            } else {
-                1.0
-            };
-
-            let border = Color::new(0.179, 0.195, 0.241);
-            renderer.draw_filled_rectangle(lb.rect, &border);
-            if let Some(tex) = &lb.thumbnail {
-                tex.render(
+        // Level thumbnails
+        let selected_level = &self.levelboxes[self.selection as usize];
+        let offset = center.0 - self.selector_offset; //selected_level.xpos - selected_level.w / 2.0;
+        for (i, level) in self.levelboxes.iter().enumerate() {
+            if let Some(t) = &level.thumbnail {
+                let d = (self.selection - i as i32).abs() as f32;
+                t.render(
                     renderer,
                     &RenderOptions {
-                        dest: RenderDest::Centered(lb.rect.center()),
-                        color: Color::WHITE.with_alpha(a),
+                        dest: RenderDest::Rect(RectF::new(
+                            level.xpos + offset,
+                            center.1 - level.h / 2.0,
+                            level.w,
+                            level.h,
+                        )),
+                        color: if d > 0.0 {
+                            Color::WHITE.with_alpha(1.0 / (2.0 + d * d))
+                        } else {
+                            Color::WHITE
+                        },
                         ..Default::default()
                     },
                 );
             }
         }
 
-        // Selection title
-        if let Some(lb) = self.levelboxes.get(self.selection) {
-            lb.title.render(&RenderTextOptions {
-                dest: RenderTextDest::BottomLeft(Vec2(10.0, renderer.height() as f32)),
-                outline: TextOutline::Shadow,
-                ..Default::default()
-            });
-        }
+        // Selected level info
+        selected_level.title.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(center + Vec2(0.0, 512.0 / 2.0 + 10.0)),
+            outline: TextOutline::Shadow,
+            ..Default::default()
+        });
 
         renderer.present();
-    }
-
-    fn level_box_rects(count: usize, w: f32, h: f32) -> (Vec<RectF>, usize) {
-        let mut rects = Vec::with_capacity(count);
-        if count == 0 {
-            return (rects, 1);
-        }
-
-        const SPACING: f32 = 32.0;
-
-        let columns = ((w / (Self::BOX_SIZE + SPACING)).floor() as usize).min(count);
-        let rows = count.div_ceil(columns);
-
-        let left = (w - columns as f32 * (Self::BOX_SIZE + SPACING)) / 2.0;
-        let top = Self::TOP_MARGIN.max((h - rows as f32 * (Self::BOX_SIZE + SPACING)) / 2.0);
-
-        for row in 0..rows {
-            let cols = columns.min(count - row * columns);
-            for col in 0..cols {
-                rects.push(RectF::new(
-                    left + col as f32 * (Self::BOX_SIZE + SPACING),
-                    top + row as f32 * (Self::BOX_SIZE + SPACING),
-                    Self::BOX_SIZE,
-                    Self::BOX_SIZE,
-                ))
-            }
-        }
-
-        (rects, columns)
-    }
-
-    fn update_levelbox_rects(&mut self) {
-        let renderer = &self.renderer.borrow();
-        let (rects, columns) = Self::level_box_rects(
-            self.levelboxes.len(),
-            renderer.width() as f32,
-            renderer.height() as f32,
-        );
-        self.columns = columns;
-
-        let scroll_offset = (self.selection / self.columns) as f32 * (Self::BOX_SIZE + 32.0);
-
-        self.levelboxes
-            .iter_mut()
-            .zip(rects)
-            .for_each(|(lb, r)| lb.target_rect = r.offset(0.0, -scroll_offset));
     }
 }
 
 impl StackableState for LevelSelection {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
-        let old_selection = self.selection;
         match button {
             MenuButton::Right(_) => {
-                self.selection = (self.selection + 1) % self.levelboxes.len();
+                self.selection = (self.selection + 1) % self.levelboxes.len() as i32;
             }
             MenuButton::Left(_) => {
-                self.selection = if self.selection > 0 {
-                    self.selection - 1
-                } else {
-                    self.levelboxes.len() - 1
-                };
+                self.selection = (self.selection - 1).rem_euclid(self.levelboxes.len() as i32);
             }
-            MenuButton::Up(_) => {
-                self.selection = if self.selection >= self.columns {
-                    self.selection - self.columns
-                } else {
-                    (self.levelboxes.len() - (self.levelboxes.len() % self.columns)
-                        + self.selection)
-                        .min(self.levelboxes.len() - 1)
-                }
-            }
-            MenuButton::Down(_) => {
-                if self.selection + self.columns < self.levelboxes.len() {
-                    self.selection += self.columns;
-                } else {
-                    self.selection %= self.columns;
-                }
-            }
+            MenuButton::Up(_) => {}
+            MenuButton::Down(_) => {}
             MenuButton::Back => {
                 return StackableStateResult::Pop;
             }
             MenuButton::Start | MenuButton::Select(_) => {
                 return StackableStateResult::Return(Box::new(
-                    self.assets.levels[self.selection].clone(),
+                    self.assets.levels[self.selection as usize].clone(),
                 ));
             }
             _ => {}
         }
 
-        if self.selection != old_selection {
-            self.update_levelbox_rects();
-        }
+        let selected_level = &self.levelboxes[self.selection as usize];
+        self.selector_offset_target = selected_level.xpos + selected_level.w / 2.0;
         StackableStateResult::Continue
     }
 
@@ -262,29 +200,16 @@ impl StackableState for LevelSelection {
             .borrow_mut()
             .update_screensize(self.renderer.borrow().size());
 
-        self.update_levelbox_rects();
+        //self.update_levelbox_rects();
     }
 
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
-        if self.levelboxes.len() < self.assets.levels.len() && self.timer <= 0.0 {
-            self.load_another_level();
-            self.update_levelbox_rects();
-            if let Some(last) = self.levelboxes.last_mut() {
-                last.rect = last.target_rect;
-            }
-            self.timer = 0.05;
-        } else {
-            self.timer -= timestep;
-        }
-
         // Animate background
         self.starfield.borrow_mut().step(timestep);
 
         // Animate level boxes
-        for lb in self.levelboxes.iter_mut() {
-            let d = (lb.target_rect.topleft() - lb.rect.topleft()) * (10.0 * timestep);
-            lb.rect = lb.rect.offset(d.0, d.1);
-        }
+        self.selector_offset +=
+            (self.selector_offset_target - self.selector_offset) * timestep * 10.0;
 
         self.render();
 

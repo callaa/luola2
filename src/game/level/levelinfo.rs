@@ -36,6 +36,7 @@ use crate::{
 #[derive(Clone)]
 pub struct LevelInfo {
     root: PathBuf,
+    levelpack: String,
     name: String,
     title: String,
     artwork_file: String,
@@ -108,6 +109,14 @@ impl LevelInfo {
 
         Ok(LevelInfo {
             root,
+            levelpack: path
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned(),
             name: path.file_stem().unwrap().to_str().unwrap().to_owned(),
             title: info.title,
             artwork_file: info.artwork,
@@ -136,6 +145,10 @@ impl LevelInfo {
                 }
             })
             .collect())
+    }
+
+    pub fn levelpack(&self) -> &str {
+        &self.levelpack
     }
 
     pub fn name(&self) -> &str {
