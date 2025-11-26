@@ -102,6 +102,22 @@ flippable = true
 [spider_hanging]
 file = "spider-hanging.png"
 
+[bat_roosting]
+file = "bat.png"
+subrect = [0, 0, 16, 16]
+
+[bat]
+file = "bat.png"
+subrect = [16, 0, 32, 16]
+frames = 2
+width = 16
+height = 16
+duration = 0.2
+
+[bat_attack]
+file = "bat_attack.png"
+scale = "Nearest"
+
 [drone]
 file = "drone.png"
 subrect = [0, 0, 384, 32]

@@ -435,6 +435,7 @@ impl World {
                     if let Some(impulse) = ship.physics().check_collision(critter.physics()) {
                         ship.physics_mut().add_impulse(impulse);
                         critter.physics_mut().add_impulse(impulse * -1.0);
+                        critter.object_collision(ship, self.scripting.lua());
                     }
                 }
 
@@ -480,6 +481,7 @@ impl World {
                     if let Some(impulse) = critter.physics().check_collision(other.physics()) {
                         critter.physics_mut().add_impulse(impulse);
                         other.physics_mut().add_impulse(impulse * -1.0);
+                        critter.object_collision(other, self.scripting.lua());
                     }
                 }
 

@@ -81,7 +81,7 @@ function impacts.diggerbeam(this, terrain, obj)
 end
 
 -- Special weapon grenade
-function impacts.grenade(this, terrain, ship)
+function impacts.grenade(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {

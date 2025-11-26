@@ -65,7 +65,7 @@ function Bird.on_bullet_hit(critter, bullet)
 		return
 	end
 
-	local hit_angle = bullet.vel:normalized():angle()
+	local hit_angle = bullet.vel:angle()
 
 	-- blood splatter
 	for _ = 0, 4 do

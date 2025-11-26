@@ -9,6 +9,7 @@ local ships = require("ships")
 local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
 local Bird = require("critters.bird")
+local Bat = require("critters.bat")
 local Fish = require("critters.fish")
 local Spider = require("critters.spider")
 local Forcefields = require("forcefields")
@@ -56,6 +57,9 @@ function luola_init_level(settings)
 
 	if settings["random-birds"] ~= nil then
 		Bird.create_random(settings["random-birds"])
+	end
+	if settings["random-bats"] ~= nil then
+		Bat.create_random(settings["random-bats"])
 	end
 	if settings["random-fish"] ~= nil then
 		Fish.create_random(settings["random-fish"])

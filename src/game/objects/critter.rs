@@ -1,3 +1,5 @@
+use mlua::UserData;
+
 use crate::{
     call_state_method,
     game::{
@@ -341,6 +343,21 @@ impl Critter {
             f.call::<Option<bool>>((
                 scope.create_userdata_ref_mut(self)?,
                 scope.create_userdata_ref_mut(bullet)?,
+            ))
+        })
+        .unwrap_or(true)
+    }
+
+    /// Execute non-bullet object collision callback.
+    /// Called for collisions with ships and other critters
+    pub fn object_collision<T>(&mut self, obj: &mut T, lua: &mlua::Lua) -> bool
+    where
+        T: UserData + 'static,
+    {
+        get_state_method!(self, lua, "on_object_hit", (f, scope) => {
+            f.call::<Option<bool>>((
+                scope.create_userdata_ref_mut(self)?,
+                scope.create_userdata_ref_mut(obj)?,
             ))
         })
         .unwrap_or(true)

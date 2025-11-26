@@ -48,6 +48,9 @@ ice-uw = [82, 83]
 [script-settings]
 snowfall = false
 random-birds = 20
+random-bats = [
+	{ count = 1, area = [583, 332, 179, 107] }
+]
 random-fish = [
 	{ count = 10, area = [192, 960, 960, 192] }
 ]
