@@ -80,8 +80,8 @@ impl Renderer {
                 CString::new(format!("Luola II {}", env!("CARGO_PKG_VERSION")))
                     .unwrap()
                     .as_ptr(),
-                1024,
-                768,
+                1280,
+                720,
                 flags,
                 &mut window,
                 &mut renderer,
@@ -119,8 +119,8 @@ impl Renderer {
             texturestore: TextureStore::new(),
             fontset: None,
             textengine,
-            width: 1024,
-            height: 768,
+            width: 1280,
+            height: 720,
             fullscreen,
         })
     }
