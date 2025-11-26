@@ -15,6 +15,9 @@ local function bullet_hell_impact(this, terrain, obj)
 end
 
 local function bullet_hell(bullet_count)
+	local state = {
+		on_impact = bullet_hell_impact,
+	}
 	for i = 0, bullet_count do
 		-- Note: we use AddMine here instead of AddBullet as a performance test.
 		-- Mine type projectiles can collide with other projectiles and are therefore
@@ -23,7 +26,7 @@ local function bullet_hell(bullet_count)
 			pos = game.find_spawnpoint(),
 			vel = Vec2(math.random() * 300, math.random() * 300),
 			texture = textures.get("pewpew"),
-			on_impact = bullet_hell_impact,
+			state = state,
 		})
 	end
 	return 1
