@@ -20,7 +20,11 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::{Result, anyhow};
 
 use crate::{
-    game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
+    game::{
+        GameControllerSet, MenuButton, Player, PlayerId,
+        level::{LEVEL_SCALE, LevelInfo},
+        world::World,
+    },
     gfx::{Color, RenderOptions, Renderer, TextureId},
     math::{Rect, RectF, Vec2},
     states::{
@@ -62,7 +66,6 @@ impl GameRoundState {
         let lua = world.scripting().lua();
 
         // Call game init script
-
         let player_settings = lua.create_table()?;
         for (idx, p) in players.iter().enumerate() {
             let player = lua.create_table()?;
@@ -70,6 +73,11 @@ impl GameRoundState {
             player.set("controller", p.controller)?;
             player.set("ship", p.ship.clone())?;
             player.set("weapon", p.weapon.clone())?;
+            player.set(
+                "spawn",
+                p.spawn
+                    .map(|(x, y)| Vec2(x as f32 * LEVEL_SCALE, y as f32 * LEVEL_SCALE)),
+            )?;
             player_settings.push(player)?;
         }
 

@@ -22,10 +22,14 @@ function luola_init_game(settings)
 	-- Create a ship for each player
 	for _, p in ipairs(settings.players) do
 		local tpl = ships["vwing"].template
+		local pos = p.spawn
+		if pos == nil then
+			pos = game.find_spawnpoint()
+		end
 		game.effect(
 			"AddShip",
 			tableutils.combined(tpl, {
-				pos = game.find_spawnpoint(),
+				pos = pos,
 				controller = p.controller,
 				player = p.player,
 				state = tableutils.combined(tpl.state, {

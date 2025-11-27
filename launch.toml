@@ -14,6 +14,7 @@ rounds = 10
 controller = 1
 ship = "vwing"
 weapon = "greygoo"
+spawn = [155, 942]
 
 [[player]]
 controller = 2

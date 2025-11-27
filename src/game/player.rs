@@ -43,6 +43,9 @@ pub struct Player {
     /// Special weapon name passed to init script
     pub weapon: String,
 
+    /// Player spawn point (if unspecified, a random spawn point will be used)
+    pub spawn: Option<(i32, i32)>,
+
     /// Number of rounds won by this player
     #[serde(skip)]
     pub wins: i32,
@@ -60,6 +63,7 @@ impl Player {
             controller,
             ship: String::new(),
             weapon: String::new(),
+            spawn: None,
             wins: 0,
             viewport: Rect::new(0, 0, 1, 1),
         }
