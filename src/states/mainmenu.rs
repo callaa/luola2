@@ -21,7 +21,7 @@ use anyhow::{Result, anyhow};
 use crate::{
     configfile::{GAME_CONFIG, save_user_config},
     game::{GameControllerSet, MenuButton, PlayerKeymap},
-    gfx::{Color, RenderOptions, Renderer, TextureId},
+    gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId},
     math::RectF,
     menu::{AnimatedStarfield, Menu, MenuItem, MenuState, MenuValue},
     states::{PlayerSelection, StackableState, StackableStateResult, game_assets::GameAssets},
@@ -317,7 +317,7 @@ impl MainMenu {
         // Background: starfield
         self.starfield.render(&renderer);
 
-        // Background: top-half
+        // Background: top and bottom halves
         let bgoffset = self.intro_outro_anim * self.intro_outro_anim * bg.height() / 2.0;
 
         let bgrect_dest = RectF::new(
@@ -340,34 +340,37 @@ impl MainMenu {
             bgrect_dest.w(),
             bg.height() / 2.0,
         );
-        bg.render_simple(
-            &renderer,
-            Some(bgrect_source),
-            Some(bgrect_dest.offset(0.0, -bgoffset)),
-        );
-        bg.render_simple(
-            &renderer,
-            Some(bgrect_source.offset(0.0, bg.height() / 2.0)),
-            Some(bgrect_dest.offset(0.0, renderer.height() as f32 - bgrect_dest.h() + bgoffset)),
-        );
+        let color = Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0 - self.intro_outro_anim * self.intro_outro_anim,
+                };
+        bg.render(&renderer, &RenderOptions {
+            source: Some(bgrect_source),
+            dest: RenderDest::Rect(bgrect_dest.offset(0.0, -bgoffset)),
+            color,
+            ..Default::default()
+        });
+        bg.render(&renderer, &RenderOptions {
+            source: Some(bgrect_source.offset(0.0, bg.height() / 2.0)),
+            dest: RenderDest::Rect(bgrect_dest.offset(0.0, renderer.height() as f32 - bgrect_dest.h() + bgoffset)),
+            color,
+            ..Default::default()
+        });
 
         // Logo
         let logo = renderer.texture_store().get_texture(self.logo);
         logo.render(
             &renderer,
             &RenderOptions {
-                dest: crate::gfx::RenderDest::Rect(RectF::new(
+                dest: RenderDest::Rect(RectF::new(
                     (renderer.width() as f32 - logo.width()) / 2.0,
                     (renderer.height() as f32 - self.controls_menu.height()) / 2.0, // tallest menu height
                     logo.width(),
                     logo.height(),
                 )),
-                color: Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 1.0 - self.intro_outro_anim * self.intro_outro_anim,
-                },
+                color,
                 ..Default::default()
             },
         );

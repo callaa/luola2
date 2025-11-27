@@ -238,6 +238,10 @@ impl StackableState for GameState {
                 ))
             }
             GameSubState::GameResults => {
+                if self.round_winners.is_empty() {
+                    return StackableStateResult::Pop;
+                }
+
                 self.controllers.borrow().clear_player_leds();
                 StackableStateResult::Replace(Box::new(
                     match GameResultsState::new(
