@@ -367,6 +367,8 @@ impl Ship {
             call_state_method!(ship, lua, "on_base", timestep, is_underwater);
         } else if terrain::is_greygoo(ter) {
             call_state_method!(ship, lua, "on_touch_greygoo");
+        } else if terrain::is_damaging(ter) {
+            ship.damage(15.0 * timestep);
         }
 
         if terrain::is_solid(ter) && impact_speed_squared > 100000.0 {

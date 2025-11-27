@@ -28,6 +28,7 @@ pub(super) const TER_TYPE_ICE: Terrain = 6;
 pub(super) const TER_TYPE_BASE: Terrain = 7;
 pub(super) const TER_TYPE_WALKWAY: Terrain = 8; // ground that walkers can walk through
 pub(super) const TER_TYPE_GREYGOO: Terrain = 9; // can infect a ship with grey goo
+pub(super) const TER_TYPE_DAMAGE: Terrain = 10; // damages things that touch it
 
 pub(super) const TER_LEVELBOUND: Terrain = TER_MASK_SOLID; // special type indicating level boundary
 
@@ -98,6 +99,11 @@ pub fn is_base(t: Terrain) -> bool {
 /// Touching it can infect a ship.
 pub fn is_greygoo(t: Terrain) -> bool {
     t & TER_MASK_SOLID == TER_TYPE_GREYGOO
+}
+
+/// Does this terrain inflict damage
+pub fn is_damaging(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_DAMAGE
 }
 
 /**
