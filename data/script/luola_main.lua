@@ -95,6 +95,11 @@ end
 function luola_explosive_terrain(pos, color)
 	local tex = textures.get("pewpew")
 
+	game.effect("AddParticle", {
+		pos = pos,
+		texture = textures.get("bigboom"),
+	})
+
 	for a = 0, 360, (360 / 5) do
 		game.effect("AddBullet", {
 			pos = pos,
