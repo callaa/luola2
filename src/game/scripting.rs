@@ -307,6 +307,7 @@ impl ScriptEnvironment {
                             WorldEffect::AddFixedObject(FixedObject::from_lua(props, lua)?)
                         }
                         b"SetWindspeed" => WorldEffect::SetWindspeed(f32::from_lua(props, lua)?),
+                        b"RegenerateTerrain" => WorldEffect::RegenerateTerrain,
                         b"EndRound" => WorldEffect::EndRound(i32::from_lua(props, lua)?),
                         unknown => {
                             return Err(anyhow!(

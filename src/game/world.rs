@@ -60,6 +60,7 @@ pub enum WorldEffect {
     UpdateForcefield(Forcefield),
     RemoveForcefield(i32),
     SetWindspeed(f32),
+    RegenerateTerrain,
     EndRound(PlayerId),
 }
 
@@ -258,6 +259,9 @@ impl World {
                 WorldEffect::UpdateForcefield(ff) => level_editor.update_forcefield(&ff),
                 WorldEffect::RemoveForcefield(id) => level_editor.remove_forcefield(id),
                 WorldEffect::SetWindspeed(ws) => level_editor.set_windspeed(ws),
+                WorldEffect::RegenerateTerrain => {
+                    level_editor.regenerate_terrain();
+                }
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }

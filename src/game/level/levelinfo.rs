@@ -267,6 +267,8 @@ fn parse_palette_mapping(table: &toml::Table) -> Result<TerrainPalette> {
                 "highexplosive" => TER_TYPE_HIGH_EXPLOSIVE | TER_BIT_DESTRUCTIBLE,
                 "ice" => TER_TYPE_ICE | TER_BIT_DESTRUCTIBLE,
                 "base" => TER_TYPE_BASE | TER_BIT_DESTRUCTIBLE,
+                "basesupport" => TER_TYPE_BASESUPPORT | TER_BIT_DESTRUCTIBLE,
+                "noregenbase" => TER_TYPE_NOREGENBASE | TER_BIT_DESTRUCTIBLE,
                 "walkway" => TER_TYPE_WALKWAY | TER_BIT_DESTRUCTIBLE,
                 "greygoo" => TER_TYPE_GREYGOO | TER_BIT_DESTRUCTIBLE,
                 "damage" => TER_TYPE_DAMAGE | TER_BIT_DESTRUCTIBLE,

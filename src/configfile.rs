@@ -38,11 +38,13 @@ fn default_true() -> bool {
 pub struct GameOptions {
     #[serde(default = "default_true")]
     pub minimap: bool,
+    #[serde(default = "default_true")]
+    pub baseregen: bool,
 }
 
 impl Default for GameOptions {
     fn default() -> Self {
-        Self { minimap: true }
+        Self { minimap: true, baseregen: true }
     }
 }
 
@@ -60,7 +62,7 @@ pub struct UserConfig {
 
 pub static GAME_CONFIG: RwLock<UserConfig> = RwLock::new(UserConfig {
     video: VideoConfig { fullscreen: false },
-    game: GameOptions { minimap: true },
+    game: GameOptions { minimap: true, baseregen: true },
     keymap1: None,
     keymap2: None,
     keymap3: None,

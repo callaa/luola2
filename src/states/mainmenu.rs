@@ -78,6 +78,7 @@ enum MenuAction {
     SaveKeyMap,
     SaveVideoOpts,
     ToggleMinimap,
+    ToggleBaseRegen,
     SaveGameOpts,
 }
 
@@ -168,6 +169,7 @@ impl MainMenu {
                 MenuItem::Heading("Game options", Color::new(0.3, 1.0, 0.3)),
                 MenuItem::Spacer(32.0),
                 MenuItem::Value("Show minimap: ", MenuAction::ToggleMinimap),
+                MenuItem::Value("Rebuild bases: ", MenuAction::ToggleBaseRegen),
                 MenuItem::Spacer(10.0),
                 MenuItem::Link("Save", MenuAction::SaveGameOpts),
                 MenuItem::Escape("Cancel", MenuAction::GoToOptions),
@@ -287,6 +289,10 @@ impl MainMenu {
             MenuAction::ToggleMinimap,
             MenuValue::Toggle(config.game.minimap),
         );
+        self.gameopts_menu.set_value(
+            MenuAction::ToggleBaseRegen,
+            MenuValue::Toggle(config.game.baseregen),
+        );
     }
 
     fn save_gameopts(&mut self) {
@@ -295,6 +301,10 @@ impl MainMenu {
         config.game.minimap = self
             .gameopts_menu
             .get_toggle_value(MenuAction::ToggleMinimap);
+
+        config.game.baseregen = self
+            .gameopts_menu
+            .get_toggle_value(MenuAction::ToggleBaseRegen);
 
         save_user_config(config);
         self.options_menu.appear();

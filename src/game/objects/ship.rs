@@ -354,7 +354,7 @@ impl Ship {
             }
         }
 
-        if terrain::is_base(ter) {
+        if terrain::is_effective_base(ter) {
             // Bases forcibly orient the ship
             if terrain::is_underwater(ter) {
                 ship.angle = 270.0;

@@ -81,6 +81,12 @@ function luola_init_level(settings)
 	if settings["snowfall"] == true then
 		Level.init_snowfall()
 	end
+
+	-- Terrain (base) regeneration
+	Scheduler.add_global(3, function()
+		game.effect("RegenerateTerrain")
+		return 3
+	end)
 end
 
 -- Terrain explosion handler

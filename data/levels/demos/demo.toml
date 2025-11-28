@@ -41,6 +41,7 @@ base-uw = [68, 69] # underwater bases re-orient the ship downwards
 base-uw-i = [70, 71]
 explosive = [72, 73]
 highexplosive = [74, 75]
+basesupport = [76, 77]
 ice = [80, 81]
 ice-uw = [82, 83]
 

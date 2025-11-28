@@ -19,7 +19,7 @@ use std::collections::HashSet;
 use crate::{
     game::{
         level::{
-            Forcefield, LEVEL_SCALE, TILE_SIZE, TileContentHint,
+            Forcefield, LEVEL_SCALE, RegeneratingTerrain, TILE_SIZE, TileContentHint,
             dynter::{DynamicTerrainCell, DynamicTerrainMap},
             rectiter::MutableRectIterator,
             terrain::{
@@ -480,6 +480,44 @@ impl<'a> LevelEditor<'a> {
 
         self.level.dynterrain.replace(new_cells);
     }
+
+    /**
+     * Perform a terrain regeneration step.
+     *
+     * Returns true if at least one pixel was regenerated
+     */
+    pub fn regenerate_terrain(&mut self) -> bool {
+        let first = self.level.regen.iter().position(|r| {
+            !terrain::is_solid(self.level.tile(r.tile.0, r.tile.1).terrain[r.offset])
+        });
+
+        let mut changes: Vec<RegeneratingTerrain> = Vec::new();
+
+        if let Some(first) = first {
+            let row = self.level.regen[first].offset / TILE_SIZE as usize;
+            changes.push(self.level.regen[first].clone());
+            for r in &self.level.regen[(first + 1)..] {
+                if (r.offset / TILE_SIZE as usize) != row {
+                    break;
+                }
+                if !terrain::is_solid(self.level.tile(r.tile.0, r.tile.1).terrain[r.offset])
+                    && ((terrain::is_basesupport(r.terrain) && fastrand::f32() < 0.7) || fastrand::f32() < 0.3)
+                {
+                    changes.push(r.clone());
+                }
+            }
+        }
+
+        for r in changes.iter() {
+            let tile = self.level.tile_mut(r.tile.0, r.tile.1);
+            tile.artwork[r.offset] = r.color;
+            tile.terrain[r.offset] = r.terrain;
+            self.dirty_set.insert(r.tile);
+        }
+
+        !changes.is_empty()
+    }
+
     /**
      * Update dirtied texture tiles (if any)
      */

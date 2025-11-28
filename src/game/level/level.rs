@@ -25,6 +25,7 @@ use super::{
 };
 use crate::{
     configfile::GAME_CONFIG,
+    game::level::terrain::Terrain,
     gfx::{Color, Image, Renderer, Texture, TextureScaleMode},
     math::{Line, LineF, Rect, RectF, Vec2},
 };
@@ -62,6 +63,14 @@ pub(super) struct TerrainTile {
     pub content_hint: TileContentHint,            // optimization hint
 }
 
+#[derive(Clone)]
+pub(super) struct RegeneratingTerrain {
+    pub(super) tile: (i32, i32),
+    pub(super) offset: usize,
+    pub(super) color: u32,
+    pub(super) terrain: Terrain,
+}
+
 #[derive(Clone, Debug)]
 pub struct Forcefield {
     /// The area (in world coordinates) of the field
@@ -94,6 +103,7 @@ pub struct Level {
     minimap: Option<Texture>, // generated on level load
     background: Option<Texture>,
     pub(super) dynterrain: Cell<DynamicTerrainMap>,
+    pub(super) regen: Vec<RegeneratingTerrain>,
     width: f32,       // width in world coordinates
     height: f32,      // height in world coordinates
     size_scale: Vec2, // multiply a vector with this to get position scaled down to 0..1 range
@@ -166,6 +176,9 @@ impl Level {
 
         let mut tiles: Vec<TerrainTile> = Vec::with_capacity((tiles_wide * tiles_high) as usize);
 
+        let mut regen: Vec<RegeneratingTerrain> = Vec::new();
+        let regen_enabled = GAME_CONFIG.read().unwrap().game.baseregen;
+
         let artwork_pixels = artwork
             .argb8888_pixels()
             .expect("Didn't we call ensure_argb8888?");
@@ -219,9 +232,31 @@ impl Level {
                 }
                 info.map_palette(&mut tile.terrain);
                 tile.reset_content_hint();
+
+                // Gather up regenerating pixels
+                if regen_enabled {
+                    for (offset, (&t, &px)) in tile.terrain.iter().zip(tile.artwork.iter()).enumerate()
+                    {
+                        if (terrain::is_base(t) || terrain::is_basesupport(t)) && terrain::is_destructible(t) {
+                            regen.push(RegeneratingTerrain {
+                                tile: (i as i32, j as i32),
+                                offset,
+                                color: px,
+                                terrain: t,
+                            });
+                        }
+                    }
+                }
+
                 tiles.push(tile);
             }
         }
+
+        // Sort terrain regeneration array by Y coordinate in descending order so
+        // terrain is regenerated from the bottom up.
+        regen.sort_unstable_by_key(|r| {
+            -(r.tile.1 * tiles_wide * TILE_SIZE + r.offset as i32 / TILE_SIZE)
+        });
 
         // Create minimap texture
         // Though we could update this as the terrain gets modified, it's probably not worth the effort
@@ -259,6 +294,7 @@ impl Level {
             minimap,
             background,
             dynterrain: Cell::default(),
+            regen,
             windspeed: 0.0,
             width,
             height,
@@ -539,6 +575,11 @@ impl Level {
             (y * TILE_SIZE + x) as usize,
             (tx, ty),
         ))
+    }
+
+    pub(super) fn tile(&self, tx: i32, ty: i32) -> &TerrainTile {
+        debug_assert!(tx >= 0 && ty >= 0);
+        &self.tiles[(ty * self.tiles_wide + tx) as usize]
     }
 
     pub(super) fn tile_mut(&mut self, tx: i32, ty: i32) -> &mut TerrainTile {

@@ -26,9 +26,11 @@ pub(super) const TER_TYPE_EXPLOSIVE: Terrain = 4;
 pub(super) const TER_TYPE_HIGH_EXPLOSIVE: Terrain = 5;
 pub(super) const TER_TYPE_ICE: Terrain = 6;
 pub(super) const TER_TYPE_BASE: Terrain = 7;
-pub(super) const TER_TYPE_WALKWAY: Terrain = 8; // ground that walkers can walk through
-pub(super) const TER_TYPE_GREYGOO: Terrain = 9; // can infect a ship with grey goo
-pub(super) const TER_TYPE_DAMAGE: Terrain = 10; // damages things that touch it
+pub(super) const TER_TYPE_NOREGENBASE: Terrain = 8; // base that does not regenerate
+pub(super) const TER_TYPE_BASESUPPORT: Terrain = 9; // ground that regenerates if base regeneration is enabled
+pub(super) const TER_TYPE_WALKWAY: Terrain = 10; // ground that walkers can walk through
+pub(super) const TER_TYPE_GREYGOO: Terrain = 11; // can infect a ship with grey goo
+pub(super) const TER_TYPE_DAMAGE: Terrain = 12; // damages things that touch it
 
 pub(super) const TER_LEVELBOUND: Terrain = TER_MASK_SOLID; // special type indicating level boundary
 
@@ -92,6 +94,25 @@ pub fn is_ice(t: Terrain) -> bool {
 /// Note: bases orient the ship to point upwards. Underwater bases point the ship downward
 pub fn is_base(t: Terrain) -> bool {
     t & TER_MASK_SOLID == TER_TYPE_BASE
+}
+
+/// Is this a non-regenerating base?
+/// Works otherwise the same as a regular base but does not regenerate even
+/// when regeneration is enabled.
+pub fn is_noregen_base(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_NOREGENBASE
+}
+
+/// Is this active base material of any type?
+pub fn is_effective_base(t: Terrain) -> bool {
+    is_base(t) || is_noregen_base(t)
+}
+
+/// Is this base support terrain?
+/// This is essentially regular ground, but regenerates along with bases
+/// if base regeneration is enabled.
+pub fn is_basesupport(t: Terrain) -> bool {
+    t & TER_MASK_SOLID == TER_TYPE_BASESUPPORT
 }
 
 /// Is this grey goo?
