@@ -20,13 +20,13 @@ use sdl3_sys::{
     events::SDL_KeyboardEvent,
     gamepad::{
         SDL_CloseGamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_LEFTX,
-        SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_BUTTON_BACK,
-        SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
-        SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH,
-        SDL_GAMEPAD_BUTTON_START, SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType,
-        SDL_GetGamepadAxis, SDL_GetGamepadButton, SDL_GetGamepadGUIDForID,
-        SDL_GetGamepadStringForType, SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED,
-        SDL_SetGamepadPlayerIndex,
+        SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHTX,
+        SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+        SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_EAST,
+        SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START, SDL_Gamepad,
+        SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
+        SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
+        SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
     },
     guid::SDL_GUID,
     joystick::{SDL_JOYSTICK_AXIS_MAX, SDL_JoystickID},
@@ -45,9 +45,10 @@ pub const KEYBOARDS: usize = 4;
  */
 #[derive(Clone)]
 pub struct GameController {
-    pub thrust: bool,
-    pub down: bool, // note: both thrust and down cannot be true at the same time when playing with a gamepad
+    pub thrust: f32,
+    pub walk: f32, // left thumbstick X-axis: same as turn on keyboards
     pub turn: f32,
+    pub jump: bool, // same as thrust>0 on keyboards
     pub fire_primary: bool,
     pub fire_secondary: bool,
 
@@ -120,11 +121,12 @@ impl MenuButton {
 impl GameController {
     pub fn new() -> Self {
         Self {
+            thrust: 0.0,
+            walk: 0.0,
             turn: 0.0,
-            thrust: false,
-            down: false,
             fire_primary: false,
             fire_secondary: false,
+            jump: false,
             guid: SDL_GUID { data: [0; 16] },
             joystick_id: 0,
             gamepad: null_mut(),
@@ -316,25 +318,28 @@ impl GameControllerSet {
             let state = &mut self.states[*idx];
             match mapping {
                 MappedKey::Up => {
-                    state.thrust = key.down;
+                    state.thrust = if key.down { 1.0 } else { 0.0 };
+                    state.jump = key.down;
                     if !key.down {
                         menubtn = MenuButton::Up(*idx as i32 + 1);
                     }
                 }
                 MappedKey::Down => {
-                    state.down = key.down;
+                    state.thrust = if key.down { -1.0 } else { 0.0 };
                     if !key.down {
                         menubtn = MenuButton::Down(*idx as i32 + 1);
                     }
                 }
                 MappedKey::Left => {
                     state.turn = if key.down { 1.0 } else { 0.0 };
+                    state.walk = state.turn;
                     if !key.down {
                         menubtn = MenuButton::Left(*idx as i32 + 1);
                     }
                 }
                 MappedKey::Right => {
                     state.turn = if key.down { -1.0 } else { 0.0 };
+                    state.walk = state.turn;
                     if !key.down {
                         menubtn = MenuButton::Right(*idx as i32 + 1);
                     }
@@ -384,37 +389,22 @@ impl GameControllerSet {
 
         let value = Self::axis_value(value);
 
-        if axis == SDL_GAMEPAD_AXIS_LEFTX {
+        if axis == SDL_GAMEPAD_AXIS_RIGHTX {
             // Buff turning speed for gamepad users, since the thumb stick requires a bigger
             // motion compared to a key press
             state.turn = value * -1.15;
-        }
-
-        if axis == SDL_GAMEPAD_AXIS_LEFTY || axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
-            let (thumb, shoulder) = if axis == SDL_GAMEPAD_AXIS_LEFTY {
-                (
-                    value,
-                    Self::axis_value(unsafe {
-                        SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
-                    }),
-                )
-            } else {
-                (
-                    Self::axis_value(unsafe {
-                        SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFTY)
-                    }),
-                    value,
-                )
-            };
-
-            state.thrust = thumb < -0.7 || shoulder > 0.0;
-            state.down = thumb > 0.7;
-        }
-
-        if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
-            // primary fire: also A button
+        } else if axis == SDL_GAMEPAD_AXIS_LEFTY {
+            state.thrust = -value;
+        } else if axis == SDL_GAMEPAD_AXIS_LEFTX {
+            state.walk = -value;
+        } else if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
+            // primary fire: also east button
             let firebtn = unsafe { SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_EAST) };
             state.fire_primary = firebtn || value > 0.0;
+        } else if axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
+            // secondary fire: also south button
+            let firebtn = unsafe { SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_SOUTH) };
+            state.fire_secondary = firebtn || value > 0.0;
         }
     }
 
@@ -482,6 +472,13 @@ impl GameControllerSet {
             }
             SDL_GAMEPAD_BUTTON_SOUTH => {
                 state.fire_secondary = down;
+                let axis = Self::axis_value(unsafe {
+                    SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
+                });
+                state.fire_secondary = down || axis > 0.0;
+            }
+            SDL_GAMEPAD_BUTTON_NORTH => {
+                state.jump = down;
             }
             SDL_GAMEPAD_BUTTON_START => {
                 if down {

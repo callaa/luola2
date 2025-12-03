@@ -55,7 +55,10 @@ impl mlua::UserData for Pilot {
 
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("aim_vector", |_, this, mag: f32| Ok(this.aim_vector(mag)));
-        methods.add_method_mut("destroy", |_, this, _: ()| Ok(this.destroy()));
+        methods.add_method_mut("destroy", |_, this, _: ()| {
+            this.destroy();
+            Ok(())
+        });
         methods.add_method_mut("impulse", |_, this, v: Vec2| {
             this.phys.add_impulse(v);
             Ok(())
@@ -153,7 +156,7 @@ impl Pilot {
 
     // Take a step to the right or left
     fn walk(pos: Vec2, level: &Level, dir: f32) -> Vec2 {
-        let new_x = pos.0 + (dir as f32 * LEVEL_SCALE);
+        let new_x = pos.0 + (dir * LEVEL_SCALE);
 
         const MAX_SLOPE: i32 = 5;
 
@@ -217,9 +220,9 @@ impl Pilot {
             self.weapon_cooldown -= timestep;
 
             let ter_above = level.terrain_at(self.phys.pos - Vec2(0.0, LEVEL_SCALE));
-            if ctrl.turn.abs() > 0.1 {
+            if ctrl.walk.abs() > 0.1 {
                 // Horizontal motion
-                let dir = -ctrl.turn.signum();
+                let dir = -ctrl.walk.signum();
                 self.facing = dir as i8;
                 if matches!(self.mode, MotionMode::Parachuting) {
                     // Drifting
@@ -233,44 +236,25 @@ impl Pilot {
                     self.phys.add_impulse(Vec2(dir * 1000.0, 0.0));
                     self.mode = MotionMode::Swimming;
                 }
-            } else {
-                if terrain::is_solid(ter) && terrain::is_space(ter_above) {
-                    self.mode = MotionMode::Standing;
-                } else if terrain::is_underwater(ter) {
-                    self.mode = MotionMode::Swimming;
-                } else if !matches!(self.mode, MotionMode::Parachuting | MotionMode::Jetpacking) {
-                    self.mode = MotionMode::Standing
-                }
+            } else if terrain::is_solid(ter) && terrain::is_space(ter_above) {
+                self.mode = MotionMode::Standing;
+            } else if terrain::is_underwater(ter) {
+                self.mode = MotionMode::Swimming;
+            } else if !matches!(self.mode, MotionMode::Parachuting | MotionMode::Jetpacking) {
+                self.mode = MotionMode::Standing
             }
 
-            if ctrl.thrust {
+            if ctrl.thrust > 0.5 {
                 if self.aim_mode {
                     // Aim upwards
                     self.aim_angle = (self.aim_angle - 180.0 * timestep).max(-90.0);
-                } else if matches!(self.mode, MotionMode::Parachuting) {
-                    // Stop parachuting
-                    self.mode = MotionMode::Standing;
-                    self.phys.drag = NORMAL_DRAG;
                 } else if terrain::is_underwater(ter) {
                     // Swim up
                     self.phys.add_impulse(Vec2(0.0, -2000.0));
-                } else {
-                    if terrain::is_solid(ter) {
-                        // Jump
-                        self.phys.add_impulse(Vec2(ctrl.turn * -40000.0, -50000.0));
-                        self.mode = MotionMode::Jetpacking;
-                    }
-
-                    if self.jetpack_charge > 0.0 {
-                        // Jetpack
-                        self.mode = MotionMode::Jetpacking;
-                        self.jetpack_charge -= timestep;
-                        call_state_method!(*self, lua, "on_jetpack", ctrl.turn);
-                    }
                 }
             }
 
-            if ctrl.down {
+            if ctrl.thrust < 0.0 {
                 if self.aim_mode {
                     // Aim downwards
                     self.aim_angle = (self.aim_angle + 180.0 * timestep).min(90.0);
@@ -280,15 +264,37 @@ impl Pilot {
                 } else if terrain::is_water(ter) {
                     // Swim down
                     self.phys.add_impulse(Vec2(0.0, 2000.0));
-                } else if terrain::is_space(ter) {
-                    // Activate parachute
-                    self.mode = MotionMode::Parachuting;
-                    self.phys.drag = PARACHUTE_DRAG;
+                }
+            }
+
+            if ctrl.jump && !self.aim_mode {
+                if matches!(self.mode, MotionMode::Parachuting) {
+                    // Stop parachuting
+                    self.mode = MotionMode::Standing;
+                    self.phys.drag = NORMAL_DRAG;
+                } else if terrain::is_solid(ter) && terrain::is_space(ter_above) {
+                    // Jump
+                    self.phys.add_impulse(Vec2(ctrl.walk * -40000.0, -50000.0));
+                    self.mode = MotionMode::Jetpacking;
+                } else if terrain::is_space(ter) && self.jetpack_charge > 0.0 {
+                    // Jetpack
+                    self.mode = MotionMode::Jetpacking;
+                    self.jetpack_charge -= timestep;
+                    call_state_method!(*self, lua, "on_jetpack", ctrl.walk);
                 }
             }
 
             if ctrl.fire_primary && self.weapon_cooldown <= 0.0 {
                 call_state_method!(*self, lua, "on_shoot");
+            }
+
+            if ctrl.fire_secondary
+                && terrain::is_space(ter)
+                && !matches!(self.mode, MotionMode::Parachuting)
+            {
+                // Activate parachute
+                self.mode = MotionMode::Parachuting;
+                self.phys.drag = PARACHUTE_DRAG;
             }
         }
 

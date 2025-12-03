@@ -48,11 +48,18 @@ The following keys can be used in menus:
 
 **Ship controls:**
 
- * Turn the ship with Left/Right keys
- * Accelerate with the Thrust key.
- * Fire primary weapon (unlimited ammo) with Fire1 key
- * Fire secondary weapon with Fire2 key. Some weapons are intended to be fired continuously by holding down the button
+ * Turn the ship with Left/Right keys or right thumbstick
+ * Accelerate with the Up key or left thumbstick.
+ * Fire primary weapon (unlimited ammo) with Fire1 key (East button or right trigger on gamepads)
+ * Fire secondary weapon with Fire2 key (South button or left trigger on gamepads.)
  * Land on a base to repair and rearm
+
+**Pilot controls:**
+
+ * Walk/parachute/swim with the left thumbstick or WASD
+ * Shoot with Fire1 button (gamepad East/right trigger)
+ * Jump/jetpack with Up key or gamepad North button
+ * Activate parachute and/or aiming mode by holding down Fire2 (gamepad South/left trigger)
 
 **Winning:**
 

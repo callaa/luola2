@@ -87,9 +87,6 @@ pub struct Ship {
     /// Ship destruction typically triggers an end-of-level condition check
     destroyed: bool,
 
-    /// Used to select sprite
-    engine_active: bool,
-
     /// Cloaking device active: use special rendering mode
     cloaked: bool,
 
@@ -139,9 +136,6 @@ impl UserData for Ship {
         fields.add_field_method_get("frozen", |_, this| Ok(this.frozen));
         fields.add_field_method_set("frozen", |_, this, f: bool| {
             this.frozen = f;
-            if f {
-                this.engine_active = false;
-            }
             Ok(())
         });
 
@@ -211,7 +205,6 @@ impl mlua::FromLua for Ship {
                 state: table.get("state")?,
                 texture: table.get("texture")?,
                 destroyed: false,
-                engine_active: false,
                 cloaked: false,
                 ghostmode: false,
                 frozen: false,
@@ -280,7 +273,7 @@ impl Ship {
         }
 
         //if self.hitpoints <= 0.0 && !was_wrecked {
-            // call method?
+        // call method?
         //}
     }
 
@@ -312,28 +305,34 @@ impl Ship {
     ) -> Ship {
         let mut ship = self.clone();
 
-        if !self.is_wrecked()
+        let engine_active = if !self.is_wrecked()
             && !self.frozen
             && let Some(controller) = controller
         {
             ship.angle += ship.turn_speed * controller.turn * timestep;
 
-            if controller.thrust {
+            if controller.thrust > 0.0 {
                 ship.phys.vel = ship.phys.vel
-                    + Vec2::for_angle(-ship.angle, SCALE_FACTOR * self.thrust * timestep);
-                ship.engine_active = true;
+                    + Vec2::for_angle(
+                        -ship.angle,
+                        SCALE_FACTOR * self.thrust * controller.thrust * timestep,
+                    );
+
+                controller.thrust
             } else {
-                ship.engine_active = false;
+                0.0
             }
-        }
+        } else {
+            0.0
+        };
 
         let impact_speed_squared = ship.phys.vel.magnitude_squared();
 
         let (prev_ter, ter) = ship.phys.step(level, timestep);
         let is_underwater = terrain::is_underwater(ter);
 
-        if ship.engine_active {
-            call_state_method!(ship, lua, "on_thrust", is_underwater);
+        if engine_active > 0.0 {
+            call_state_method!(ship, lua, "on_thrust", is_underwater, engine_active);
         }
 
         if ship.damage_effect > 0.0 {
@@ -392,7 +391,9 @@ impl Ship {
 
             if ship.hitpoints < -1000.0 || terrain::is_solid(ter) {
                 ship.destroy(lua);
-            } else if let Some(controller) = controller && controller.fire_secondary {
+            } else if let Some(controller) = controller
+                && controller.fire_secondary
+            {
                 call_state_method!(ship, lua, "on_eject");
                 ship.controller = 0;
             }
@@ -422,14 +423,7 @@ impl Ship {
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
         let ts = renderer.texture_store();
 
-        let tex = ts.get_texture_alt_fallback(
-            self.texture,
-            if self.engine_active {
-                TexAlt::Active
-            } else {
-                TexAlt::Main
-            },
-        );
+        let tex = ts.get_texture(self.texture);
 
         let mut renderopts = RenderOptions {
             dest: RenderDest::Centered(self.phys.pos - camera_pos),

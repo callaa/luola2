@@ -3,23 +3,25 @@ local weapons = require("primary_weapons")
 local Impacts = require("weapons.impacts")
 local Pilot = require("pilot")
 
-local function ship_thrust_effect(ship, uw)
+local function ship_thrust_effect(ship, uw, thrust)
 	if uw then
+		local a = math.floor(thrust * 0x66) << 24
 		for i = 0, 5 do
 			game.effect("AddParticle", {
 				pos = ship.pos,
 				vel = Vec2_for_angle(-ship.angle - 180 + math.random(-60, 60), 100),
-				color = 0x66aaaaff,
+				color = 0x00aaaaff | a,
 				target_color = 0x00aaaaff,
 				lifetime = 0.30,
 				texture = textures.get("dot3x3"),
 			})
 		end
 	else
+		local a = math.floor(thrust * 0xff) << 24
 		game.effect("AddParticle", {
 			pos = ship.pos,
 			vel = Vec2_for_angle(-ship.angle - 180, 300) + ship.vel,
-			color = 0xffffffff,
+			color = 0x00ffffff | a,
 			target_color = 0x00ff0000,
 			lifetime = 0.15,
 			texture = textures.get("dot8x8"),
