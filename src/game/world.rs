@@ -361,6 +361,14 @@ impl World {
                 timestep,
             );
 
+            // Pilots have auto-aim
+            pilot.set_autotarget(
+                self.ships_work
+                    .borrow()
+                    .find_nearest(pilot.pos(), 600.0, |s| s.player_id() != pilot.player_id())
+                    .map(|s| s.pos()),
+            );
+
             if pilot.player_id() > 0 && pilot.controller() > 0 {
                 let ps = &mut self.players.borrow_mut()[pilot.player_id() as usize - 1];
                 ps.hud = PlayerHud::Pilot {

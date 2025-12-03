@@ -23,6 +23,7 @@ pub struct Pilot {
     swim_texture: AnimatedTexture,
     parachute_texture: AnimatedTexture,
     mode: MotionMode,
+    auto_target: Option<Vec2>,
     aim_mode: bool,
     aim_angle: f32, // -90 -- 90
     facing: i8,     // -1 or 1
@@ -100,6 +101,7 @@ impl mlua::FromLua for Pilot {
                 swim_texture: AnimatedTexture::new(table.get("swim_texture")?),
                 parachute_texture: AnimatedTexture::new(table.get("parachute_texture")?),
                 mode: MotionMode::Parachuting,
+                auto_target: None,
                 aim_mode: false,
                 aim_angle: 0.0,
                 facing: 1,
@@ -142,7 +144,13 @@ impl Pilot {
     }
 
     pub fn aim_vector(&self, mag: f32) -> Vec2 {
-        Vec2::for_angle(self.aim_angle, mag).element_wise_product(Vec2(self.facing as f32, 1.0))
+        if !self.aim_mode
+            && let Some(at) = self.auto_target
+        {
+            (at - self.pos() + Vec2(0.0, -16.0)).normalized() * mag
+        } else {
+            Vec2::for_angle(self.aim_angle, mag).element_wise_product(Vec2(self.facing as f32, 1.0))
+        }
     }
 
     /// Get the position (in world coordinates) for the targeting reticle
@@ -150,8 +158,12 @@ impl Pilot {
         if self.aim_mode {
             Some(self.phys.pos + Vec2(0.0, -16.0) + self.aim_vector(60.0))
         } else {
-            None
+            self.auto_target
         }
+    }
+
+    pub fn set_autotarget(&mut self, target: Option<Vec2>) {
+        self.auto_target = target;
     }
 
     // Take a step to the right or left

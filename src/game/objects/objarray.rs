@@ -96,6 +96,24 @@ impl<T: GameObject> GameObjectArray<T> {
         self.0.last_mut().unwrap()
     }
 
+    pub fn find_nearest<P: Fn(&T) -> bool>(
+        &self,
+        pos: Vec2,
+        range: f32,
+        predicate: P,
+    ) -> Option<&T> {
+        let mut nearest_dist2 = range * range;
+        let mut nearest: Option<&T> = None;
+        for item in self.range_slice(pos.0 - range, pos.0 + range) {
+            let dd = item.pos().dist_squared(pos);
+            if dd < nearest_dist2 && predicate(item) {
+                nearest_dist2 = dd;
+                nearest = Some(item);
+            }
+        }
+
+        nearest
+    }
     /**
      * Sort the game object array for broadphase collision checks.
      * Also removes destroyed objects.
