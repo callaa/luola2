@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! call_state_method {
-    ($obj:expr, $lua:ident, $name:literal $(, $param:ident)*) => {
+    ($obj:expr, $lua:ident, $name:literal $(, $param:expr)*) => {
        if let Some(state) = $obj.state.as_mut() {
             match state.get::<Option<mlua::Function>>($name) {
                 Ok(Some(f)) => {

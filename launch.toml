@@ -15,11 +15,12 @@ controller = 1
 ship = "vwing"
 weapon = "greygoo"
 spawn = [155, 942]
+pilot_spawn = [185, 942]
 
 [[player]]
 controller = 2
 ship = "vwing"
-weapon = "mine"
+weapon = "laser"
 
 #[[player]]
 #controller = 3

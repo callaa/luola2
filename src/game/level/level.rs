@@ -41,6 +41,10 @@ pub const LEVEL_SCALE: f32 = 3.0; // Scaling factor: 1 level pixel equals this m
 pub const TILE_SIZE: i32 = 64;
 pub const TILE_LENGTH: usize = (TILE_SIZE * TILE_SIZE) as usize;
 
+pub fn to_level_scale(pos: (i32, i32)) -> Vec2 {
+    Vec2(pos.0 as f32 * LEVEL_SCALE, pos.1 as f32 * LEVEL_SCALE)
+}
+
 /**
  * Knowing something about the content of the tile
  * allows us to skip certain checks in certain cases.
@@ -423,10 +427,7 @@ impl Level {
                         Either::Left((t, x, y)) => {
                             return Either::Left((
                                 t,
-                                Vec2(
-                                    (x + tile_rect.x()) as f32 * LEVEL_SCALE,
-                                    (y + tile_rect.y()) as f32 * LEVEL_SCALE,
-                                ),
+                                to_level_scale((x + tile_rect.x(), y + tile_rect.y())),
                             ));
                         }
                         Either::Right(t) => {

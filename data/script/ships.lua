@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local weapons = require("primary_weapons")
 local Impacts = require("weapons.impacts")
+local Pilot = require("pilot")
 
 local function ship_thrust_effect(ship, uw)
 	if uw then
@@ -49,27 +50,6 @@ local function ship_on_base(ship, timestep)
 	ship.ammo = ship.ammo + timestep * 10
 end
 
-local function check_round_end_condition()
-	local last_player_standing = 0
-	local count = 0
-
-	game.ships_iter(function(ship)
-		if ship.player ~= 0 then
-			count = count + 1
-			if last_player_standing == 0 then
-				last_player_standing = ship.player
-			else
-				last_player_standing = 0
-				return false
-			end
-		end
-	end)
-
-	if count == 0 or last_player_standing ~= 0 then
-		game.effect("EndRound", last_player_standing)
-	end
-end
-
 local function on_ship_destroyed(ship)
 	-- We can't check this immediately on ship destruction
 	-- because we need to check the state of all ships/players
@@ -92,6 +72,10 @@ local function on_ship_destroyed(ship)
 			on_impact = Impacts.bullet,
 		}
 	})
+end
+
+local function on_ship_eject(ship)
+	Pilot.create(ship.pos, ship.player, ship.controller)
 end
 
 local function ship_touch_greygoo(ship)
@@ -151,6 +135,7 @@ local ships = {
 				on_base = ship_on_base,
 				on_thrust = ship_thrust_effect,
 				on_touch_greygoo = ship_touch_greygoo,
+				on_eject = on_ship_eject,
 			}
 		},
 	},

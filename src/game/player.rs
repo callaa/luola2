@@ -43,8 +43,11 @@ pub struct Player {
     /// Special weapon name passed to init script
     pub weapon: String,
 
-    /// Player spawn point (if unspecified, a random spawn point will be used)
+    /// Player spawn point in level coordinates (if unspecified, a random spawn point will be used)
     pub spawn: Option<(i32, i32)>,
+
+    /// Pilot spawn point in level coordinates (if specified, pilot will start outside the ship)
+    pub pilot_spawn: Option<(i32, i32)>,
 
     /// Number of rounds won by this player
     #[serde(skip)]
@@ -64,6 +67,7 @@ impl Player {
             ship: String::new(),
             weapon: String::new(),
             spawn: None,
+            pilot_spawn: None,
             wins: 0,
             viewport: Rect::new(0, 0, 1, 1),
         }

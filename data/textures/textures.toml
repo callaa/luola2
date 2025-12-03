@@ -1,17 +1,49 @@
 [vwing]
 file = "vwing.png"
 subrect = [0, 0, 960, 80]
+alts.Decal.subrect = [0, 80, 960, 80]
+alts.Damage.subrect = [0, 160, 960, 80]
 angles = 12
 width = 80
 height = 80
 
-[vwing.alts.Decal]
-file = "vwing.png"
-subrect = [0, 80, 960, 80]
+[pilot_stand]
+file = "pilot.png"
+subrect = [0, 0, 32, 32]
+flippable = true
+alts.Decal.subrect = [0, 32, 32, 32]
 
-[vwing.alts.Damage]
-file = "vwing.png"
-subrect = [0, 160, 960, 80]
+[pilot_jetpack]
+file = "pilot.png"
+subrect = [32, 0, 32, 32]
+alts.Decal.subrect = [32, 32, 32, 32]
+flippable = true
+
+[pilot_walk]
+file = "pilot.png"
+subrect = [64, 0, 128, 32]
+alts.Decal.subrect = [64, 32, 128, 32]
+width = 32
+height = 32
+frames = 4
+duration = 0.3
+flippable = true
+
+[pilot_swim]
+file = "pilot.png"
+subrect = [192, 0, 64, 32]
+alts.Decal.subrect = [192, 32, 64, 32]
+width = 32
+height = 32
+frames = 2
+duration = 0.3
+flippable = true
+
+[pilot_parachuting]
+file = "pilot.png"
+subrect = [256, 0, 32, 64]
+flippable = true
+alts.Decal.subrect = [320, 0, 32, 64]
 
 [pewpew]
 file = "bullets.png"
@@ -191,3 +223,7 @@ subrect = [0, 9, 9, 9]
 [minimap_pointer]
 file = "hud.png"
 subrect = [9, 0, 7, 7]
+
+[hud_reticle]
+file = "hud.png"
+subrect = [9, 9, 9, 9]

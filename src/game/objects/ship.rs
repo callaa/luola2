@@ -18,6 +18,7 @@ use log::error;
 use mlua::{Function, Lua, Table, UserData};
 
 use super::{GameObject, PhysicalObject, SCALE_FACTOR, TerrainCollisionMode};
+use crate::game::PlayerId;
 use crate::game::controller::GameController;
 use crate::game::level::{Level, terrain};
 use crate::gfx::{Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId};
@@ -118,6 +119,7 @@ impl UserData for Ship {
         fields.add_field_method_get("radius", |_, this| Ok(this.phys.radius));
         fields.add_field_method_get("angle", |_, this| Ok(this.angle));
         fields.add_field_method_get("player", |_, this| Ok(this.player_id));
+        fields.add_field_method_get("controller", |_, this| Ok(this.controller));
         fields.add_field_method_get("health", |_, this| Ok(this.hitpoints));
         fields.add_field_method_get("ammo", |_, this| Ok(this.ammo_remaining));
         fields.add_field_method_set("ammo", |_, this, ammo: f32| {
@@ -235,7 +237,7 @@ impl Ship {
         &mut self.phys
     }
 
-    pub fn player_id(&self) -> i32 {
+    pub fn player_id(&self) -> PlayerId {
         self.player_id
     }
 
@@ -277,10 +279,9 @@ impl Ship {
             self.damage_effect = 0.1;
         }
 
-        /* TODO on_wrecked callback
-        if self.hitpoints <= 0 && !was_wrecked {
-        }
-        */
+        //if self.hitpoints <= 0.0 && !was_wrecked {
+            // call method?
+        //}
     }
 
     pub fn destroy(&mut self, lua: &Lua) {
@@ -391,6 +392,9 @@ impl Ship {
 
             if ship.hitpoints < -1000.0 || terrain::is_solid(ter) {
                 ship.destroy(lua);
+            } else if let Some(controller) = controller && controller.fire_secondary {
+                call_state_method!(ship, lua, "on_eject");
+                ship.controller = 0;
             }
         } else if let Some(controller) = controller {
             if ship.primary_weapon_cooldown > 0.0 {

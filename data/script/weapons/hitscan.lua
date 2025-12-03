@@ -1,7 +1,7 @@
 local Hitscan = {}
 
 local function laser_hit_object(laser, obj)
-	if obj.is_ship then
+	if obj.damage then
 		obj:damage(5)
 	elseif obj.is_critter then
 		obj.state.on_bullet_hit(obj, laser)

@@ -71,6 +71,7 @@ enum MenuAction {
     GoToGameOpts,
     ToggleFullscreen,
     KeyMapThrust,
+    KeyMapDown,
     KeyMapLeft,
     KeyMapRight,
     KeyMapFire1,
@@ -151,9 +152,10 @@ impl MainMenu {
                 MenuItem::Spacer(logo_h),
                 MenuItem::Heading("Keymap", Color::new(0.3, 1.0, 0.3)),
                 MenuItem::Spacer(32.0),
-                MenuItem::Value("Thrust:", MenuAction::KeyMapThrust),
-                MenuItem::Value("Turn left:", MenuAction::KeyMapLeft),
-                MenuItem::Value("Turn right:", MenuAction::KeyMapRight),
+                MenuItem::Value("Up:", MenuAction::KeyMapThrust),
+                MenuItem::Value("Down:", MenuAction::KeyMapDown),
+                MenuItem::Value("Left:", MenuAction::KeyMapLeft),
+                MenuItem::Value("Right:", MenuAction::KeyMapRight),
                 MenuItem::Value("Fire primary:", MenuAction::KeyMapFire1),
                 MenuItem::Value("Fire secondary:", MenuAction::KeyMapFire2),
                 MenuItem::Spacer(10.0),
@@ -243,6 +245,8 @@ impl MainMenu {
         self.keymap_menu
             .set_value(MenuAction::KeyMapThrust, MenuValue::KeyGrab(km.thrust));
         self.keymap_menu
+            .set_value(MenuAction::KeyMapDown, MenuValue::KeyGrab(km.down));
+        self.keymap_menu
             .set_value(MenuAction::KeyMapLeft, MenuValue::KeyGrab(km.left));
         self.keymap_menu
             .set_value(MenuAction::KeyMapLeft, MenuValue::KeyGrab(km.left));
@@ -261,6 +265,7 @@ impl MainMenu {
     fn save_keymap(&mut self) {
         let keymap = Some(PlayerKeymap {
             thrust: self.keymap_menu.get_keygrab_value(MenuAction::KeyMapThrust),
+            down: self.keymap_menu.get_keygrab_value(MenuAction::KeyMapDown),
             left: self.keymap_menu.get_keygrab_value(MenuAction::KeyMapLeft),
             right: self.keymap_menu.get_keygrab_value(MenuAction::KeyMapRight),
             fire_primary: self.keymap_menu.get_keygrab_value(MenuAction::KeyMapFire1),
@@ -351,23 +356,31 @@ impl MainMenu {
             bg.height() / 2.0,
         );
         let color = Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 1.0 - self.intro_outro_anim * self.intro_outro_anim,
-                };
-        bg.render(&renderer, &RenderOptions {
-            source: Some(bgrect_source),
-            dest: RenderDest::Rect(bgrect_dest.offset(0.0, -bgoffset)),
-            color,
-            ..Default::default()
-        });
-        bg.render(&renderer, &RenderOptions {
-            source: Some(bgrect_source.offset(0.0, bg.height() / 2.0)),
-            dest: RenderDest::Rect(bgrect_dest.offset(0.0, renderer.height() as f32 - bgrect_dest.h() + bgoffset)),
-            color,
-            ..Default::default()
-        });
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0 - self.intro_outro_anim * self.intro_outro_anim,
+        };
+        bg.render(
+            &renderer,
+            &RenderOptions {
+                source: Some(bgrect_source),
+                dest: RenderDest::Rect(bgrect_dest.offset(0.0, -bgoffset)),
+                color,
+                ..Default::default()
+            },
+        );
+        bg.render(
+            &renderer,
+            &RenderOptions {
+                source: Some(bgrect_source.offset(0.0, bg.height() / 2.0)),
+                dest: RenderDest::Rect(
+                    bgrect_dest.offset(0.0, renderer.height() as f32 - bgrect_dest.h() + bgoffset),
+                ),
+                color,
+                ..Default::default()
+            },
+        );
 
         // Logo
         let logo = renderer.texture_store().get_texture(self.logo);

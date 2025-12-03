@@ -28,8 +28,8 @@ use crate::fs::find_datafile_path;
 use crate::game::hud::HudOverlay;
 use crate::game::level::{DynamicTerrainCell, Forcefield, Level};
 use crate::game::objects::{
-    Critter, FixedObject, GameObject, GameObjectArray, HitscanProjectile, Particle, Projectile,
-    Ship, TerrainParticle,
+    Critter, FixedObject, GameObject, GameObjectArray, HitscanProjectile, Particle, Pilot,
+    Projectile, Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
 use crate::game::{PlayerId, PlayerState};
@@ -122,6 +122,7 @@ impl ScriptEnvironment {
         players: Rc<RefCell<Vec<PlayerState>>>,
         level: Rc<RefCell<Level>>,
         ship_list: Rc<RefCell<GameObjectArray<Ship>>>,
+        pilot_list: Rc<RefCell<GameObjectArray<Pilot>>>,
         mine_list: Rc<RefCell<GameObjectArray<Projectile>>>,
         critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
     ) -> LuaResult<()> {
@@ -193,6 +194,24 @@ impl ScriptEnvironment {
                 lua.scope(|scope| {
                     for ship in ships.iter() {
                         let res = callback.call::<Option<bool>>(scope.create_userdata_ref(ship))?;
+                        if let Some(false) = res {
+                            break;
+                        }
+                    }
+                    Ok(())
+                })
+            })?,
+        )?;
+
+        // Iterate through a read-only list of pilots
+        api.set(
+            "pilots_iter",
+            self.lua.create_function(move |lua, callback: Function| {
+                let pilots = pilot_list.borrow();
+                lua.scope(|scope| {
+                    for pilot in pilots.iter() {
+                        let res =
+                            callback.call::<Option<bool>>(scope.create_userdata_ref(pilot))?;
                         if let Some(false) = res {
                             break;
                         }
@@ -296,6 +315,7 @@ impl ScriptEnvironment {
                             )
                         }
                         b"AddShip" => WorldEffect::AddShip(Ship::from_lua(props, lua)?),
+                        b"AddPilot" => WorldEffect::AddPilot(Pilot::from_lua(props, lua)?),
                         b"AddCritter" => WorldEffect::AddCritter(Critter::from_lua(props, lua)?),
                         b"UpdateForcefield" => {
                             WorldEffect::UpdateForcefield(Forcefield::from_lua(props, lua)?)

@@ -46,6 +46,7 @@ pub const KEYBOARDS: usize = 4;
 #[derive(Clone)]
 pub struct GameController {
     pub thrust: bool,
+    pub down: bool, // note: both thrust and down cannot be true at the same time when playing with a gamepad
     pub turn: f32,
     pub fire_primary: bool,
     pub fire_secondary: bool,
@@ -58,6 +59,7 @@ pub struct GameController {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PlayerKeymap {
     pub thrust: u32,
+    pub down: u32,
     pub left: u32,
     pub right: u32,
     pub fire_primary: u32,
@@ -120,6 +122,7 @@ impl GameController {
         Self {
             turn: 0.0,
             thrust: false,
+            down: false,
             fire_primary: false,
             fire_secondary: false,
             guid: SDL_GUID { data: [0; 16] },
@@ -133,6 +136,7 @@ impl GameController {
 pub enum MappedKey {
     Up,
     Right,
+    Down,
     Left,
     Fire1,
     Fire2,
@@ -275,6 +279,7 @@ impl GameControllerSet {
 
         PlayerKeymap {
             thrust: find_key(MappedKey::Up),
+            down: find_key(MappedKey::Down),
             left: find_key(MappedKey::Left),
             right: find_key(MappedKey::Right),
             fire_primary: find_key(MappedKey::Fire1),
@@ -285,6 +290,8 @@ impl GameControllerSet {
     fn set_keymap(&mut self, controller: usize, keymap: &PlayerKeymap) {
         self.keymap
             .insert(keymap.thrust, (MappedKey::Up, controller));
+        self.keymap
+            .insert(keymap.down, (MappedKey::Down, controller));
         self.keymap
             .insert(keymap.left, (MappedKey::Left, controller));
         self.keymap
@@ -312,6 +319,12 @@ impl GameControllerSet {
                     state.thrust = key.down;
                     if !key.down {
                         menubtn = MenuButton::Up(*idx as i32 + 1);
+                    }
+                }
+                MappedKey::Down => {
+                    state.down = key.down;
+                    if !key.down {
+                        menubtn = MenuButton::Down(*idx as i32 + 1);
                     }
                 }
                 MappedKey::Left => {
@@ -395,6 +408,7 @@ impl GameControllerSet {
             };
 
             state.thrust = thumb < -0.7 || shoulder > 0.0;
+            state.down = thumb > 0.7;
         }
 
         if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
@@ -518,6 +532,7 @@ impl GameControllerSet {
     pub const DEFAULT_KEYMAP: [PlayerKeymap; 4] = [
         PlayerKeymap {
             thrust: SDLK_UP,
+            down: SDLK_DOWN,
             left: SDLK_LEFT,
             right: SDLK_RIGHT,
             fire_primary: SDLK_RSHIFT,
@@ -525,6 +540,7 @@ impl GameControllerSet {
         },
         PlayerKeymap {
             thrust: SDLK_W,
+            down: SDLK_S,
             left: SDLK_A,
             right: SDLK_D,
             fire_primary: SDLK_LSHIFT,
@@ -532,6 +548,7 @@ impl GameControllerSet {
         },
         PlayerKeymap {
             thrust: SDLK_KP_8,
+            down: SDLK_KP_5,
             left: SDLK_KP_4,
             right: SDLK_KP_6,
             fire_primary: SDLK_KP_0,
@@ -539,6 +556,7 @@ impl GameControllerSet {
         },
         PlayerKeymap {
             thrust: SDLK_I,
+            down: SDLK_K,
             left: SDLK_J,
             right: SDLK_L,
             fire_primary: SDLK_Y,

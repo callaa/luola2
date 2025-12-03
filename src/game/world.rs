@@ -25,7 +25,9 @@ use crate::{
         Player, PlayerId, PlayerState,
         hud::{PlayerHud, draw_hud, draw_minimap},
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
-        objects::{Critter, FixedObject, GameObjectArray, HitscanProjectile, TerrainParticle},
+        objects::{
+            Critter, FixedObject, GameObjectArray, HitscanProjectile, Pilot, TerrainParticle,
+        },
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
     math::{Rect, Vec2},
@@ -41,6 +43,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub enum WorldEffect {
     AddShip(Ship),
+    AddPilot(Pilot),
     AddBullet(Projectile),
     AddMine(Projectile),
     AddParticle(Particle),
@@ -89,6 +92,9 @@ pub struct World {
     /// Double buffered ships so we can access them in lua at any time
     ships: Rc<RefCell<GameObjectArray<Ship>>>, // ships that (may) be piloted by a player
     ships_work: RefCell<GameObjectArray<Ship>>,
+
+    /// Pilots ejected from ships
+    pilots: Rc<RefCell<GameObjectArray<Pilot>>>,
 
     /// Bullets are fast moving projectiles that do not collide with each other.
     /// No double-buffering because bullets cannot be referenced in scripts outside their callbacks
@@ -151,6 +157,7 @@ impl World {
             players.iter().map(|_| PlayerState::new()).collect(),
         ));
         let ships = Rc::new(RefCell::new(GameObjectArray::new()));
+        let pilots = Rc::new(RefCell::new(GameObjectArray::new()));
         let mines = Rc::new(RefCell::new(GameObjectArray::new()));
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
@@ -159,6 +166,7 @@ impl World {
             players.clone(),
             level.clone(),
             ships.clone(),
+            pilots.clone(),
             mines.clone(),
             critters.clone(),
         )?;
@@ -172,6 +180,7 @@ impl World {
             scripting,
             level,
             ships,
+            pilots,
             ships_work: RefCell::new(GameObjectArray::new()),
             bullets: GameObjectArray::new(),
             mines,
@@ -217,12 +226,6 @@ impl World {
         let mut level_editor = LevelEditor::new(&mut level);
         for fx in effects {
             match fx {
-                WorldEffect::AddShip(s) => {
-                    if s.player_id() > 0 && s.controller() > 0 {
-                        self.players.borrow_mut()[s.player_id() as usize - 1].camera_pos = s.pos();
-                    }
-                    self.ships.borrow_mut().push(s);
-                }
                 WorldEffect::AddBullet(b) => self.bullets.push(b),
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
                 WorldEffect::AddParticle(p) => self.particles.push(p),
@@ -261,6 +264,18 @@ impl World {
                 WorldEffect::SetWindspeed(ws) => level_editor.set_windspeed(ws),
                 WorldEffect::RegenerateTerrain => {
                     level_editor.regenerate_terrain();
+                }
+                WorldEffect::AddShip(s) => {
+                    if s.player_id() > 0 && s.controller() > 0 {
+                        self.players.borrow_mut()[s.player_id() as usize - 1].camera_pos = s.pos();
+                    }
+                    self.ships.borrow_mut().push(s);
+                }
+                WorldEffect::AddPilot(p) => {
+                    if p.player_id() > 0 && p.controller() > 0 {
+                        self.players.borrow_mut()[p.player_id() as usize - 1].camera_pos = p.pos();
+                    }
+                    self.pilots.borrow_mut().push(p);
                 }
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
@@ -322,7 +337,6 @@ impl World {
                         health: ship.health(),
                         ammo: ship.ammo(),
                         cooling_down: ship.secondary_weapon_cooldown() > 0.0,
-                        pos: ship.pos().element_wise_product(level.size_scale()),
                     };
                     // camera inertia for an enhanced feeling of motion
                     // TODO rather than trailing behind the ship, the camera should look ahead?
@@ -333,6 +347,32 @@ impl World {
 
             work.sort();
         }
+
+        // Pilot simulation step
+        for pilot in self.pilots.borrow_mut().iter_mut() {
+            pilot.step_mut(
+                if pilot.controller() > 0 {
+                    Some(&controllers[pilot.controller() as usize - 1])
+                } else {
+                    None
+                },
+                &level,
+                self.scripting.lua(),
+                timestep,
+            );
+
+            if pilot.player_id() > 0 && pilot.controller() > 0 {
+                let ps = &mut self.players.borrow_mut()[pilot.player_id() as usize - 1];
+                ps.hud = PlayerHud::Pilot {
+                    jetpack: pilot.jetpack_charge(),
+                    target: pilot.aim_target(),
+                };
+                // camera inertia for an enhanced feeling of motion
+                ps.camera_pos = ps.camera_pos + (pilot.pos() - ps.camera_pos) / 5.0;
+                ps.fadeout = -1.0;
+            }
+        }
+        self.pilots.borrow_mut().sort();
 
         // Bullet simulation step
         for bullet in self.bullets.iter_mut() {
@@ -518,6 +558,33 @@ impl World {
             }
         }
 
+        // Pilots can hit bullets, mines, ships, and critters
+        {
+            let mut work = self.pilots.borrow_mut();
+            for pilot in work.iter_mut() {
+                for bullet in self.bullets.collider_slice_mut(pilot).iter_mut() {
+                    if bullet.owner() != pilot.player_id()
+                        && pilot.physics().check_overlap(bullet.physics())
+                    {
+                        let terrain = self.level.borrow().terrain_at(bullet.pos());
+                        bullet.impact(terrain, Some(pilot), self.scripting.lua());
+                    }
+                }
+
+                let mut minework = self.mines.borrow_mut();
+                for mine in minework.collider_slice_mut(pilot).iter_mut() {
+                    if pilot.physics().check_overlap(mine.physics()) {
+                        let terrain = self.level.borrow().terrain_at(mine.pos());
+                        mine.impact(terrain, Some(pilot), self.scripting.lua());
+                    }
+                }
+
+                // TODO critter collisions
+
+                // TODO ship collisions
+            }
+        }
+
         // Hitscans
         for hs in self.hitscans.iter_mut() {
             hs.hit_level(&level);
@@ -530,6 +597,7 @@ impl World {
                 Ship(&'a mut Ship),
                 Mine(&'a mut Projectile),
                 Critter(&'a mut Critter),
+                Pilot(&'a mut Pilot),
             }
             let mut nearest_object = Nearest::None;
 
@@ -559,6 +627,15 @@ impl World {
                 }
             }
 
+            let mut pilots_work = self.pilots.borrow_mut();
+            for pilot in pilots_work.range_slice_mut(left, right) {
+                if (hs.owner() == 0 || hs.owner() != pilot.player_id())
+                    && hs.do_hit_object(self.scripting.lua(), pilot)
+                {
+                    nearest_object = Nearest::Pilot(pilot);
+                }
+            }
+
             match nearest_object {
                 Nearest::None => {}
                 Nearest::Ship(s) => {
@@ -569,6 +646,9 @@ impl World {
                 }
                 Nearest::Critter(c) => {
                     hs.on_hit_object(self.scripting.lua(), c);
+                }
+                Nearest::Pilot(p) => {
+                    hs.on_hit_object(self.scripting.lua(), p);
                 }
             }
 
@@ -661,12 +741,16 @@ impl World {
                 ship.render(renderer, camera_pos);
             }
 
+            for pilot in self.pilots.borrow().iter() {
+                pilot.render(renderer, camera_pos);
+            }
+
             for critter in self.critters.borrow().range_slice(left, right) {
                 critter.render(renderer, camera_pos);
             }
 
             // Player HUD
-            draw_hud(renderer, player.hud, &player.overlays);
+            draw_hud(renderer, player.hud, &player.overlays, camera_pos);
 
             if let Some(minimap) = self.level.borrow().minimap() {
                 let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
@@ -678,6 +762,13 @@ impl World {
                             ship.pos().element_wise_product(levelscale),
                         ));
                     }
+                }
+
+                for pilot in self.pilots.borrow().iter() {
+                    markers.push((
+                        Color::player_color(pilot.player_id()),
+                        pilot.pos().element_wise_product(levelscale),
+                    ));
                 }
 
                 draw_minimap(renderer, minimap, &markers);

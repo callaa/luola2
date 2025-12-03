@@ -70,7 +70,7 @@ pub struct TextureConfig {
 #[derive(serde::Deserialize, Debug)]
 pub struct TextureAltConfig {
     #[serde(rename = "file")]
-    filename: String,
+    filename: Option<String>,
     subrect: Option<(i32, i32, i32, i32)>,
 }
 
@@ -129,6 +129,9 @@ pub enum RenderDest {
     /// Center on this point
     Centered(Vec2),
 
+    /// Horizontally centered with the bottom edge on this point
+    BottomCentered(Vec2),
+
     /// Center and apply uniform scaling factor
     CenterScaled(Vec2, f32),
 }
@@ -183,7 +186,7 @@ impl Texture {
         alt_config: Option<&TextureAltConfig>,
         shared_textures: &mut HashMap<String, *mut SDL_Texture>,
     ) -> Result<Texture> {
-        let filename = alt_config.map_or_else(|| &config.filename, |a| &a.filename);
+        let filename = alt_config.iter().flat_map(|a| &a.filename).next().unwrap_or(&config.filename);
 
         let mut tex = if shared_textures.contains_key(filename) {
             let tex = Self::from_texture(shared_textures[filename]);
@@ -392,6 +395,12 @@ impl Texture {
         let dest = match options.dest {
             RenderDest::Fill => None,
             RenderDest::Centered(pos) => Some(self.centered_rect(pos)),
+            RenderDest::BottomCentered(pos) => Some(RectF::new(
+                pos.0 - self.width / 2.0,
+                pos.1 - self.height,
+                self.width,
+                self.height,
+            )),
             RenderDest::CenterScaled(pos, scale) => {
                 Some(self.centered_rect(pos).scale_centered(scale))
             }

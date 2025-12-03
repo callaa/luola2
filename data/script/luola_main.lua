@@ -3,11 +3,12 @@
 -- by the game engine are prefixed with "luola_" and are all collected
 -- in this file.
 
+local tableutils = require("utils.table")
+local Scheduler = require("utils.scheduler")
 local sweapons = require("secondary_weapons")
 local Impacts = require("weapons.impacts")
 local ships = require("ships")
-local tableutils = require("utils.table")
-local Scheduler = require("utils.scheduler")
+local Pilot = require("pilot")
 local Bird = require("critters.bird")
 local Bat = require("critters.bat")
 local Fish = require("critters.fish")
@@ -26,11 +27,18 @@ function luola_init_game(settings)
 		if pos == nil then
 			pos = game.find_spawnpoint()
 		end
+
+		local controller = p.controller
+		if p.pilot_spawn ~= nil then
+			controller = 0
+			Pilot.create(p.pilot_spawn, p.player, p.controller)
+		end
+
 		game.effect(
 			"AddShip",
 			tableutils.combined(tpl, {
 				pos = pos,
-				controller = p.controller,
+				controller = controller,
 				player = p.player,
 				state = tableutils.combined(tpl.state, {
 					on_fire_secondary = luola_secondary_weapons[p.weapon].fire_func,
@@ -128,6 +136,28 @@ function luola_splash(pos, vel, imass)
 				drag = 0.002,
 			})
 		end
+	end
+end
+
+-- End the round if end condition holds
+function check_round_end_condition()
+	local last_player_standing = 0
+	local count = 0
+
+	game.ships_iter(function(ship)
+		if ship.controller ~= 0 then
+			count = count + 1
+			last_player_standing = ship.player
+		end
+	end)
+
+	game.pilots_iter(function(pilot)
+		count = count + 1
+		last_player_standing = pilot.player
+	end)
+
+	if count <= 1 then
+		game.effect("EndRound", last_player_standing)
 	end
 end
 

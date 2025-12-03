@@ -180,6 +180,7 @@ pub fn make_button_icon(
 
         let key = match button {
             MappedKey::Up => keymap.thrust,
+            MappedKey::Down => keymap.down,
             MappedKey::Right => keymap.right,
             MappedKey::Left => keymap.left,
             MappedKey::Fire1 => keymap.fire_primary,
@@ -192,6 +193,7 @@ pub fn make_button_icon(
         let icon = match button {
             MappedKey::Up => 0,
             MappedKey::Right => 1,
+            MappedKey::Down => 2,
             MappedKey::Left => 3,
             MappedKey::Fire1 => 6,
             MappedKey::Fire2 => 7,

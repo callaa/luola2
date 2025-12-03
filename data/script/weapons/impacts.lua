@@ -61,7 +61,7 @@ function impacts.bullet(this, terrain, obj)
 		texture = textures.get("boom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(3)
 	end
 end
@@ -75,7 +75,7 @@ function impacts.diggerbeam(this, terrain, obj)
 		dust = 0.5
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(0.3)
 	end
 end
@@ -89,7 +89,7 @@ function impacts.grenade(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(1)
 	end
 
@@ -113,7 +113,7 @@ function impacts.megabomb(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(20)
 	end
 
@@ -138,7 +138,7 @@ function impacts.rocket(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(15)
 	end
 
@@ -160,7 +160,7 @@ function impacts.missile(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(10)
 	end
 
@@ -184,7 +184,7 @@ function impacts.minimissile(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.damage then
 		obj:damage(5)
 	end
 	impacts.make_firestarters(3, this.pos)
@@ -201,7 +201,7 @@ end
 function impacts.greygoo(this, terrain, obj)
 	this:destroy()
 
-	if obj ~= nil and obj.state ~=nil and obj.state.on_touch_greygoo ~=nil then
+	if obj and obj.state and obj.state.on_touch_greygoo then
 		obj.state.on_touch_greygoo(obj)
 	else
 		game.effect("AddDynamicTerrain", {
@@ -214,7 +214,7 @@ end
 function impacts.freezer(this, terrain, obj)
 	this:destroy()
 
-	if obj ~= nil and obj.is_ship then
+	if obj and obj.is_ship then
 		obj.frozen = true
 		Scheduler.add_to_object(obj, 5, function(ship)
 			ship.frozen = false

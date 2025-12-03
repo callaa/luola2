@@ -22,7 +22,7 @@ use anyhow::{Result, anyhow};
 use crate::{
     game::{
         GameControllerSet, MenuButton, Player, PlayerId,
-        level::{LEVEL_SCALE, LevelInfo},
+        level::{LevelInfo, to_level_scale},
         world::World,
     },
     gfx::{Color, RenderOptions, Renderer, TextureId},
@@ -73,11 +73,8 @@ impl GameRoundState {
             player.set("controller", p.controller)?;
             player.set("ship", p.ship.clone())?;
             player.set("weapon", p.weapon.clone())?;
-            player.set(
-                "spawn",
-                p.spawn
-                    .map(|(x, y)| Vec2(x as f32 * LEVEL_SCALE, y as f32 * LEVEL_SCALE)),
-            )?;
+            player.set("spawn", p.spawn.map(to_level_scale))?;
+            player.set("pilot_spawn", p.pilot_spawn.map(to_level_scale))?;
             player_settings.push(player)?;
         }
 

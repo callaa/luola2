@@ -29,7 +29,10 @@ pub enum PlayerHud {
         health: f32,
         ammo: f32,
         cooling_down: bool,
-        pos: Vec2,
+    },
+    Pilot {
+        jetpack: f32,
+        target: Option<Vec2>,
     },
     None,
 }
@@ -203,7 +206,7 @@ impl HudOverlay {
     }
 }
 
-pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay]) {
+pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay], camera_pos: Vec2) {
     match hud {
         PlayerHud::Ship {
             health,
@@ -211,6 +214,9 @@ pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay]) {
             cooling_down,
             ..
         } => draw_ship_hud(renderer, health, ammo, cooling_down),
+        PlayerHud::Pilot { jetpack, target } => {
+            draw_pilot_hud(renderer, jetpack, target.map(|t| t - camera_pos))
+        }
         PlayerHud::None => {}
     }
 
@@ -308,5 +314,56 @@ fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32, cooling_down: bool
             a: if cooling_down { 0.5 } else { 1.0 },
         };
         barfill.render(renderer, &opts);
+    }
+}
+
+fn draw_pilot_hud(renderer: &Renderer, jetpack: f32, target: Option<Vec2>) {
+    let barfill = renderer.texture_store().get_texture(
+        renderer
+            .texture_store()
+            .find_texture("bar_fill")
+            .expect("bar_fill texture should exist"),
+    );
+    let barbg = renderer.texture_store().get_texture(
+        renderer
+            .texture_store()
+            .find_texture("bar_bg")
+            .expect("bar_bg texture should exist"),
+    );
+
+    let w = ((renderer.width() - 20) as f32 * 0.1).ceil();
+    let h = barbg.height();
+    let x = 10.0;
+    let y = renderer.height() as f32 - (h * 2.0) - 10.0;
+
+    let mut opts = RenderOptions {
+        dest: RenderDest::Rect(RectF::new(x, y, w, h)),
+        mode: RenderMode::NineGrid(1.0),
+        ..Default::default()
+    };
+
+    // Jetpack charge bar
+    barbg.render(renderer, &opts);
+
+    if jetpack > 0.0 {
+        opts.dest = RenderDest::Rect(RectF::new(x, y, w * jetpack, h));
+        barfill.render(renderer, &opts);
+    }
+
+    // Target reticle
+    if let Some(t) = target {
+        let tex = renderer.texture_store().get_texture(
+            renderer
+                .texture_store()
+                .find_texture("hud_reticle")
+                .expect("hud_reticle texture should exist"),
+        );
+        tex.render(
+            renderer,
+            &RenderOptions {
+                dest: RenderDest::CenterScaled(t, 2.0),
+                ..Default::default()
+            },
+        );
     }
 }
