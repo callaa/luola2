@@ -239,9 +239,12 @@ impl Level {
 
                 // Gather up regenerating pixels
                 if regen_enabled {
-                    for (offset, (&t, &px)) in tile.terrain.iter().zip(tile.artwork.iter()).enumerate()
+                    for (offset, (&t, &px)) in
+                        tile.terrain.iter().zip(tile.artwork.iter()).enumerate()
                     {
-                        if (terrain::is_base(t) || terrain::is_basesupport(t)) && terrain::is_destructible(t) {
+                        if (terrain::is_base(t) || terrain::is_basesupport(t))
+                            && terrain::is_destructible(t)
+                        {
                             regen.push(RegeneratingTerrain {
                                 tile: (i as i32, j as i32),
                                 offset,

@@ -6,7 +6,8 @@ outline = 2
 [menu_big]
 file = "PressStart2P-Regular.ttf"
 size = 64
+outline = 3
 
 [flavortext]
-file = "Questrial-Regular.ttf"
-size = 24
+file = "PressStart2P-Regular.ttf"
+size = 16

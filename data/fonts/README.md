@@ -5,10 +5,6 @@
 Copyright (c) 2012, Cody "CodeMan38" Boisclair (cody@zone38.net), with Reserved Font Name "Press Start 2P"
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 
-## Questrial-Regular
-
-By Joe Prince, licensed under the OFL.
-
 # Open Font License
 
 ## PREAMBLE

@@ -20,10 +20,10 @@ use anyhow::Result;
 
 use super::{StackableState, StackableStateResult};
 use crate::{
-    game::{GameControllerSet, MenuButton, Player, PlayerId},
+    game::{GameControllerSet, MenuButton, Player, PlayerId, level::LEVEL_SCALE},
     gfx::{
-        Color, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
-        Texture, TextureId, make_button_icon,
+        Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
+        TextOutline, Texture, make_button_icon,
     },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
@@ -33,12 +33,16 @@ use crate::{
 pub struct WeaponSelection {
     starfield: Rc<RefCell<AnimatedStarfield>>,
     assets: Rc<GameAssets>,
-    box_border: TextureId,
+    background: Option<Texture>,
+    background_rect: RectF,
+    background_scroll: Vec2,
     round_text: Text,
     renderer: Rc<RefCell<Renderer>>,
     players: Vec<PlayerWeaponChoice>,
-    weapon_texts: Vec<(Text, Text)>,
+    weapon_texts: Vec<(Text, Text, Text)>,
     longest_weapon_text_width: f32,
+    flavortext_selection: usize,
+    fade_timer: f32,
     start_timer: Option<f32>,
 }
 
@@ -76,7 +80,8 @@ impl PlayerWeaponChoice {
                 .fontset()
                 .menu
                 .create_text(renderer, &format!("Player {}", player_id))?
-                .with_color(Color::player_color(player_id)),
+                .with_color(Color::player_color(player_id))
+                .with_outline_color(Color::BLACK),
             left_button_icon: make_button_icon(
                 player.controller,
                 crate::game::MappedKey::Left,
@@ -99,11 +104,13 @@ impl PlayerWeaponChoice {
         })
     }
 }
+
 impl WeaponSelection {
     pub fn new(
         assets: Rc<GameAssets>,
         players: &[Player],
         round: i32,
+        background: Option<Texture>,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
         controllers: &GameControllerSet,
@@ -126,8 +133,12 @@ impl WeaponSelection {
                     r.fontset().menu.create_text(&r, &w.title)?,
                     r.fontset()
                         .flavotext
+                        .create_text(&r, &w.title)?
+                        .with_color(Color::new(1.0, 1.0, 0.8)),
+                    r.fontset()
+                        .flavotext
                         .create_text(&r, &w.flavortext)?
-                        .with_color(Color::new(0.6, 0.6, 0.8))
+                        .with_color(Color::new(0.9, 0.9, 0.9))
                         .with_wrapwidth(flavortext_max_width),
                 ))
             })
@@ -137,7 +148,7 @@ impl WeaponSelection {
             .iter()
             .fold(0.0, |acc, t| f32::max(acc, t.0.width()));
 
-        let choices: Result<Vec<_>> = players
+        let choices = players
             .iter()
             .enumerate()
             .map(|(idx, player)| {
@@ -149,28 +160,44 @@ impl WeaponSelection {
                     controllers,
                 )
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
-        let box_border = renderer
-            .borrow()
-            .texture_store()
-            .find_texture("box_border")?;
+        let background_rect = if let Some(bg) = &background {
+            Self::make_background_rect(bg, &renderer.borrow())
+        } else {
+            RectF::new(0.0, 0.0, 0.0, 0.0)
+        };
 
+        let flavortext_selection = choices[0].selection;
         Ok(Self {
             assets,
-            box_border,
+            background,
+            background_rect,
+            background_scroll: Vec2(15.0, 8.0),
             weapon_texts,
-            players: choices?,
+            players: choices,
             round_text,
             starfield,
             renderer,
             longest_weapon_text_width,
+            flavortext_selection,
             start_timer: None,
+            fade_timer: 0.0,
         })
     }
 
+    fn make_background_rect(tex: &Texture, renderer: &Renderer) -> RectF {
+        let ar = renderer.height() as f32 / renderer.width() as f32;
+        RectF::new(
+            0.0,
+            0.0,
+            tex.width() / LEVEL_SCALE,
+            tex.width() / LEVEL_SCALE * ar,
+        )
+    }
+
     fn flavortext_max_width(screen_width: i32) -> i32 {
-        screen_width * 3 / 4 - 16
+        screen_width / 4
     }
 
     fn find_player_mut(&mut self, controller: i32) -> Option<&mut PlayerWeaponChoice> {
@@ -182,87 +209,59 @@ impl WeaponSelection {
     fn render_player_box(&self, player: &PlayerWeaponChoice, rect: RectF) {
         let renderer = &self.renderer.borrow();
 
+        // Player name
+        let mut x = rect.x() + 8.0;
         player.player_text.render(&RenderTextOptions {
-            dest: RenderTextDest::TopLeft(Vec2(rect.x() + 8.0, rect.y())),
+            dest: RenderTextDest::TopLeft(Vec2(x, rect.y())),
+            outline: TextOutline::Outline,
             ..Default::default()
         });
 
-        let rect = RectF::new(
-            rect.x(),
-            rect.y() + player.player_text.height(),
-            rect.w(),
-            rect.h() - player.player_text.height(),
-        );
+        x += player.player_text.width() + 8.0;
 
-        renderer
-            .texture_store()
-            .get_texture(self.box_border)
-            .render(
+        // Selected weapon
+        let icon_w = player.left_button_icon.width();
+        let icon_h = player.left_button_icon.height();
+
+        let title_text = &self.weapon_texts[player.selection].0;
+
+        if !player.decided {
+            player.left_button_icon.render(
                 renderer,
                 &RenderOptions {
-                    dest: crate::gfx::RenderDest::Rect(rect),
-                    mode: RenderMode::NineGrid(1.0),
+                    dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
                     ..Default::default()
                 },
             );
 
-        let (title_text, flavor_text) = &self.weapon_texts[player.selection];
-        let weapon_title_x = rect.x() + (rect.w() - title_text.width()) / 2.0;
+            x += player.left_button_icon.width() + 8.0;
+        }
 
-        if player.decided {
-            title_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopLeft(Vec2(
-                    weapon_title_x,
-                    rect.y() + (rect.h() - title_text.height()) / 2.0,
-                )),
-                ..Default::default()
-            });
-        } else {
-            let y = rect.y() + 8.0;
-            title_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopLeft(Vec2(
-                    weapon_title_x,
-                    y + (title_text.height().max(player.left_button_icon.height())
-                        - title_text.height())
-                        / 2.0,
-                )),
-                ..Default::default()
-            });
+        title_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopLeft(Vec2(x, rect.y())),
+            outline: TextOutline::Outline,
+            ..Default::default()
+        });
 
-            flavor_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopLeft(Vec2(rect.x() + 8.0, y + title_text.height() + 16.0)),
-                ..Default::default()
-            });
+        x += title_text.width() + 8.0;
 
-            player.left_button_icon.render_simple(
+        if !player.decided {
+            player.right_button_icon.render(
                 renderer,
-                None,
-                Some(RectF::new(
-                    weapon_title_x - player.left_button_icon.width() - 8.0,
-                    y,
-                    player.left_button_icon.width(),
-                    player.left_button_icon.height(),
-                )),
+                &RenderOptions {
+                    dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
+                    ..Default::default()
+                },
             );
-            player.right_button_icon.render_simple(
+
+            x += icon_w + 16.0;
+
+            player.select_button_icon.render(
                 renderer,
-                None,
-                Some(RectF::new(
-                    weapon_title_x + title_text.width() + 8.0,
-                    y,
-                    player.right_button_icon.width(),
-                    player.right_button_icon.height(),
-                )),
-            );
-            player.select_button_icon.render_simple(
-                renderer,
-                None,
-                Some(RectF::new(
-                    rect.x() + rect.w() - player.select_button_icon.width() - 8.0,
-                    rect.y() + rect.h() - player.select_button_icon.height() - 8.0,
-                    player.select_button_icon.width(),
-                    player.select_button_icon.height(),
-                )),
+                &RenderOptions {
+                    dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
+                    ..Default::default()
+                },
             );
         }
     }
@@ -273,35 +272,69 @@ impl WeaponSelection {
 
         // Render background
         self.starfield.borrow().render(renderer);
+        if let Some(bg) = &self.background {
+            bg.render(
+                renderer,
+                &RenderOptions {
+                    source: Some(self.background_rect),
+                    dest: RenderDest::Fill,
+                    color: Color::WHITE.with_alpha(self.fade_timer / FADE_TIME * 0.7),
+                    ..Default::default()
+                },
+            );
+        }
 
         // Round number
         self.round_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            outline: TextOutline::Outline,
             ..Default::default()
         });
 
         // Player weapon selection boxes
-        let player_box_w = renderer.width() as f32 * (3.0 / 4.0);
-        let player_box_h = f32::min(
-            (renderer.height() as f32 - self.round_text.height() - 10.0)
-                / self.players.len() as f32
-                - 20.0,
-            renderer.height() as f32 / 4.0,
+        let (_, flavor_title, flavor_text) = &self.weapon_texts[self.flavortext_selection];
+        let flavortext_box_w = flavor_title.width().max(flavor_text.width());
+        let flavortext_box_x = renderer.width() as f32 - flavortext_box_w - 32.0;
+
+        let player_box_w = self.players[0].player_text.width() + self.longest_weapon_text_width;
+        let player_box_h = self.players[0].player_text.height() + 32.0;
+
+        let mut player_box = RectF::new(
+            (renderer.width() as f32 - player_box_w) / 2.0,
+            (renderer.height() as f32 - player_box_h * self.players.len() as f32) / 2.0,
+            player_box_w,
+            player_box_h,
         );
 
-        let player_box_x = (renderer.width() as f32 - player_box_w) / 2.0;
-        let mut player_box_y = self.round_text.height()
-            + ((renderer.height() as f32 - self.round_text.height())
-                - ((player_box_h + 20.0) * self.players.len() as f32))
-                / 2.0;
+        if player_box.right() > flavortext_box_x {
+            player_box = player_box + Vec2(flavortext_box_x - player_box.right(), 0.0);
+        }
 
         for player in &self.players {
-            self.render_player_box(
-                player,
-                RectF::new(player_box_x, player_box_y, player_box_w, player_box_h),
-            );
-            player_box_y += player_box_h + 20.0;
+            self.render_player_box(player, player_box);
+            player_box = player_box + Vec2(0.0, player_box_h);
         }
+
+        // Weapon flavor text box
+        let flavortext_box_h = flavor_title.height() + flavor_text.height();
+        let hint_box = RectF::new(
+            flavortext_box_x,
+            renderer.height() as f32 - flavortext_box_h - 32.0,
+            flavortext_box_w + 16.0,
+            flavortext_box_h + 24.0,
+        );
+
+        renderer.draw_filled_rectangle(hint_box, &Color::new_rgba(0.1, 0.1, 0.2, 0.9));
+        flavor_title.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(hint_box.topleft() + Vec2(hint_box.w() / 2.0, 8.0)),
+            ..Default::default()
+        });
+        flavor_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopLeft(
+                hint_box.topleft() + Vec2(8.0, flavor_title.height() + 16.0),
+            ),
+            ..Default::default()
+        });
 
         // Fadeout when it's time to start
         if let Some(t) = self.start_timer {
@@ -333,6 +366,7 @@ impl StackableState for WeaponSelection {
                     } else {
                         p.selection = weapon_count - 1;
                     }
+                    self.flavortext_selection = p.selection;
                 }
             }
             MenuButton::Right(plr) if plr > 0 => {
@@ -340,6 +374,7 @@ impl StackableState for WeaponSelection {
                     && !p.decided
                 {
                     p.selection = (p.selection + 1) % weapon_count;
+                    self.flavortext_selection = p.selection;
                 }
             }
             MenuButton::Select(plr) if plr > 0 => {
@@ -365,12 +400,32 @@ impl StackableState for WeaponSelection {
         let ww = Self::flavortext_max_width(self.renderer.borrow().width());
         self.weapon_texts
             .iter_mut()
-            .for_each(|(_, t)| t.set_wrapwidth(ww));
+            .for_each(|(_, _, t)| t.set_wrapwidth(ww));
+
+        if let Some(bg) = &self.background {
+            self.background_rect = Self::make_background_rect(bg, &self.renderer.borrow());
+        }
     }
 
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
         // Animate background
         self.starfield.borrow_mut().step(timestep);
+        if self.fade_timer < FADE_TIME {
+            self.fade_timer = (self.fade_timer + timestep).min(FADE_TIME);
+        }
+
+        if let Some(bg) = &self.background {
+            self.background_rect = self.background_rect + self.background_scroll * timestep;
+            if self.background_rect.right() >= bg.width() || self.background_rect.x() <= 0.0 {
+                self.background_scroll =
+                    self.background_scroll.element_wise_product(Vec2(-1.0, 1.0));
+            }
+
+            if self.background_rect.bottom() >= bg.height() || self.background_rect.y() <= 0.0 {
+                self.background_scroll =
+                    self.background_scroll.element_wise_product(Vec2(1.0, -1.0));
+            }
+        }
 
         // Game start fadeout animation
         if let Some(t) = self.start_timer {
@@ -395,3 +450,5 @@ impl StackableState for WeaponSelection {
         StackableStateResult::Continue
     }
 }
+
+const FADE_TIME: f32 = 3.0;

@@ -125,6 +125,7 @@ impl LevelSelection {
         // Round number
         self.round_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            outline: TextOutline::Outline,
             ..Default::default()
         });
 

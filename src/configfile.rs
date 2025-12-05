@@ -44,7 +44,10 @@ pub struct GameOptions {
 
 impl Default for GameOptions {
     fn default() -> Self {
-        Self { minimap: true, baseregen: true }
+        Self {
+            minimap: true,
+            baseregen: true,
+        }
     }
 }
 
@@ -62,7 +65,10 @@ pub struct UserConfig {
 
 pub static GAME_CONFIG: RwLock<UserConfig> = RwLock::new(UserConfig {
     video: VideoConfig { fullscreen: false },
-    game: GameOptions { minimap: true, baseregen: true },
+    game: GameOptions {
+        minimap: true,
+        baseregen: true,
+    },
     keymap1: None,
     keymap2: None,
     keymap3: None,

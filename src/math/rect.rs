@@ -16,7 +16,7 @@
 
 use core::cmp::{max, min};
 use sdl3_sys::rect::{SDL_FRect, SDL_GetRectIntersectionFloat, SDL_Rect};
-use std::fmt;
+use std::{fmt, ops::Add};
 
 use crate::math::Vec2;
 
@@ -138,6 +138,14 @@ impl RectF {
             && point.0 < self.right()
             && point.1 >= self.y()
             && point.1 < self.bottom()
+    }
+}
+
+impl Add<Vec2> for RectF {
+    type Output = RectF;
+
+    fn add(self, rhs: Vec2) -> Self::Output {
+        RectF::new(self.x() + rhs.0, self.y() + rhs.1, self.w(), self.h())
     }
 }
 

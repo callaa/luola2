@@ -19,7 +19,7 @@ use std::{cell::RefCell, mem::take, rc::Rc};
 
 use crate::{
     game::{GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId, level::LevelInfo},
-    gfx::Renderer,
+    gfx::{Renderer, Texture},
     menu::AnimatedStarfield,
     states::{
         StackableState, StackableStateResult,
@@ -204,11 +204,25 @@ impl StackableState for GameState {
             }
             GameSubState::SelectWeapons => {
                 self.substate = GameSubState::SelectLevel;
+                let level_art = if let Some(lev) = &self.level {
+                    match Texture::from_file(&self.renderer.borrow(), lev.artwork_path()) {
+                        Ok(t) => Some(t),
+                        Err(e) => {
+                            log::error!("Couldn't open level art {:?}: {}", lev.artwork_path(), e);
+                            None
+                        }
+                    }
+                } else {
+                    log::error!("Entered weapon selection state with no level set!");
+                    None
+                };
+
                 StackableStateResult::Push(Box::new(
                     match WeaponSelection::new(
                         self.assets.clone(),
                         &self.players,
                         self.round_winners.len() as i32 + 1,
+                        level_art,
                         self.starfield.clone(),
                         self.renderer.clone(),
                         &self.controllers.borrow(),

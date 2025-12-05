@@ -186,7 +186,11 @@ impl Texture {
         alt_config: Option<&TextureAltConfig>,
         shared_textures: &mut HashMap<String, *mut SDL_Texture>,
     ) -> Result<Texture> {
-        let filename = alt_config.iter().flat_map(|a| &a.filename).next().unwrap_or(&config.filename);
+        let filename = alt_config
+            .iter()
+            .flat_map(|a| &a.filename)
+            .next()
+            .unwrap_or(&config.filename);
 
         let mut tex = if shared_textures.contains_key(filename) {
             let tex = Self::from_texture(shared_textures[filename]);
@@ -284,6 +288,7 @@ impl Texture {
 
         unsafe {
             SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+            SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_NEAREST);
         }
 
         Ok(Texture {

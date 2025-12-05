@@ -501,7 +501,8 @@ impl<'a> LevelEditor<'a> {
                     break;
                 }
                 if !terrain::is_solid(self.level.tile(r.tile.0, r.tile.1).terrain[r.offset])
-                    && ((terrain::is_basesupport(r.terrain) && fastrand::f32() < 0.7) || fastrand::f32() < 0.3)
+                    && ((terrain::is_basesupport(r.terrain) && fastrand::f32() < 0.7)
+                        || fastrand::f32() < 0.3)
                 {
                     changes.push(r.clone());
                 }

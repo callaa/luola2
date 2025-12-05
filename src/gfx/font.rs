@@ -223,17 +223,29 @@ impl Text {
         self.height
     }
 
-    pub fn with_wrapwidth(self, width: i32) -> Self {
-        unsafe {
-            TTF_SetTextWrapWidth(self.text, width);
-        }
+    pub fn with_wrapwidth(mut self, width: i32) -> Self {
+        self.set_wrapwidth(width);
         self
     }
 
-    pub fn set_wrapwidth(&mut self, width: i32) {
+    pub fn set_wrapwidth(&mut self, wrap_width: i32) {
+        let mut width: c_int = 0;
+        let mut height: c_int = 0;
+
         unsafe {
-            TTF_SetTextWrapWidth(self.text, width);
+            TTF_SetTextWrapWidth(self.text, wrap_width);
+            if !self.outline.is_null() {
+                TTF_SetTextWrapWidth(self.outline, wrap_width);
+            }
+            TTF_GetTextSize(
+                if self.outline.is_null() { self.text } else { self.outline },
+                &mut width,
+                &mut height,
+            );
         }
+
+        self.width = width as f32;
+        self.height = height as f32;
     }
 
     pub fn with_color(mut self, color: Color) -> Self {
