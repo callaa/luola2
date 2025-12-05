@@ -147,7 +147,7 @@ impl Pilot {
         if !self.aim_mode
             && let Some(at) = self.auto_target
         {
-            (at - self.pos() + Vec2(0.0, -16.0)).normalized() * mag
+            (at - self.pos() - Vec2(0.0, -16.0)).normalized() * mag
         } else {
             Vec2::for_angle(self.aim_angle, mag).element_wise_product(Vec2(self.facing as f32, 1.0))
         }
@@ -167,40 +167,46 @@ impl Pilot {
     }
 
     // Take a step to the right or left
-    fn walk(pos: Vec2, level: &Level, dir: f32) -> Vec2 {
+    fn walk(pos: Vec2, level: &Level, dir: f32) -> Option<Vec2> {
         let new_x = pos.0 + (dir * LEVEL_SCALE);
 
         const MAX_SLOPE: i32 = 5;
 
+        // Downhill
         for i in 0..MAX_SLOPE {
-            // uphill
             let new_pos = Vec2(new_x, pos.1 + i as f32 * LEVEL_SCALE);
             let ter_at = level.terrain_at(new_pos);
             if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
                 let above = new_pos - Vec2(0.0, LEVEL_SCALE);
                 if terrain::can_walk_through(level.terrain_at(above)) {
-                    return above;
+                    return Some(above);
+                } else {
+                    break;
                 }
             }
+        }
 
-            // downhill
+        // Uphill
+        for i in 1..MAX_SLOPE {
             let new_pos = Vec2(new_x, pos.1 - i as f32 * LEVEL_SCALE);
             let ter_at = level.terrain_at(new_pos);
             if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
                 let above = new_pos - Vec2(0.0, LEVEL_SCALE);
+
                 if terrain::can_walk_through(level.terrain_at(above)) {
-                    return above;
+                    return Some(above);
                 }
             }
         }
 
+        // Walk off an edge
         let new_pos = Vec2(new_x, pos.1);
         if terrain::can_walk_through(level.terrain_at(new_pos)) {
-            new_pos
+            Some(new_pos)
         } else {
-            pos
+            None
         }
     }
 
@@ -239,9 +245,11 @@ impl Pilot {
                 if matches!(self.mode, MotionMode::Parachuting) {
                     // Drifting
                     self.phys.add_impulse(Vec2(dir * 2000.0, 1000.0));
-                } else if terrain::is_solid(ter) && terrain::is_space(ter_above) {
+                } else if terrain::is_solid(ter)
+                    && let Some(newpos) = Self::walk(self.pos(), level, dir)
+                {
                     // Walking on solid ground
-                    self.phys.pos = Self::walk(self.pos(), level, dir);
+                    self.phys.pos = newpos;
                     self.mode = MotionMode::Walking;
                 } else if terrain::is_water(ter) {
                     // Swimming underwater
