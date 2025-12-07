@@ -232,14 +232,23 @@ function weapons.freezer(ship)
 			pos = ship.pos,
 			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
 			mass = 300,
-			radius = 5,
+			radius = 16,
 			drag = 0.0025,
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xffb7f5fc,
 			state = {
 				on_impact = Impacts.freezer,
-			}
+				scheduler = Scheduler:new():add(0, function(proj)
+					game.effect("AddTerrainParticle", {
+						pos = proj.pos,
+						vel = proj.vel + Vec2(math.random(-100, 100), math.random(-100, 100)),
+						color = game.snow_color,
+					})
+					return 0
+				end)
+			},
+			timer = 0,
 		})
 	end
 end
