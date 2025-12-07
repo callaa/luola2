@@ -28,7 +28,7 @@ function Rockets.rocket(pos, vel, angle, owner)
 		state = {
 			on_impact = Impacts.rocket,
 			impulse = Vec2_for_angle(angle, 8000.0),
-			scheduler = Scheduler:new():add(0, rocket_thrust),
+			scheduler = rocket_thrust,
 		},
 		timer = 0,
 	})
@@ -36,11 +36,11 @@ end
 
 local function homing_missile_targeting(this)
 	local target = nil
-	local nearest = 0
+	local nearest = 9999999
 
 	game.ships_iter(function(ship)
-		local dist = ship.pos:dist(this.pos)
-		if ship.player ~= this.owner and not ship.cloaked and (target == nil or dist < nearest) then
+		local dist = ship.pos:dist_squared(this.pos)
+		if ship.player ~= this.owner and not ship.cloaked and dist < nearest then
 			target = ship.pos
 			nearest = dist
 		end
@@ -86,7 +86,7 @@ function Rockets.homing_missile(pos, vel, launch_angle, owner)
 		state = {
 			on_impact = Impacts.missile,
 			angle = launch_angle,
-			scheduler = Scheduler:new():add(0, homing_missile_targeting),
+			scheduler = homing_missile_targeting,
 		},
 		timer = 0,
 	})
@@ -104,7 +104,7 @@ function Rockets.mini_homing_missile(pos, vel, launch_angle, owner)
 		state = {
 			on_impact = Impacts.minimissile,
 			angle = launch_angle,
-			scheduler = Scheduler:new():add(0, homing_missile_targeting),
+			scheduler = homing_missile_targeting,
 		},
 		timer = 0,
 	})

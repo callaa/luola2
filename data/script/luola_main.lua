@@ -163,7 +163,7 @@ end
 
 -- Game object timer callback
 function luola_on_object_timer(obj, timestep)
-	return obj.state.scheduler:service(obj, timestep)
+	return obj.state.scheduler(obj, timestep)
 end
 
 -- Global scheduler timer callback

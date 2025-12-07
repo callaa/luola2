@@ -103,10 +103,7 @@ local function ship_touch_greygoo(ship)
 				texture = textures.get("dot3x3"),
 				color = 0x80ffffff,
 				state = {
-					scheduler = Scheduler:new():add(0, function(ctx)
-						ctx:destroy()
-						return 0
-					end),
+					scheduler = Scheduler.destroy_this,
 					on_impact = Impacts.greygoo,
 				},
 				timer = 2/60,

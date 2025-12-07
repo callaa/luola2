@@ -9,6 +9,12 @@ function Scheduler:new()
 	return scheduler
 end
 
+function Scheduler.__call(scheduler, context, timestep)
+	-- So we can call either Scheduler instances or plain functions
+	-- with a uniform interface.
+	return scheduler:service(context, timestep)
+end
+
 function Scheduler:add(timeout, callback)
 	table.insert(self, { t = timeout, c = callback })
 	return self

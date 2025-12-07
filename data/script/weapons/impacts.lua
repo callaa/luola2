@@ -24,22 +24,16 @@ end
 -- these are short-lived projectiles that pass through ground and only interact with
 -- combustible terrain to start fires
 function impacts.make_firestarters(count, pos)
-	local tex = textures.get("dot3x3")
-
-	for a = 0, 360, (360 / count) do
-		game.effect("AddBullet", {
-			pos = pos + Vec2_for_angle(a, 3.0),
-			vel = Vec2_for_angle(a, 1000.0),
-			terrain_collision = "passthrough",
-			color = 0,
-			texture = tex,
-			state = {
-				scheduler = Scheduler:new():add(0.3, Scheduler.destroy_this),
-				on_impact = impacts.firestarter,
-			},
-			timer = 0.3,
-		})
-	end
+	impacts.make_shrapnell(count, pos, {
+		terrain_collision = "passthrough",
+		color = 0,
+		texture = textures.get("dot3x3"),
+		state = {
+			scheduler = Scheduler.destroy_this,
+			on_impact = impacts.firestarter,
+		},
+		timer = 0.3,
+	})
 end
 
 function impacts.firestarter(this, terrain, obj)

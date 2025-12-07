@@ -239,14 +239,14 @@ function weapons.freezer(ship)
 			color = 0xffb7f5fc,
 			state = {
 				on_impact = Impacts.freezer,
-				scheduler = Scheduler:new():add(0, function(proj)
+				scheduler = function(proj)
 					game.effect("AddTerrainParticle", {
 						pos = proj.pos,
 						vel = proj.vel + Vec2(math.random(-100, 100), math.random(-100, 100)),
 						color = game.snow_color,
 					})
 					return 0
-				end)
+				end
 			},
 			timer = 0,
 		})
@@ -283,10 +283,7 @@ function weapons.diggerbeam(ship)
 	if ship:consume_ammo(0.5, 0.1) then
 		local state = {
 			on_impact = Impacts.diggerbeam,
-			scheduler = Scheduler:new():add(0, function(obj)
-				obj:destroy()
-				return 0
-			end),
+			scheduler = Scheduler.destroy_this,
 		}
 		local tex = textures.get("dot3x3")
 		for a = -30, 30, 3 do
