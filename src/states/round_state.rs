@@ -159,14 +159,15 @@ impl StackableState for GameRoundState {
 
         if let Some(f) = filler {
             let fillertex = renderer.texture_store().get_texture(self.filler_logo);
-            if fillertex.width() > f.w() || fillertex.height() > f.h() {
+            let (w, h) = if fillertex.width() > f.w() || fillertex.height() > f.h() {
                 let scale = (f.w() / fillertex.width()).min(f.h() / fillertex.height());
-                let w = fillertex.width() * scale;
-                let h = fillertex.height() * scale;
+                (fillertex.width() * scale, fillertex.height() * scale)
+            } else {
+                (fillertex.width(), fillertex.height())
+            };
 
-                self.filler_logo_rect =
-                    RectF::new(f.x() + (f.w() - w) / 2.0, f.y() + (f.h() - h) / 2.0, w, h);
-            }
+            self.filler_logo_rect =
+                RectF::new(f.x() + (f.w() - w) / 2.0, f.y() + (f.h() - h) / 2.0, w, h);
         }
 
         self.world
