@@ -13,8 +13,10 @@ Features:
 
  * Splitscreen play for 2+ players
  * Configurable key bindings for 4 players
+ * Gamepad support
+ * Pilot ejection for platformer mode!
  * Lua scripting, including per-level custom scripts
- * 5 special weapons to choose from
+ * 20 special weapons to choose from
  * Destructible terrain
  * 100% artisanal code and art: no gen-AI used!
 
@@ -24,16 +26,10 @@ The "finished" 1.0 version will have all the good features from Luola, as well a
 
 Planned features:
 
- * Gamepad support
- * More special weapons (including gravity weapons, terrain modifiers, more mine types, etc.)
  * Multiple selectable ship types
- * Pilot ejection
  * Sound effects & music (pending release of SDL Mixer 3)
  * Special playmodes such as timed battle with sudden death
- * Neutral and hostile critters: birds, fish, tanks and drones
  * Neutral and hostile stationary objects: jump gates and turrets
- * Special terrain modification effects such as: burning, freezing, dissolving, expanding foam
- * An official level set (aside from the engine demo leves)
 
 ## Instructions
 
@@ -83,4 +79,4 @@ The game will look for the `data` directory in the following places:
 
  * Same directory as the executable
  * Location explicitly specified with the `--data <path>` argument (TODO)
- * Linux: XDG data directory (`~/.local/share/io.github.callaa.luola2/luola2/`) (TODO)
+ * Linux: XDG data directory (`~/.local/share/io.github.callaa.luola2/luola2/`)
