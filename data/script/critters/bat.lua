@@ -34,18 +34,8 @@ function Bat._timer_decide_target(critter)
 
 	if critter.state.aggro > 0 then
 		critter.state.aggro = critter.state.aggro - 1
-		local nearest_enemy_pos = nil
-		local nearest_enemy_dist2 = 90000
-		-- Bats have sonar and can find even cloaked ships
-		game.ships_iter(function(ship)
-			local dist2 = ship.pos:dist_squared(critter.pos)
-			if dist2 < nearest_enemy_dist2 then
-				nearest_enemy_pos = ship.pos
-				nearest_enemy_dist2 = dist2
-			end
-		end)
-
-		if nearest_enemy_pos ~= nil then
+		local nearest_enemy_pos = game.ships_nearest_pos(critter.pos, 300, 0)
+		if nearest_enemy_pos then
 			critter.state.target = nearest_enemy_pos
 			return 0.3
 		end

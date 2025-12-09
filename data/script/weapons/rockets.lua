@@ -35,18 +35,9 @@ function Rockets.rocket(pos, vel, angle, owner)
 end
 
 local function homing_missile_targeting(this)
-	local target = nil
-	local nearest = 9999999
+	local target = game.ships_nearest_pos(this.pos, 3000, this.owner)
 
-	game.ships_iter(function(ship)
-		local dist = ship.pos:dist_squared(this.pos)
-		if ship.player ~= this.owner and not ship.cloaked and dist < nearest then
-			target = ship.pos
-			nearest = dist
-		end
-	end)
-
-	if target ~= nil then
+	if target then
 		local angle = -(target - this.pos):angle()
 		local my_angle = -this.vel:angle()
 		local boost = 10000

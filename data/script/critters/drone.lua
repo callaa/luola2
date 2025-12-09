@@ -4,8 +4,8 @@ local UniqID = require("utils.uniqid")
 
 local Drone = {}
 
-local PURSUE_DIST2 = 600 * 600
-local FIRING_DIST2 = 400 * 400
+local PURSUE_DIST = 600
+local FIRING_DIST = 400
 
 function Drone._timer_fly(critter)
 	local delta = critter.state.target - critter.pos
@@ -16,24 +16,13 @@ function Drone._timer_fly(critter)
 end
 
 function Drone._timer_targeting(critter)
-	local nearest_enemy_pos = nil
-	local nearest_enemy_dist2 = PURSUE_DIST2
+	local nearest_enemy_pos = game.ships_nearest_pos(critter.pos, PURSUE_DIST, critter.owner)
 
-	game.ships_iter(function(ship)
-		if ship.player ~= critter.owner and not ship.cloaked then
-			local dist2 = ship.pos:dist_squared(critter.pos)
-			if dist2 < nearest_enemy_dist2 then
-				nearest_enemy_pos = ship.pos
-				nearest_enemy_dist2 = dist2
-			end
-		end
-	end)
-
-	if nearest_enemy_pos ~= nil then
+	if nearest_enemy_pos then
 		-- Pursue nearby enemies and shoot if they're close enough
 		critter.state.target = nearest_enemy_pos
 
-		if nearest_enemy_dist2 < FIRING_DIST2 then
+		if nearest_enemy_pos:dist_squared(critter.pos) < (FIRING_DIST * FIRING_DIST) then
 			critter.state.ammo = 3
 			Scheduler.add_to_object(critter, 0, Drone._timer_shoot)
 		end
@@ -54,19 +43,9 @@ function Drone._timer_targeting(critter)
 end
 
 function Drone._timer_shoot(critter)
-	local nearest_enemy_pos = nil
-	local nearest_enemy_dist2 = FIRING_DIST2 -- firing distance
-	game.ships_iter(function(ship)
-		if ship.player ~= critter.owner then
-			local dist2 = ship.pos:dist_squared(critter.pos)
-			if dist2 < nearest_enemy_dist2 then
-				nearest_enemy_pos = ship.pos
-				nearest_enemy_dist2 = dist2
-			end
-		end
-	end)
+	local nearest_enemy_pos = game.ships_nearest_pos(critter.pos, FIRING_DIST, critter.owner)
 
-	if nearest_enemy_pos ~= nil then
+	if nearest_enemy_pos then
 		local firing_vector = (nearest_enemy_pos - critter.pos):normalized()
 		game.effect("AddBullet", {
 			pos = critter.pos + firing_vector * 10,
