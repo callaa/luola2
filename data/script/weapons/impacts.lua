@@ -255,4 +255,19 @@ function impacts.nitroglycerin(this, terrain, obj)
 	})
 end
 
+function impacts.toxin(this, terrain, obj)
+	if hit_object(this, obj, 2) then
+		return
+	end
+
+	this:destroy()
+
+	if Level.mask_solid(terrain) ~= 0 and not Level.is_indestructible(terrain) and not Level.is_base(terrain) then
+		game.effect("AddDynamicTerrain", {
+			pos = this.pos,
+			type = "Toxin",
+		})
+	end
+end
+
 return impacts

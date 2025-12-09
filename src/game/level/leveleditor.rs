@@ -230,7 +230,13 @@ impl<'a> LevelEditor<'a> {
                         .blend(Color::from_argb_u32(self.water_color).with_alpha(0.5))
                         .as_argb_u32();
                 } else {
-                    tile.artwork[offset] = color;
+                    if color & 0xff000000 != 0xff000000 {
+                        tile.artwork[offset] = Color::from_argb_u32(tile.artwork[offset])
+                            .blend(Color::from_argb_u32(color))
+                            .as_argb_u32();
+                    } else {
+                        tile.artwork[offset] = color;
+                    }
                 }
                 tile.terrain[offset] =
                     (tile.terrain[offset] & !TER_MASK_SOLID) | TER_BIT_DESTRUCTIBLE | solid;
@@ -468,6 +474,25 @@ impl<'a> LevelEditor<'a> {
                                         p,
                                         DynamicTerrainCell::Freezer { limit: limit - 3 },
                                     );
+                                }
+                            }
+                        });
+                    }
+                }
+                DynamicTerrainCell::Toxin { limit } => {
+                    self.replace_point_lc(pos, TER_TYPE_DAMAGE, 0x60ff2b80);
+                    if limit > 0 {
+                        Self::neighbors(&NEIGHBORS4, pos).for_each(|p| {
+                            let ter_at_p: u8 = self.level.terrain_at_lc(p);
+                            if terrain::is_destructible(ter_at_p)
+                                && !terrain::is_damaging(ter_at_p)
+                                && !terrain::is_effective_base(ter_at_p)
+                            {
+                                let neighboring_space = Self::neighbors(&NEIGHBORS_ROUNDISH, p)
+                                    .any(|n| terrain::is_space(self.level.terrain_at_lc(n)));
+                                if neighboring_space {
+                                    new_cells
+                                        .insert(p, DynamicTerrainCell::Toxin { limit: limit - 1 });
                                 }
                             }
                         });

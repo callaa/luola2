@@ -66,6 +66,11 @@ function Tank._fire(critter, target_pos)
 end
 
 function Tank.on_bullet_hit(critter, bullet)
+	if bullet.state and bullet.state.is_toxin then
+		-- tanks are not affected by toxins
+		return true
+	end
+
 	critter:destroy()
 end
 

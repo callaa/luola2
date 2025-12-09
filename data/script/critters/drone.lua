@@ -98,6 +98,11 @@ function Drone._timer_shoot(critter)
 end
 
 function Drone.on_bullet_hit(critter, bullet)
+	if bullet.state and bullet.state.is_toxin then
+		-- drones are not affected by toxins
+		return true
+	end
+
 	critter:destroy()
 end
 

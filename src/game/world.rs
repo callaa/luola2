@@ -672,12 +672,10 @@ impl World {
 
             let mut fobjs_work = self.fixedobjects.borrow_mut();
             for fobj in fobjs_work.range_slice_mut(left, right) {
-                if hs.do_hit_object(self.scripting.lua(), fobj)
-                {
+                if hs.do_hit_object(self.scripting.lua(), fobj) {
                     nearest_object = Nearest::FixedObj(fobj);
                 }
             }
-
 
             match nearest_object {
                 Nearest::None => {}

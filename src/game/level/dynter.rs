@@ -49,6 +49,11 @@ pub enum DynamicTerrainCell {
         counter: i32,
         cinder: bool,
     },
+
+    // Toxic material that absorbs into terrain surface
+    Toxin {
+        limit: i32,
+    },
 }
 
 impl DynamicTerrainCell {
@@ -88,6 +93,9 @@ impl DynamicTerrainCell {
             b"Fire" => Ok(DynamicTerrainCell::Fire {
                 counter: table.get::<Option<i32>>("counter")?.unwrap_or(60),
                 cinder: false,
+            }),
+            b"Toxin" => Ok(DynamicTerrainCell::Toxin {
+                limit: table.get::<Option<i32>>("limit")?.unwrap_or(5),
             }),
             t => Err(mlua::Error::FromLuaConversionError {
                 from: "table",

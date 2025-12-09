@@ -278,5 +278,10 @@ luola_secondary_weapons = {
 		title = "Sonic chisel",
 		fire_func = sweapons.diggerbeam,
 		description = "Emits an ultrasonic beam that breaks down rock and loosens dirt material. Primarily a digging tool; not very effective against modern armor.",
-	}
+	},
+	chemtrail = {
+		title = "Chemtrail dispenser",
+		fire_func = sweapons.chemtrail,
+		description = "Releases a toxic mist behind the ship.",
+	},
 }

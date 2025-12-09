@@ -22,6 +22,11 @@ local function deathray_turret_target(turret)
 end
 
 local function turret_hit_bullet(turret, bullet)
+	if bullet.state and bullet.state.is_toxin then
+		-- toxins do not affect mechanical turrets
+		return true
+	end
+
 	turret:destroy()
 	game.effect("AddParticle", {
 		pos = turret.pos,

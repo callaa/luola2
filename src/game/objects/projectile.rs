@@ -52,6 +52,8 @@ pub struct Projectile {
     color: Color,
     owner: i32,
     destroyed: bool,
+    hit_water: bool,
+    wind: bool,
     state: Option<Table>,
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -96,6 +98,8 @@ impl mlua::FromLua for Projectile {
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
                 destroyed: false,
+                hit_water: !table.get::<Option<bool>>("waterproof")?.unwrap_or(true),
+                wind: table.get::<Option<bool>>("wind")?.unwrap_or(false),
                 state: table.get("state")?,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -191,9 +195,15 @@ impl Projectile {
     }
 
     pub fn step_mut(&mut self, level: &Level, lua: &mlua::Lua, timestep: f32) {
+        if self.wind {
+            let jitter = (-0.5 + fastrand::f32()) * 0.5;
+            self.phys
+                .add_impulse(Vec2(level.windspeed() / 10.0 + jitter, 0.0));
+        }
+
         let (_, ter) = self.phys.step(level, timestep);
 
-        if terrain::is_solid(ter) {
+        if terrain::is_solid(ter) || (self.hit_water && terrain::is_water(ter)) {
             self.impact::<Self>(ter, None, lua);
         }
 

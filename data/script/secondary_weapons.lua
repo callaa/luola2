@@ -300,4 +300,36 @@ function weapons.diggerbeam(ship)
 	end
 end
 
+local function chemtrail_activate(p)
+	p:disown()
+	p.color = 0x66fc2292
+end
+
+function weapons.chemtrail(ship)
+	if ship:consume_ammo(0.5, 0.05) then
+		for i = 0, 5 do
+			game.effect("AddBullet", {
+				pos = ship.pos,
+				vel = ship.vel * 0.5 + Vec2_for_angle(-ship.angle + 180 + math.random(-10, 10), 500),
+				mass = 0.1,
+				radius = 5,
+				drag = 0.7,
+				owner = ship.player,
+				texture = textures.get("dot8x8"),
+				color = 0x33fc2292,
+				waterproof = false,
+				wind = true,
+				state = {
+					is_toxin = true,
+					on_impact = Impacts.toxin,
+					scheduler = Scheduler:new()
+						:add(0.5, chemtrail_activate)
+						:add(17, Scheduler.destroy_this),
+				},
+				timer = 0.5,
+			})
+		end
+	end
+end
+
 return weapons

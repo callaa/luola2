@@ -9,8 +9,10 @@ local Level = {
 	TER_TYPE_HIGH_EXPLOSIVE = 5,
 	TER_TYPE_ICE = 6,
 	TER_TYPE_BASE = 7,
-	TER_TER_TYPE_WALKWAY = 8,
-	TER_TYPE_GREYGOO = 9,
+	TER_TYPE_BASE_NOREGEN = 8,
+	TER_TER_TYPE_WALKWAY = 10,
+	TER_TYPE_GREYGOO = 11,
+	TER_TYPE_DAMAGE = 12,
 }
 
 function Level.mask_solid(ter)
@@ -21,6 +23,10 @@ function Level.is_water(ter)
 	return ter & 0xbf == 0x80
 end
 
+function Level.is_indestructible(ter)
+	return (ter & 0x40) == 0
+end
+
 function Level.is_burnable(ter)
 	local solid = Level.mask_solid(ter)
 	return solid == Level.TER_TYPE_BURNABLE or solid == Level.TER_TYPE_CINDER
@@ -29,6 +35,11 @@ end
 function Level.is_explosive(ter)
 	local solid = Level.mask_solid(ter)
 	return solid == Level.TER_TYPE_EXPLOSIVE or solid == Level.TER_TYPE_HIGH_EXPLOSIVE
+end
+
+function Level.is_base(ter)
+	local solid = Level.mask_solid(ter)
+	return solid == Level.TER_TYPE_BASE or solid == Level.TER_TYPE_BASE_NOREGEN
 end
 
 -- Convert a list of coordinates from level to world coordinates
