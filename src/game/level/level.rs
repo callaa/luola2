@@ -31,7 +31,6 @@ use crate::{
 };
 
 use anyhow::{Result, anyhow};
-use either::Either;
 use fastrand;
 use log::error;
 use mlua;
@@ -119,6 +118,13 @@ pub struct Level {
     pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
     pub snow_color: u32,  // pixel value used when creating snow
+}
+
+pub enum TerrainLineHit {
+    /// Hit solid terrain at the given coordinates
+    Hit(Terrain, Vec2),
+    /// Did not hit solid terrain. (Non-solid) terrain type at the end of the line
+    Miss(Terrain),
 }
 
 impl mlua::FromLua for Forcefield {
@@ -381,24 +387,18 @@ impl Level {
      * Returns either the first point in which solid terrain was found,
      * or just the terrain type at the end if it was non-solid.
      */
-    pub fn terrain_line(&self, line: LineF) -> Either<(terrain::Terrain, Vec2), terrain::Terrain> {
+    pub fn terrain_line(&self, line: LineF) -> TerrainLineHit {
         if line.0.0 < 0.0 || line.0.1 < 0.0 || line.0.0 >= self.width || line.0.1 >= self.height {
-            return Either::Left((
-                terrain::TER_LEVELBOUND,
-                Vec2(
-                    line.1.0.clamp(0.0, self.width - 1.0),
-                    line.1.1.clamp(0.0, self.height - 1.0),
-                ),
-            ));
+            return TerrainLineHit::Hit(terrain::TER_LEVELBOUND, Vec2(line.0.0, line.0.1));
         }
 
-        let delta = (line.1 - line.0) / LEVEL_SCALE;
-        if delta.magnitude_squared() <= 1.0 {
+        // Optimization: if line length is smaller than one pixel, just check that pixel
+        if (line.1 - line.0).magnitude_squared() <= LEVEL_SCALE * LEVEL_SCALE {
             let t = self.terrain_at(line.1);
             return if terrain::is_solid(t) {
-                Either::Left((t, line.1))
+                TerrainLineHit::Hit(t, line.1)
             } else {
-                Either::Right(t)
+                TerrainLineHit::Miss(t)
             };
         }
 
@@ -427,13 +427,14 @@ impl Level {
                     last_non_solid = TER_BIT_WATER;
                 } else {
                     match tile.terrain_line(isect.offset(-tile_rect.x(), -tile_rect.y())) {
-                        Either::Left((t, x, y)) => {
-                            return Either::Left((
+                        TerrainLineHit::Hit(t, pos) => {
+                            return TerrainLineHit::Hit(
                                 t,
-                                to_level_scale((x + tile_rect.x(), y + tile_rect.y())),
-                            ));
+                                (pos + Vec2(tile_rect.x() as f32, tile_rect.y() as f32))
+                                    * LEVEL_SCALE,
+                            );
                         }
-                        Either::Right(t) => {
+                        TerrainLineHit::Miss(t) => {
                             last_non_solid = t;
                         }
                     }
@@ -464,16 +465,15 @@ impl Level {
         }
 
         if line.1.0 < 0.0 || line.1.1 < 0.0 || line.1.0 >= self.width || line.1.1 >= self.height {
-            return Either::Left((
+            return TerrainLineHit::Hit(
                 terrain::TER_LEVELBOUND,
-                Vec2(
-                    line.1.0.clamp(0.0, self.width - 1.0),
-                    line.1.1.clamp(0.0, self.height - 1.0),
-                ),
-            ));
+                line.intersected(&RectF::new(0.0, 0.0, self.width, self.height))
+                    .unwrap()
+                    .1,
+            );
         }
 
-        Either::Right(last_non_solid)
+        TerrainLineHit::Miss(last_non_solid)
     }
 
     /// Remove the force field with the given ID
@@ -712,7 +712,8 @@ impl TerrainTile {
         };
     }
 
-    fn terrain_line(&self, line: Line) -> Either<(terrain::Terrain, i32, i32), terrain::Terrain> {
+    // Note: returns tile coordinates
+    fn terrain_line(&self, line: Line) -> TerrainLineHit {
         debug_assert!(line.x1 >= 0 && line.x1 < TILE_SIZE);
         debug_assert!(line.x2 >= 0 && line.x2 < TILE_SIZE);
         debug_assert!(line.y1 >= 0 && line.y1 < TILE_SIZE);
@@ -730,7 +731,7 @@ impl TerrainTile {
         loop {
             let ter = self.terrain[(y * TILE_SIZE + x) as usize];
             if terrain::is_solid(ter) {
-                return Either::Left((ter, x, y));
+                return TerrainLineHit::Hit(ter, Vec2(x as f32, y as f32));
             }
             let e2 = error * 2;
             if e2 >= dy {
@@ -749,6 +750,6 @@ impl TerrainTile {
             }
         }
 
-        Either::Right(self.terrain[(line.y2 * TILE_SIZE + line.x2) as usize])
+        TerrainLineHit::Miss(self.terrain[(line.y2 * TILE_SIZE + line.x2) as usize])
     }
 }

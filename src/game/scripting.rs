@@ -20,13 +20,11 @@ use std::{cell::RefCell, path::Path, rc::Rc};
 
 use anyhow::{Result, anyhow};
 use log::error;
-use mlua::{
-    Either, FromLua, Function, Lua, Result as LuaResult, String as LuaString, Table, Value,
-};
+use mlua::{FromLua, Function, Lua, Result as LuaResult, String as LuaString, Table, Value};
 
 use crate::fs::find_datafile_path;
 use crate::game::hud::HudOverlay;
-use crate::game::level::{DynamicTerrainCell, Forcefield, Level};
+use crate::game::level::{DynamicTerrainCell, Forcefield, Level, TerrainLineHit};
 use crate::game::objects::{
     Critter, FixedObject, GameObject, GameObjectArray, HitscanProjectile, Particle, Pilot,
     Projectile, Ship, TerrainParticle,
@@ -175,8 +173,8 @@ impl ScriptEnvironment {
                 self.lua
                     .create_function(move |_, (start, end): (Vec2, Vec2)| {
                         match level.borrow().terrain_line(LineF(start, end)) {
-                            Either::Left((t, pos)) => Ok((pos, t, true)),
-                            Either::Right(t) => Ok((end, t, false)),
+                            TerrainLineHit::Hit(t, pos) => Ok((pos, t, true)),
+                            TerrainLineHit::Miss(t) => Ok((end, t, false)),
                         }
                     })?,
             )?;
@@ -187,20 +185,40 @@ impl ScriptEnvironment {
         // Iterate through a read-only list of ships
         // function ships_iter(callback)
         // Callback can return false to stop iteration
-        api.set(
-            "ships_iter",
-            self.lua.create_function(move |lua, callback: Function| {
-                let ships = ship_list.borrow();
-                lua.scope(|scope| {
-                    for ship in ships.iter() {
-                        let res = callback.call::<Option<bool>>(scope.create_userdata_ref(ship))?;
-                        if let Some(false) = res {
-                            break;
+        {
+            let ship_list = ship_list.clone();
+            api.set(
+                "ships_iter",
+                self.lua.create_function(move |lua, callback: Function| {
+                    let ships = ship_list.borrow();
+                    lua.scope(|scope| {
+                        for ship in ships.iter() {
+                            let res =
+                                callback.call::<Option<bool>>(scope.create_userdata_ref(ship))?;
+                            if let Some(false) = res {
+                                break;
+                            }
                         }
-                    }
-                    Ok(())
-                })
-            })?,
+                        Ok(())
+                    })
+                })?,
+            )?;
+        }
+
+        // Get the position of the nearest ship
+        // This is used by target seeking scripts.
+        // Note: returns only non-cloaked, non-wrecked ships!
+        api.set(
+            "ships_nearest_pos",
+            self.lua.create_function(
+                move |_, (pos, range, other_than): (Vec2, f32, PlayerId)| {
+                    let ships = ship_list.borrow();
+                    let nearest = ships.find_nearest(pos, range, |s| {
+                        s.player_id() != other_than && !s.is_cloaked() && !s.is_wrecked()
+                    });
+                    Ok(nearest.map(|s| s.pos()))
+                },
+            )?,
         )?;
 
         // Iterate through a read-only list of pilots

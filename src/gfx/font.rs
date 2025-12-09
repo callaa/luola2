@@ -238,7 +238,11 @@ impl Text {
                 TTF_SetTextWrapWidth(self.outline, wrap_width);
             }
             TTF_GetTextSize(
-                if self.outline.is_null() { self.text } else { self.outline },
+                if self.outline.is_null() {
+                    self.text
+                } else {
+                    self.outline
+                },
                 &mut width,
                 &mut height,
             );

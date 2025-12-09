@@ -117,6 +117,10 @@ local function ship_touch_greygoo(ship)
 	end
 end
 
+local function ship_bullet_hit(ship, bullet, damage)
+	ship:damage(damage)
+end
+
 local ships = {
 	vwing = {
 		title = "V-Wing",
@@ -135,6 +139,7 @@ local ships = {
 				on_thrust = ship_thrust_effect,
 				on_touch_greygoo = ship_touch_greygoo,
 				on_eject = on_ship_eject,
+				on_bullet_hit = ship_bullet_hit,
 			}
 		},
 	},

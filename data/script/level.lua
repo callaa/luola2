@@ -21,6 +21,16 @@ function Level.is_water(ter)
 	return ter & 0xbf == 0x80
 end
 
+function Level.is_burnable(ter)
+	local solid = Level.mask_solid(ter)
+	return solid == Level.TER_TYPE_BURNABLE or solid == Level.TER_TYPE_CINDER
+end
+
+function Level.is_explosive(ter)
+	local solid = Level.mask_solid(ter)
+	return solid == Level.TER_TYPE_EXPLOSIVE or solid == Level.TER_TYPE_HIGH_EXPLOSIVE
+end
+
 -- Convert a list of coordinates from level to world coordinates
 function Level.to_world_coordinates(coordinates)
 	local w = {}

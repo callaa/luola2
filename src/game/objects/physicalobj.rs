@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::game::{level::Level, level::terrain};
+use crate::game::{level::Level, level::TerrainLineHit, level::terrain};
 use crate::math::{LineF, Vec2};
-use either::Either;
 
 pub const SCALE_FACTOR: f32 = 50.0;
 
@@ -114,12 +113,12 @@ impl PhysicalObject {
                 match self.terrain_collision_mode {
                     TerrainCollisionMode::Exact => {
                         match level.terrain_line(LineF(self.pos, new_pos)) {
-                            Either::Left((t, exact_pos)) => {
+                            TerrainLineHit::Hit(t, exact_pos) => {
                                 self.vel = Vec2::ZERO;
                                 self.pos = exact_pos;
                                 t
                             }
-                            Either::Right(t) => {
+                            TerrainLineHit::Miss(t) => {
                                 self.pos = new_pos;
                                 t
                             }

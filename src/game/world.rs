@@ -224,11 +224,15 @@ impl World {
     {
         let mut level = self.level.borrow_mut();
         let mut level_editor = LevelEditor::new(&mut level);
+        let mut sort_particles = false;
         for fx in effects {
             match fx {
                 WorldEffect::AddBullet(b) => self.bullets.push(b),
                 WorldEffect::AddMine(b) => self.mines.borrow_mut().push(b),
-                WorldEffect::AddParticle(p) => self.particles.push(p),
+                WorldEffect::AddParticle(p) => {
+                    self.particles.push(p);
+                    sort_particles = true;
+                }
                 WorldEffect::AddTerrainParticle(p) => self.terrainparticles.push(p),
                 WorldEffect::AddDynamicTerrain(pos, t) => level_editor.add_dynterrain(pos, t),
                 WorldEffect::AddFixedObject(o) => {
@@ -281,6 +285,12 @@ impl World {
             }
         }
         level_editor.step_dynterrain();
+
+        if sort_particles {
+            // Hitscan weapons (laser) add a large number of short lived particles.
+            // The object array has to be sorted for rendering to work.
+            self.particles.sort();
+        }
     }
 
     pub fn toggle_debugmode(&mut self) {
@@ -543,22 +553,14 @@ impl World {
                     if (critter.owner() == 0 || critter.owner() != bullet.owner())
                         && critter.physics().check_overlap(bullet.physics())
                     {
-                        // Critters may have special processing for bullets
-                        // If bullet_hit returns false, it means the critter's script
-                        // has already performed the special impact routine for the
-                        // bullet (or wants it ignored otherwise.)
-                        if critter.bullet_hit(bullet, self.scripting.lua()) {
-                            let terrain = self.level.borrow().terrain_at(bullet.pos());
-                            bullet.impact(terrain, Some(critter), self.scripting.lua());
-                        }
+                        let terrain = self.level.borrow().terrain_at(bullet.pos());
+                        bullet.impact(terrain, Some(critter), self.scripting.lua());
                     }
                 }
 
                 let mut minework = self.mines.borrow_mut();
                 for mine in minework.collider_slice_mut(critter).iter_mut() {
-                    if critter.physics().check_overlap(mine.physics())
-                        && critter.bullet_hit(mine, self.scripting.lua())
-                    {
+                    if critter.physics().check_overlap(mine.physics()) {
                         let terrain = self.level.borrow().terrain_at(mine.pos());
                         mine.impact(terrain, Some(critter), self.scripting.lua());
                     }
@@ -591,6 +593,29 @@ impl World {
 
                 // TODO ship collisions
             }
+
+            // Fixed objects can also hit other objects
+            {
+                let mut work = self.fixedobjects.borrow_mut();
+                for fobj in work.iter_mut() {
+                    for bullet in self.bullets.collider_slice_mut(fobj).iter_mut() {
+                        if fobj.check_overlap(bullet.physics()) {
+                            let terrain = self.level.borrow().terrain_at(bullet.pos());
+                            bullet.impact(terrain, Some(fobj), self.scripting.lua());
+                        }
+                    }
+
+                    let mut minework = self.mines.borrow_mut();
+                    for mine in minework.collider_slice_mut(fobj).iter_mut() {
+                        if fobj.check_overlap(mine.physics()) {
+                            let terrain = self.level.borrow().terrain_at(mine.pos());
+                            mine.impact(terrain, Some(fobj), self.scripting.lua());
+                        }
+                    }
+
+                    // TODO ship impacts
+                }
+            }
         }
 
         // Hitscans
@@ -606,6 +631,7 @@ impl World {
                 Mine(&'a mut Projectile),
                 Critter(&'a mut Critter),
                 Pilot(&'a mut Pilot),
+                FixedObj(&'a mut FixedObject),
             }
             let mut nearest_object = Nearest::None;
 
@@ -644,6 +670,15 @@ impl World {
                 }
             }
 
+            let mut fobjs_work = self.fixedobjects.borrow_mut();
+            for fobj in fobjs_work.range_slice_mut(left, right) {
+                if hs.do_hit_object(self.scripting.lua(), fobj)
+                {
+                    nearest_object = Nearest::FixedObj(fobj);
+                }
+            }
+
+
             match nearest_object {
                 Nearest::None => {}
                 Nearest::Ship(s) => {
@@ -657,6 +692,9 @@ impl World {
                 }
                 Nearest::Pilot(p) => {
                     hs.on_hit_object(self.scripting.lua(), p);
+                }
+                Nearest::FixedObj(o) => {
+                    hs.on_hit_object(self.scripting.lua(), o);
                 }
             }
 

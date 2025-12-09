@@ -1,6 +1,8 @@
 use crate::{
-    call_state_method, gameobject_timer,
-    gfx::{AnimatedTexture, Color, RenderDest, RenderOptions, Renderer, TextureId},
+    call_state_method,
+    game::objects::PhysicalObject,
+    gameobject_timer,
+    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
     math::Vec2,
 };
 
@@ -16,8 +18,11 @@ pub struct FixedObject {
     radius: f32,
     destroyed: bool,
     texture: Option<AnimatedTexture>,
+    action_texture: Option<AnimatedTexture>,
     color: Color,
     state: Option<mlua::Table>,
+    action: bool,
+    angle: f32,
 
     /// Flag that is set when the object is moved via scripting
     moved: bool,
@@ -33,14 +38,20 @@ impl mlua::FromLua for FixedObject {
             let texture = table
                 .get::<Option<TextureId>>("texture")?
                 .map(AnimatedTexture::new);
+            let action_texture = table
+                .get::<Option<TextureId>>("action_texture")?
+                .map(AnimatedTexture::new);
             Ok(FixedObject {
                 id: table.get("id")?,
                 pos: table.get("pos")?,
                 radius: table.get::<Option<f32>>("radius")?.unwrap_or(1.0),
                 texture,
+                action_texture,
+                action: false,
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
+                angle: table.get::<Option<f32>>("angle")?.unwrap_or_default(),
                 destroyed: false,
                 moved: false,
                 state: table.get("state")?,
@@ -66,11 +77,24 @@ impl mlua::UserData for FixedObject {
             Ok(())
         });
 
+        fields.add_field_method_get("angle", |_, this| Ok(this.angle));
+        fields.add_field_method_set("angle", |_, this, a: f32| {
+            this.angle = a;
+            Ok(())
+        });
+
         fields.add_field_method_get("texture", |_, this| {
             Ok(this.texture.as_ref().map(|t| t.id()))
         });
         fields.add_field_method_set("texture", |_, this, t: Option<TextureId>| {
             this.texture = t.map(AnimatedTexture::new);
+            Ok(())
+        });
+        fields.add_field_method_get("action_texture", |_, this| {
+            Ok(this.action_texture.as_ref().map(|t| t.id()))
+        });
+        fields.add_field_method_set("action_texture", |_, this, t: Option<TextureId>| {
+            this.action_texture = t.map(AnimatedTexture::new);
             Ok(())
         });
         fields.add_field_method_get("id", |_, this| Ok(this.id));
@@ -88,6 +112,10 @@ impl mlua::UserData for FixedObject {
             this.destroy(lua);
             Ok(())
         });
+        methods.add_method_mut("action", |_lua, this, _: ()| {
+            this.action = true;
+            Ok(())
+        });
     }
 }
 
@@ -103,8 +131,28 @@ impl FixedObject {
         }
     }
 
+    // Check overlap with a physical object
+    pub fn check_overlap(&self, obj: &PhysicalObject) -> bool {
+        let distv = self.pos - obj.pos;
+        let dd = distv.dot(distv);
+        let r = self.radius + obj.radius;
+
+        dd <= r * r
+    }
+
     pub fn step_mut(&mut self, lua: &mlua::Lua, timestep: f32) -> bool {
-        if let Some(tex) = &mut self.texture {
+        if self.action {
+            let complete = if let Some(tex) = &mut self.action_texture {
+                tex.step(timestep)
+            } else {
+                true
+            };
+
+            if complete {
+                self.action = false;
+                call_state_method!(*self, lua, "on_action_complete");
+            }
+        } else if let Some(tex) = &mut self.texture {
             tex.step(timestep);
         }
 
@@ -117,9 +165,19 @@ impl FixedObject {
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
-        if let Some(tex) = &self.texture {
+        let tex = if self.action {
+            &self.action_texture
+        } else {
+            &self.texture
+        };
+        if let Some(tex) = tex {
             let options = RenderOptions {
                 dest: RenderDest::Centered(self.pos - camera_pos),
+                mode: if tex.id().needs_rotation() {
+                    RenderMode::Rotated(self.angle, false)
+                } else {
+                    RenderMode::Normal
+                },
                 ..Default::default()
             };
             tex.render(renderer, &options);

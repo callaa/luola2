@@ -15,6 +15,7 @@ local Fish = require("critters.fish")
 local Spider = require("critters.spider")
 local Forcefields = require("forcefields")
 local Level = require("level")
+local Turrets = require("turrets")
 
 -- Main entrypoint
 -- This is called when initializing the game for a new round.
@@ -81,6 +82,9 @@ function luola_init_level(settings)
 	end
 	if settings["forcefields"] ~= nil then
 		Forcefields.add_from_config(settings["forcefields"])
+	end
+	if settings["turrets"] then
+		Turrets.add_from_config(settings["turrets"])
 	end
 	if settings["wind"] ~= false then
 		Level.init_random_wind()

@@ -9,8 +9,8 @@ local function bullet_hell_impact(this, terrain, obj)
 		texture = textures.get("boom"),
 	})
 
-	if obj ~= nil and obj.damage ~=nil then
-		obj:damage(0.1)
+	if obj and obj.state and obj.state.on_bullet_hit then
+		obj.state.on_bullet_hit(obj, this, 0.1)
 	end
 end
 

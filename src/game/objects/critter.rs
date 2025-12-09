@@ -5,7 +5,7 @@ use crate::{
     game::{
         PlayerId,
         level::{LEVEL_SCALE, Level, terrain},
-        objects::{GameObject, PhysicalObject, Projectile, Rope, TerrainCollisionMode},
+        objects::{GameObject, PhysicalObject, Rope, TerrainCollisionMode},
     },
     gameobject_timer, get_state_method,
     gfx::{
@@ -334,18 +334,6 @@ impl Critter {
             options.color = Color::player_color(self.owner);
             t.render_alt(renderer, TexAlt::Decal, &options);
         }
-    }
-
-    /// Execute bullet hit callback.
-    /// Returns true if bullet impact callback should be processed as usual too.
-    pub fn bullet_hit(&mut self, bullet: &mut Projectile, lua: &mlua::Lua) -> bool {
-        get_state_method!(self, lua, "on_bullet_hit", (f, scope) => {
-            f.call::<Option<bool>>((
-                scope.create_userdata_ref_mut(self)?,
-                scope.create_userdata_ref_mut(bullet)?,
-            ))
-        })
-        .unwrap_or(true)
     }
 
     /// Execute non-bullet object collision callback.

@@ -97,7 +97,7 @@ function Bat.on_bullet_hit(critter, bullet)
 		bullet:destroy()
 		critter.state.explosive = true
 		critter.state.aggro = 40
-		return false
+		return true
 	end
 
 	if critter.state.aggro <= 0 then

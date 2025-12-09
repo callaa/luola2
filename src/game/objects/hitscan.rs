@@ -1,10 +1,8 @@
-use either::Either;
-
 use crate::{
     call_state_method,
     game::{
         PlayerId,
-        level::{Level, terrain::Terrain},
+        level::{Level, TerrainLineHit, terrain::Terrain},
         objects::GameObject,
     },
     get_state_method,
@@ -38,11 +36,15 @@ pub struct HitscanProjectile {
 
 impl mlua::UserData for HitscanProjectile {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field("is_hitscan", true);
         fields.add_field_method_get("start", |_, this| Ok(this.start));
         fields.add_field_method_get("stop", |_, this| Ok(this.stop));
         fields.add_field_method_get("owner", |_, this| Ok(this.owner));
         fields.add_field_method_get("terrain", |_, this| Ok(this.terrain));
         fields.add_field_method_get("state", |_, this| Ok(this.state.clone()));
+
+        // compatibility with Projectiles
+        fields.add_field_method_get("vel", |_, this| Ok(this.stop - this.start));
     }
 }
 
@@ -95,11 +97,11 @@ impl HitscanProjectile {
     pub fn hit_level(&mut self, level: &Level) {
         if self.hit_terrain {
             match level.terrain_line(LineF(self.start, self.stop)) {
-                Either::Left((t, pos)) => {
+                TerrainLineHit::Hit(t, pos) => {
                     self.stop = pos;
                     self.terrain = t;
                 }
-                Either::Right(t) => self.terrain = t,
+                TerrainLineHit::Miss(t) => self.terrain = t,
             }
         }
     }

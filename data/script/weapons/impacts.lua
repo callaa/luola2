@@ -1,7 +1,7 @@
 -- This file contains code for bullet impact functions.
 local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
-
+local Level = require("level")
 local impacts = {}
 
 -- generic function for explosions
@@ -37,7 +37,7 @@ function impacts.make_firestarters(count, pos)
 end
 
 function impacts.firestarter(this, terrain, obj)
-	if terrain == 0x42 or terrain == 0x43 then
+	if Level.is_burnable(terrain) then
 		this:destroy()
 		game.effect("AddDynamicTerrain", {
 			pos = this.pos,
@@ -46,47 +46,56 @@ function impacts.firestarter(this, terrain, obj)
 	end
 end
 
+-- call an object's (ship, critter, etc.) bullet impact handler
+-- If the impact handler returns true, the bullet's own impact
+-- handling should not be called as the target's handler already
+-- performed a special case action.
+local function hit_object(bullet, obj, damage)
+	if obj and obj.state and obj.state.on_bullet_hit then
+		return obj.state.on_bullet_hit(obj, bullet, damage)
+	end
+end
+
 -- Standard bullet
 function impacts.bullet(this, terrain, obj)
+	if hit_object(this, obj, 3) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBulletHole", this.pos)
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("boom"),
 	})
-
-	if obj and obj.damage then
-		obj:damage(3)
-	end
 end
 
 -- Digger particle. Doesn't damage ships much
 function impacts.diggerbeam(this, terrain, obj)
+	if hit_object(this, obj, 0.3) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", {
 		pos = this.pos,
 		r = 2,
 		dust = 0.5
 	})
-
-	if obj and obj.damage then
-		obj:damage(0.3)
-	end
 end
 
 -- Special weapon grenade
 function impacts.grenade(this, terrain, obj)
+	if hit_object(this, obj, 1) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
-
-	if obj and obj.damage then
-		obj:damage(1)
-	end
-
 	impacts.make_shrapnell(36, this.pos, {
 		color = 0xffff6666,
 		texture = textures.get("pewpew"),
@@ -94,22 +103,21 @@ function impacts.grenade(this, terrain, obj)
 			on_impact = impacts.bullet,
 		},
 	})
-
 	impacts.make_firestarters(8, this.pos)
 end
 
 -- Special weapon Megabomb
 function impacts.megabomb(this, terrain, obj)
+	if hit_object(this, obj, 20) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 16 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
-
-	if obj and obj.damage then
-		obj:damage(20)
-	end
 
 	impacts.make_shrapnell(10, this.pos, {
 		mass = 300,
@@ -125,16 +133,16 @@ end
 
 -- Special weapon Rocket (should be slightly less powerful than a megabomb)
 function impacts.rocket(this, terrain, obj)
+	if hit_object(this, obj, 15) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 12 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
-
-	if obj and obj.damage then
-		obj:damage(15)
-	end
 
 	impacts.make_shrapnell(4, this.pos, {
 		texture = textures.get("pewpew"),
@@ -147,16 +155,16 @@ end
 
 -- Special weapon Homing Missile (should be less powerful than a rocket)
 function impacts.missile(this, terrain, obj)
+	if hit_object(this, obj, 10) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 8 })
 	game.effect("AddParticle", {
 		pos = this.pos,
 		texture = textures.get("bigboom"),
 	})
-
-	if obj and obj.damage then
-		obj:damage(10)
-	end
 
 	impacts.make_shrapnell(20, this.pos, {
 		color = 0xffff6666,
@@ -171,6 +179,10 @@ end
 -- Mini missiles are small (possibly homing) missiles that are typically
 -- launched in great numbers do don't do much damage on their own
 function impacts.minimissile(this, terrain, obj)
+	if hit_object(this, obj, 5) then
+		return
+	end
+
 	this:destroy()
 	game.effect("MakeBigHole", { pos = this.pos, r = 5 })
 	game.effect("AddParticle", {
@@ -178,13 +190,14 @@ function impacts.minimissile(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	if obj and obj.damage then
-		obj:damage(5)
-	end
 	impacts.make_firestarters(3, this.pos)
 end
 
 function impacts.foam_grenade(this, terrain, obj)
+	if hit_object(this, obj, 0) then
+		return
+	end
+
 	this:destroy()
 	game.effect("AddDynamicTerrain", {
 		pos = this.pos,
@@ -193,6 +206,10 @@ function impacts.foam_grenade(this, terrain, obj)
 end
 
 function impacts.greygoo(this, terrain, obj)
+	if hit_object(this, obj, 0) then
+		return
+	end
+
 	this:destroy()
 
 	if obj and obj.state and obj.state.on_touch_greygoo then
@@ -206,6 +223,10 @@ function impacts.greygoo(this, terrain, obj)
 end
 
 function impacts.freezer(this, terrain, obj)
+	if hit_object(this, obj, 0) then
+		return
+	end
+
 	this:destroy()
 
 	if obj and obj.is_ship then
@@ -222,6 +243,10 @@ function impacts.freezer(this, terrain, obj)
 end
 
 function impacts.nitroglycerin(this, terrain, obj)
+	if hit_object(this, obj, 0) then
+		return
+	end
+
 	this:destroy()
 	-- Note: critters have special handling for nitro bullets
 	game.effect("AddDynamicTerrain", {

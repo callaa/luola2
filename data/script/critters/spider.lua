@@ -72,7 +72,7 @@ function Spider.on_bullet_hit(critter, bullet)
 	if bullet.state ~= nil and bullet.state.is_nitro then
 		bullet:destroy()
 		critter.state.explosive = true
-		return false
+		return true
 	end
 
 	if critter.state.explosive then

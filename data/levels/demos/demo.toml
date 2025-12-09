@@ -58,3 +58,8 @@ random-fish = [
 random-spiders = [
 	{ count = 3, area = [320, 470, 128, 40]}
 ]
+
+turrets = [
+  { type = "deathray", pos = [160, 940], range = 600},
+  { type = "gun", pos = [704, 192], range = 400, angle = 90},
+]

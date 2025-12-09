@@ -180,6 +180,28 @@ frames = 11
 duration = 0.5
 flippable = true
 
+[turret_deathray]
+file = "turret-deathray.png"
+subrect = [0, 0, 80, 16]
+width = 16
+height = 16
+frames = 5
+duration = 0.4
+
+[turret_deathray_shoot]
+file = "turret-deathray.png"
+subrect = [80, 0, 80, 16]
+width = 16
+height = 16
+frames = 5
+duration = 0.4
+
+[turret_gun]
+file = "turret-gun.png"
+angles = 24
+width = 48
+height = 48
+
 [shield]
 file = "shield.png"
 blend = "Add"
