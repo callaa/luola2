@@ -27,7 +27,10 @@ use std::{collections::HashMap, fs, path::Path};
  */
 pub struct TextureStore {
     textures: Vec<TextureWithAlts>,
-    name_map: HashMap<String, TextureId>,
+
+    // note: byte array is used as the name key because textures are looked up
+    // most often via Lua scripting and this allows us to avoid making a temporary String instance
+    name_map: HashMap<Vec<u8>, TextureId>,
 }
 
 struct TextureWithAlts {
@@ -139,7 +142,7 @@ impl TextureStore {
         for (name, config) in config {
             let main = store
                 .add_texture(
-                    name,
+                    name.into_bytes(),
                     Texture::from_config(renderer, root, &config.main, None, &mut shared_textures)?,
                 )
                 .expect("duplicates shouldn't be possible here");
@@ -163,9 +166,12 @@ impl TextureStore {
         Ok(store)
     }
 
-    pub fn add_texture(&mut self, name: String, texture: Texture) -> Result<TextureId> {
+    pub fn add_texture(&mut self, name: Vec<u8>, texture: Texture) -> Result<TextureId> {
         if self.name_map.contains_key(&name) {
-            return Err(anyhow!("Texture {} already added", name));
+            return Err(anyhow!(
+                "Texture {} already added",
+                str::from_utf8(&name).unwrap()
+            ));
         }
 
         self.textures.push(TextureWithAlts {
@@ -201,11 +207,11 @@ impl TextureStore {
         Ok(())
     }
 
-    pub fn find_texture(&self, name: &str) -> Result<TextureId> {
+    pub fn find_texture(&self, name: &[u8]) -> Result<TextureId> {
         self.name_map
             .get(name)
-            .cloned()
-            .ok_or_else(|| anyhow!("Texture \"{}\" not found", name))
+            .copied()
+            .ok_or_else(|| anyhow!("Texture \"{}\" not found", str::from_utf8(name).unwrap()))
     }
 
     pub fn get_texture(&self, id: TextureId) -> &Texture {

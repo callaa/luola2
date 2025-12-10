@@ -242,7 +242,7 @@ pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, 
     let tex = renderer.texture_store().get_texture(
         renderer
             .texture_store()
-            .find_texture("minimap_pointer")
+            .find_texture(b"minimap_pointer")
             .expect("minimap_pointer texture should exist"),
     );
     for (color, pointer) in pointers {
@@ -264,13 +264,13 @@ fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32, cooling_down: bool
     let barfill = renderer.texture_store().get_texture(
         renderer
             .texture_store()
-            .find_texture("bar_fill")
+            .find_texture(b"bar_fill")
             .expect("bar_fill texture should exist"),
     );
     let barbg = renderer.texture_store().get_texture(
         renderer
             .texture_store()
-            .find_texture("bar_bg")
+            .find_texture(b"bar_bg")
             .expect("bar_bg texture should exist"),
     );
 
@@ -321,13 +321,13 @@ fn draw_pilot_hud(renderer: &Renderer, jetpack: f32, target: Option<Vec2>) {
     let barfill = renderer.texture_store().get_texture(
         renderer
             .texture_store()
-            .find_texture("bar_fill")
+            .find_texture(b"bar_fill")
             .expect("bar_fill texture should exist"),
     );
     let barbg = renderer.texture_store().get_texture(
         renderer
             .texture_store()
-            .find_texture("bar_bg")
+            .find_texture(b"bar_bg")
             .expect("bar_bg texture should exist"),
     );
 
@@ -355,7 +355,7 @@ fn draw_pilot_hud(renderer: &Renderer, jetpack: f32, target: Option<Vec2>) {
         let tex = renderer.texture_store().get_texture(
             renderer
                 .texture_store()
-                .find_texture("hud_reticle")
+                .find_texture(b"hud_reticle")
                 .expect("hud_reticle texture should exist"),
         );
         tex.render(

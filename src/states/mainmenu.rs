@@ -90,7 +90,7 @@ impl MainMenu {
         renderer: Rc<RefCell<Renderer>>,
     ) -> Result<Self> {
         let r = renderer.borrow();
-        let logo = r.texture_store().find_texture("gamelogo")?;
+        let logo = r.texture_store().find_texture(b"gamelogo")?;
         let logo_h = r.texture_store().get_texture(logo).height() + 32.0;
         let mut main_menu = Menu::new(
             &r,
@@ -180,7 +180,7 @@ impl MainMenu {
 
         main_menu.appear();
 
-        let background = r.texture_store().find_texture("menubackground")?;
+        let background = r.texture_store().find_texture(b"menubackground")?;
         let starfield = AnimatedStarfield::new(200, r.width() as f32, r.height() as f32);
 
         drop(r);

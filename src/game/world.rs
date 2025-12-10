@@ -191,7 +191,7 @@ impl World {
             particles: GameObjectArray::new(),
             fixedobjects,
             noise_texture: AnimatedTexture::new(
-                renderer.borrow().texture_store().find_texture("noise")?,
+                renderer.borrow().texture_store().find_texture(b"noise")?,
             ),
             starfield: if levelinfo.use_starfield() {
                 Some(Starfield::new())

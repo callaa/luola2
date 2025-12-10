@@ -87,7 +87,10 @@ impl GameRoundState {
             .get_function("luola_init_game")?
             .call::<()>(settings)?;
 
-        let filler_logo = renderer.borrow().texture_store().find_texture("gamelogo")?;
+        let filler_logo = renderer
+            .borrow()
+            .texture_store()
+            .find_texture(b"gamelogo")?;
 
         let mut game = Self {
             renderer,

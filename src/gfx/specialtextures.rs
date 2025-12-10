@@ -160,7 +160,7 @@ pub fn make_controller_icon(
 
         let tex = renderer
             .texture_store()
-            .get_texture(renderer.texture_store().find_texture("input_devices")?);
+            .get_texture(renderer.texture_store().find_texture(b"input_devices")?);
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))
@@ -201,7 +201,7 @@ pub fn make_button_icon(
 
         let tex = renderer
             .texture_store()
-            .get_texture(renderer.texture_store().find_texture("gamepad_buttons")?);
+            .get_texture(renderer.texture_store().find_texture(b"gamepad_buttons")?);
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))

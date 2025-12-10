@@ -56,8 +56,8 @@ impl ScriptEnvironment {
         let r1 = renderer.clone();
         texapi.set(
             "get",
-            lua.create_function(move |_, name: String| {
-                Ok(r1.borrow().texture_store().find_texture(&name)?)
+            lua.create_function(move |_, name: LuaString| {
+                Ok(r1.borrow().texture_store().find_texture(&name.as_bytes())?)
             })?,
         )?;
 
