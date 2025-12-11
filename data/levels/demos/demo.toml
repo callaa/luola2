@@ -25,6 +25,12 @@ starfield = false
 # Snow color is used by the snowfall level feature
 snow = 0xffeeeeff
 
+# Block spawning in enclosed areas
+nospawnzones = [
+	{ rect = [128, 192, 64, 192] },
+	{ rect = [960, 192, 128, 192] },
+]
+
 # Mapping of terrain types to palette indices
 # All unmapped colors will be mapped to "ground"
 [terrain-palette]

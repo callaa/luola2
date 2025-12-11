@@ -29,8 +29,7 @@ use anyhow::{Result, anyhow};
 
 use super::terrain::*;
 use crate::{
-    fs::glob_datafiles,
-    gfx::{Renderer, Texture},
+    fs::glob_datafiles, game::level::LEVEL_SCALE, gfx::{Renderer, Texture}, math::RectF
 };
 
 #[derive(Clone)]
@@ -49,6 +48,7 @@ pub struct LevelInfo {
     transparent_color_index: Option<u8>,
     script_settings: toml::Table,
     starfield: bool,
+    nospawnzones: Vec<RectF>,
 }
 
 type TerrainPalette = [u8; 256];
@@ -65,6 +65,9 @@ struct LevelInfoToml {
     #[serde(default)]
     starfield: bool,
 
+    #[serde(default)]
+    nospawnzones: Vec<NoSpawnZoneToml>,
+
     #[serde(rename = "terrain-palette")]
     terrain_palette: toml::Table,
 
@@ -73,6 +76,11 @@ struct LevelInfoToml {
 
     #[serde(rename = "script-settings")]
     script_settings: Option<toml::Table>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+struct NoSpawnZoneToml {
+    rect: (i32, i32, i32, i32)
 }
 
 #[derive(serde::Deserialize, Clone, Debug, Default)]
@@ -107,6 +115,10 @@ impl LevelInfo {
             }
         };
 
+        let nospawnzones = info.nospawnzones.iter().map(|n| {
+            RectF::new(n.rect.0 as f32 * LEVEL_SCALE, n.rect.1 as f32 * LEVEL_SCALE, n.rect.2 as f32 *LEVEL_SCALE, n.rect.3 as f32 * LEVEL_SCALE)
+        }).collect();
+
         Ok(LevelInfo {
             root,
             levelpack: path
@@ -129,6 +141,7 @@ impl LevelInfo {
             script_settings: info.script_settings.unwrap_or_default(),
             starfield: info.starfield,
             colors: info.colors,
+            nospawnzones,
         })
     }
 
@@ -189,6 +202,10 @@ impl LevelInfo {
 
     pub fn use_starfield(&self) -> bool {
         self.starfield
+    }
+
+    pub fn nospawnzones(&self) -> &Vec<RectF> {
+        &self.nospawnzones
     }
 
     // Convert the given pixel values into the internal format using the terrain palette map

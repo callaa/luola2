@@ -114,6 +114,7 @@ pub struct Level {
     tiles_high: i32,  // height in tiles
 
     windspeed: f32, // Wind speed (horizontal)
+    nospawnzones: Vec<RectF>,
 
     pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
@@ -317,6 +318,7 @@ impl Level {
             forcefields: Vec::new(),
             water_color,
             snow_color,
+            nospawnzones: info.nospawnzones().clone(),
         })
     }
 
@@ -602,11 +604,17 @@ impl Level {
             None => RectF::new(0.0, 0.0, self.width, self.height),
         };
 
-        for _ in 0..100 {
+        'retry: for _ in 0..100 {
             let pos = Vec2(
                 in_area.x() + fastrand::f32() * in_area.w(),
                 in_area.y() + fastrand::f32() * in_area.h(),
             );
+
+            for nospawn in &self.nospawnzones {
+                if nospawn.contains(pos) {
+                    continue 'retry;
+                }
+            }
 
             let ter = self.terrain_at(pos);
             if !terrain::is_solid(ter) && (allow_water || !terrain::is_underwater(ter)) {
