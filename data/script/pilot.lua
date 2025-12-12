@@ -36,7 +36,11 @@ local function on_jetpack(pilot, dir)
 	end
 end
 
-local function on_kill(pilot)
+local function on_bullet_hit(pilot, bullet, damage)
+	if damage <= 0 then
+		return
+	end
+
 	Scheduler.add_global(1, check_round_end_condition)
 
 	pilot:destroy()
@@ -62,7 +66,7 @@ function Pilot.create(pos, player, controller)
 			state = {
 				on_shoot = on_shoot,
 				on_jetpack = on_jetpack,
-				on_kill = on_kill,
+				on_bullet_hit = on_bullet_hit,
 			},
 			walk_texture = textures.get("pilot_walk"),
 			swim_texture = textures.get("pilot_swim"),

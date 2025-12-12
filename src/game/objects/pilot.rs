@@ -64,12 +64,6 @@ impl mlua::UserData for Pilot {
             this.phys.add_impulse(v);
             Ok(())
         });
-
-        // Damage method compatible with the one for ships
-        methods.add_method_mut("damage", |lua, this, hp: f32| {
-            this.damage(hp, lua);
-            Ok(())
-        });
     }
 }
 
@@ -128,11 +122,6 @@ impl Pilot {
 
     pub fn controller(&self) -> i32 {
         self.controller
-    }
-
-    pub fn damage(&mut self, _hp: f32, lua: &mlua::Lua) {
-        // Only one HP at the moment
-        call_state_method!(*self, lua, "on_kill");
     }
 
     pub fn destroy(&mut self) {
