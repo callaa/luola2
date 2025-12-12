@@ -19,7 +19,7 @@ function weapons.grenade(ship)
 			radius = 5,
 			drag = 0.0025,
 			owner = ship.player,
-			texture = textures.get("pewpew"),
+			texture = textures.get("pewpew2"),
 			state = {
 				on_impact = Impacts.grenade,
 			}

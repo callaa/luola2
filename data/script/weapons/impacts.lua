@@ -120,9 +120,7 @@ function impacts.megabomb(this, terrain, obj)
 	})
 
 	impacts.make_shrapnell(10, this.pos, {
-		mass = 300,
-		radius = 5,
-		texture = textures.get("pewpew"),
+		texture = textures.get("pewpew2"),
 		state = {
 			on_impact = impacts.grenade,
 		}
@@ -145,7 +143,7 @@ function impacts.rocket(this, terrain, obj)
 	})
 
 	impacts.make_shrapnell(4, this.pos, {
-		texture = textures.get("pewpew"),
+		texture = textures.get("pewpew2"),
 		state = {
 			on_impact = impacts.grenade,
 		}

@@ -50,6 +50,11 @@ file = "bullets.png"
 subrect = [32, 0, 8, 8]
 needs_rotation = true
 
+[pewpew2]
+file = "bullets.png"
+subrect = [40, 0, 8, 8]
+needs_rotation = true
+
 [megabomb]
 file = "megabomb.png"
 width = 32
