@@ -169,6 +169,7 @@ impl World {
             pilots.clone(),
             mines.clone(),
             critters.clone(),
+            fixedobjects.clone(),
         )?;
 
         if let Some(levelscript) = levelinfo.script_path() {
@@ -613,7 +614,12 @@ impl World {
                         }
                     }
 
-                    // TODO ship impacts
+                    let mut shipswork = self.ships_work.borrow_mut();
+                    for ship in shipswork.collider_slice_mut(fobj).iter_mut() {
+                        if fobj.check_overlap(ship.physics()) {
+                            fobj.object_collision(ship, self.scripting.lua());
+                        }
+                    }
                 }
             }
         }

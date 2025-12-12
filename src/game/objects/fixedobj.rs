@@ -1,9 +1,7 @@
+use mlua::UserData;
+
 use crate::{
-    call_state_method,
-    game::objects::PhysicalObject,
-    gameobject_timer,
-    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
-    math::Vec2,
+    call_state_method, game::objects::PhysicalObject, gameobject_timer, get_state_method, gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId}, math::Vec2
 };
 
 use super::GameObject;
@@ -178,10 +176,25 @@ impl FixedObject {
                 } else {
                     RenderMode::Normal
                 },
+                color: self.color,
                 ..Default::default()
             };
             tex.render(renderer, &options);
         }
+    }
+
+    /// Execute non-bullet object collision callback.
+    pub fn object_collision<T>(&mut self, obj: &mut T, lua: &mlua::Lua) -> bool
+    where
+        T: UserData + 'static,
+    {
+        get_state_method!(self, lua, "on_object_hit", (f, scope) => {
+            f.call::<Option<bool>>((
+                scope.create_userdata_ref_mut(self)?,
+                scope.create_userdata_ref_mut(obj)?,
+            ))
+        })
+        .unwrap_or(true)
     }
 }
 

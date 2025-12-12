@@ -231,6 +231,10 @@ file = "gamepad-buttons.png"
 file = "weapon-icons.png"
 subrect = [0, 0, 32, 32]
 
+[portal_icon]
+file = "weapon-icons.png"
+subrect = [32, 0, 32, 32]
+
 [bar_fill]
 file = "hud.png"
 subrect = [0, 0, 9, 9]
@@ -246,3 +250,11 @@ subrect = [9, 0, 7, 7]
 [hud_reticle]
 file = "hud.png"
 subrect = [9, 9, 9, 9]
+
+[portal]
+file = "portal.png"
+width = 64
+height = 64
+frames = 12
+duration = 0.4
+blend = "Add"

@@ -123,6 +123,7 @@ impl ScriptEnvironment {
         pilot_list: Rc<RefCell<GameObjectArray<Pilot>>>,
         mine_list: Rc<RefCell<GameObjectArray<Projectile>>>,
         critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
+        fixedobj_list: Rc<RefCell<GameObjectArray<FixedObject>>>,
     ) -> LuaResult<()> {
         let api = self.lua.create_table().unwrap();
 
@@ -289,6 +290,25 @@ impl ScriptEnvironment {
                     })
                 },
             )?,
+        )?;
+
+        // Iterate through a mutable list of fixed objects
+        // Note: not double buffered so can't be used in FixedObject callbacks. Change this if needed
+        api.set(
+            "fixedobjs_iter_mut",
+            self.lua.create_function(
+                move |lua, callback: Function| {
+                    let mut fixedobjs = fixedobj_list.borrow_mut();
+                    lua.scope(|scope| {
+                        for fobj in fixedobjs.iter_mut() {
+                            let res = callback.call::<Option<bool>>(scope.create_userdata_ref_mut(fobj))?;
+                            if let Some(false) = res {
+                                break;
+                            }
+                        }
+                        Ok(())
+                    })
+                })?
         )?;
 
         // Change the world.

@@ -112,6 +112,7 @@ impl UserData for Ship {
         fields.add_field("is_ship", true);
         fields.add_field_method_get("texture", |_, this| Ok(this.texture));
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
+        fields.add_field_method_set("pos", |_, this, pos| { this.phys.pos = pos; Ok(()) });
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_get("radius", |_, this| Ok(this.phys.radius));
         fields.add_field_method_get("angle", |_, this| Ok(this.angle));

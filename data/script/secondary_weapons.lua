@@ -6,6 +6,7 @@ local Mines = require("weapons.mines")
 local Rockets = require("weapons.rockets")
 local Grav = require("weapons.grav")
 local Hitscan = require("weapons.hitscan")
+local Portals = require("portals")
 
 local weapons = {}
 
@@ -329,6 +330,12 @@ function weapons.chemtrail(ship)
 				timer = 0.5,
 			})
 		end
+	end
+end
+
+function weapons.jumpengine(ship)
+	if ship:consume_ammo(10, 1) then
+		Portals.activate_jumpengine(ship)
 	end
 end
 

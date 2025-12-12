@@ -119,6 +119,10 @@ impl mlua::UserData for Projectile {
         fields.add_field("is_projectile", true);
 
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
+        fields.add_field_method_set("pos", |_, this, p: Vec2| {
+            this.phys.pos = p;
+            Ok(())
+        });
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_set("vel", |_, this, v: Vec2| {
             this.phys.vel = v;

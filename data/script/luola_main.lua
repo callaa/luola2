@@ -267,7 +267,7 @@ luola_secondary_weapons = {
 	nitroglycerin = {
 		title = "Nitro-ampule",
 		fire_func = sweapons.nitroglycerin,
-		description = "A glass sphere filled with nitroglyserin. The soaked ground may detonate if disturbed by a sufficiently large shock.",
+		description = "A glass sphere filled with nitroglycerin. The soaked ground may detonate if disturbed by a sufficiently large shock.",
 	},
 	laser = {
 		title = "Laser cannon",
@@ -283,5 +283,10 @@ luola_secondary_weapons = {
 		title = "Chemtrail dispenser",
 		fire_func = sweapons.chemtrail,
 		description = "Releases a toxic mist behind the ship.",
+	},
+	jumpengine = {
+		title = "Jump engine",
+		fire_func= sweapons.jumpengine,
+		description = "Generates a wormhole allowing instantaneous travel across any distance.",
 	},
 }
