@@ -63,11 +63,14 @@ function impacts.bullet(this, terrain, obj)
 	end
 
 	this:destroy()
-	game.effect("MakeBulletHole", this.pos)
-	game.effect("AddParticle", {
-		pos = this.pos,
-		texture = textures.get("boom"),
-	})
+
+	if terrain ~= Level.TER_LEVELBOUND then
+		game.effect("MakeBulletHole", this.pos)
+		game.effect("AddParticle", {
+			pos = this.pos,
+			texture = textures.get("boom"),
+		})
+	end
 end
 
 -- Digger particle. Doesn't damage ships much

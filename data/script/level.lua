@@ -13,6 +13,7 @@ local Level = {
 	TER_TER_TYPE_WALKWAY = 10,
 	TER_TYPE_GREYGOO = 11,
 	TER_TYPE_DAMAGE = 12,
+	TER_LEVELBOUND = 0x3f,
 }
 
 function Level.mask_solid(ter)
