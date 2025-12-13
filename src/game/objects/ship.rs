@@ -112,12 +112,23 @@ impl UserData for Ship {
         fields.add_field("is_ship", true);
         fields.add_field_method_get("texture", |_, this| Ok(this.texture));
         fields.add_field_method_get("pos", |_, this| Ok(this.phys.pos));
-        fields.add_field_method_set("pos", |_, this, pos| { this.phys.pos = pos; Ok(()) });
+        fields.add_field_method_set("pos", |_, this, pos| {
+            this.phys.pos = pos;
+            Ok(())
+        });
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_get("radius", |_, this| Ok(this.phys.radius));
         fields.add_field_method_get("angle", |_, this| Ok(this.angle));
         fields.add_field_method_get("player", |_, this| Ok(this.player_id));
+        fields.add_field_method_set("player", |_, this, player: PlayerId| {
+            this.player_id = player;
+            Ok(())
+        });
         fields.add_field_method_get("controller", |_, this| Ok(this.controller));
+        fields.add_field_method_set("controller", |_, this, controller: i32| {
+            this.controller = controller;
+            Ok(())
+        });
         fields.add_field_method_get("health", |_, this| Ok(this.hitpoints));
         fields.add_field_method_get("ammo", |_, this| Ok(this.ammo_remaining));
         fields.add_field_method_set("ammo", |_, this, ammo: f32| {
@@ -393,26 +404,29 @@ impl Ship {
             if ship.hitpoints < -1000.0 || terrain::is_solid(ter) {
                 ship.destroy(lua);
             } else if let Some(controller) = controller
-                && controller.fire_secondary
+                && (controller.fire_secondary || controller.eject)
             {
                 call_state_method!(ship, lua, "on_eject");
-                ship.controller = 0;
             }
         } else if let Some(controller) = controller {
-            if ship.primary_weapon_cooldown > 0.0 {
-                ship.primary_weapon_cooldown -= timestep;
-            }
+            if controller.eject {
+                call_state_method!(ship, lua, "on_eject");
+            } else {
+                if ship.primary_weapon_cooldown > 0.0 {
+                    ship.primary_weapon_cooldown -= timestep;
+                }
 
-            if ship.secondary_weapon_cooldown > 0.0 {
-                ship.secondary_weapon_cooldown -= timestep;
-            }
+                if ship.secondary_weapon_cooldown > 0.0 {
+                    ship.secondary_weapon_cooldown -= timestep;
+                }
 
-            if controller.fire_primary && ship.primary_weapon_cooldown <= 0.0 {
-                call_state_method!(ship, lua, "on_fire_primary");
-            }
+                if controller.fire_primary && ship.primary_weapon_cooldown <= 0.0 {
+                    call_state_method!(ship, lua, "on_fire_primary");
+                }
 
-            if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
-                call_state_method!(ship, lua, "on_fire_secondary");
+                if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
+                    call_state_method!(ship, lua, "on_fire_secondary");
+                }
             }
         }
 

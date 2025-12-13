@@ -2,10 +2,9 @@ local Scheduler = require("utils.scheduler")
 
 local Portals = {}
 
-function Portals.create_portal_pair(source, destination)
-	local tex = textures.get("portal")
-	local lifetime = 4
+local PORTAL_LIFETIME = 4
 
+function Portals.create_portal_pair(source, destination)
 	function teleport_object(portal, obj)
 		obj.pos = (obj.pos - portal.pos) + destination
 		return true -- ignore projectile's own hit handler
@@ -14,7 +13,7 @@ function Portals.create_portal_pair(source, destination)
 	-- Entry portal
 	game.effect("AddFixedObject", {
 		pos = source,
-		texture = tex,
+		texture = textures.get("portal"),
 		color = 0xfff0a422,
 		radius = 16, 
 		id = 0,
@@ -23,15 +22,20 @@ function Portals.create_portal_pair(source, destination)
 			on_bullet_hit = teleport_object,
 			scheduler = Scheduler.destroy_this,
 		},
-		timer = lifetime
+		timer = PORTAL_LIFETIME
 	})
 
-	-- Exit portal (decorative)
+	-- Exit portal
+	Portals.create_exit_portal(destination)
+end
+
+-- Exit portal is purely decorative
+function Portals.create_exit_portal(pos)
 	game.effect("AddParticle", {
-		pos = destination,
-		texture = tex,
+		pos = pos,
+		texture = textures.get("portal"),
 		color = 0xff5fcde4,
-		lifetime = lifetime,
+		lifetime = PORTAL_LIFETIME,
 	})
 end
 

@@ -592,7 +592,13 @@ impl World {
 
                 // TODO critter collisions
 
-                // TODO ship collisions
+                // Pilots can claim empty ships by touching them
+                let mut shipswork = self.ships_work.borrow_mut();
+                for ship in shipswork.collider_slice_mut(pilot).iter_mut() {
+                    if !ship.is_wrecked() && pilot.physics().check_overlap(ship.physics()) {
+                        pilot.touch_ship(ship, self.scripting.lua());
+                    }
+                }
             }
 
             // Fixed objects can also hit other objects

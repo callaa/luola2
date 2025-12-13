@@ -119,14 +119,16 @@ end
 function Bat.on_object_hit(critter, obj)
 	if obj.is_ship then
 		critter.state.aggro = 40
-		game.player_effect("hud_overlay", obj.player, {
-			texture = textures.get("bat_attack"),
-			pos = Vec2(math.random(), math.random()),
-			scale = 1,
-			angle = math.random() * 360,
-			lifetime = 1,
-			fadeout = 0.4,
-		})
+		if obj.controller > 0 then
+			game.player_effect("hud_overlay", obj.player, {
+				texture = textures.get("bat_attack"),
+				pos = Vec2(math.random(), math.random()),
+				scale = 1,
+				angle = math.random() * 360,
+				lifetime = 1,
+				fadeout = 0.4,
+			})
+		end
 
 		if critter.state.explosive then
 			Impacts.grenade(critter, 0, obj)

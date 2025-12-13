@@ -16,7 +16,7 @@ Features:
  * Gamepad support
  * Pilot ejection for platformer mode!
  * Lua scripting, including per-level custom scripts
- * 20 special weapons to choose from
+ * 22 special weapons to choose from
  * Destructible terrain
  * 100% artisanal code and art: no gen-AI used!
 
@@ -49,6 +49,7 @@ The following keys can be used in menus:
  * Fire primary weapon (unlimited ammo) with Fire1 key (East button or right trigger on gamepads)
  * Fire secondary weapon with Fire2 key (South button or left trigger on gamepads.)
  * Land on a base to repair and rearm
+ * Eject the pilot by hitting Fire2 when the ship is spinning out of control, or at any time by pressing Down+Fire1 (or left+right shoulder buttons on a gamepad)
 
 **Pilot controls:**
 
@@ -56,6 +57,7 @@ The following keys can be used in menus:
  * Shoot with Fire1 button (gamepad East/right trigger)
  * Jump/jetpack with Up key or gamepad North button
  * Activate parachute and/or aiming mode by holding down Fire2 (gamepad South/left trigger)
+ * Summon a new ship with the eject button combo when standing on a base
 
 **Winning:**
 

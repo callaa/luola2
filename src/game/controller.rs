@@ -23,8 +23,9 @@ use sdl3_sys::{
         SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHTX,
         SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_LEFT,
         SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_EAST,
-        SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START, SDL_Gamepad,
-        SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
+        SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_NORTH,
+        SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START,
+        SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
         SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
         SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
     },
@@ -51,6 +52,7 @@ pub struct GameController {
     pub jump: bool, // same as thrust>0 on keyboards
     pub fire_primary: bool,
     pub fire_secondary: bool,
+    pub eject: bool, // same as thrust<0 & fire_primary on keyboards
 
     guid: SDL_GUID,
     joystick_id: SDL_JoystickID,
@@ -126,6 +128,7 @@ impl GameController {
             turn: 0.0,
             fire_primary: false,
             fire_secondary: false,
+            eject: false,
             jump: false,
             guid: SDL_GUID { data: [0; 16] },
             joystick_id: 0,
@@ -326,6 +329,7 @@ impl GameControllerSet {
                 }
                 MappedKey::Down => {
                     state.thrust = if key.down { -1.0 } else { 0.0 };
+                    state.eject = state.fire_primary & (state.thrust < 0.0);
                     if !key.down {
                         menubtn = MenuButton::Down(*idx as i32 + 1);
                     }
@@ -346,6 +350,7 @@ impl GameControllerSet {
                 }
                 MappedKey::Fire1 => {
                     state.fire_primary = key.down;
+                    state.eject = state.fire_primary & (state.thrust < 0.0);
                     if !key.down {
                         menubtn = MenuButton::Select(*idx as i32 + 1);
                     }
@@ -489,6 +494,12 @@ impl GameControllerSet {
                 if down {
                     menubtn = MenuButton::Back;
                 }
+            }
+            SDL_GAMEPAD_BUTTON_LEFT_SHOULDER | SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER => {
+                state.eject = unsafe {
+                    SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER)
+                        & SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER)
+                };
             }
             _ => {}
         }

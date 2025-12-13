@@ -17,35 +17,25 @@ local Forcefields = require("forcefields")
 local Level = require("level")
 local Turrets = require("turrets")
 
+local player_settings = {}
+
 -- Main entrypoint
 -- This is called when initializing the game for a new round.
 -- A fresh scripting environment is created for each round.
 function luola_init_game(settings)
-	-- Create a ship for each player
 	for _, p in ipairs(settings.players) do
-		local tpl = ships[p.ship].template
+		player_settings[p.player] = p
+
 		local pos = p.spawn
 		if pos == nil then
 			pos = game.find_spawnpoint()
 		end
 
-		local ship_controller = p.controller
-		if p.pilot_spawn then
-			ship_controller = 0
+		if p.pilot_spawn ~= nil then
 			Pilot.create(p.pilot_spawn, p.player, p.controller)
 		end
 
-		game.effect(
-			"AddShip",
-			tableutils.combined(tpl, {
-				pos = pos,
-				controller = ship_controller,
-				player = p.player,
-				state = tableutils.combined(tpl.state, {
-					on_fire_secondary = luola_weapons[p.weapon].fire_func,
-				})
-			})
-		)
+		create_ship_for_player(p.player, pos, not p.pilot_spawn)
 
 		game.player_effect("hud_overlay", p.player, {
 			text = textures.font("menu", "Get ready!"),
@@ -54,10 +44,31 @@ function luola_init_game(settings)
 			lifetime = 3,
 			fadeout = 1,
 		})
-
 	end
 
 	luola_init_level(settings.level)
+end
+
+-- Create a new ship (global function)
+function create_ship_for_player(player_id, pos, with_controller)
+	local player = player_settings[player_id]
+	local tpl = ships[player.ship].template
+	local controller = player.controller
+	if with_controller == false then
+		controller = 0
+	end
+
+	game.effect(
+		"AddShip",
+		tableutils.combined(tpl, {
+			pos = pos,
+			controller = controller,
+			player = player.player,
+			state = tableutils.combined(tpl.state, {
+				on_fire_secondary = luola_weapons[player.weapon].fire_func,
+			})
+		})
+	)
 end
 
 -- Standard level initialization function
@@ -224,7 +235,6 @@ luola_weapons = {
 		fire_func = sweapons.moving_gravmine,
 		description = "A variant of the gravity mine. A deliberately engineered inbalance in the field causes the anomaly to move in a straight line.",
 	},
-
 	drone = {
 		title = "Drone (flying)",
 		fire_func = sweapons.drone,

@@ -2,6 +2,7 @@ local Scheduler = require("utils.scheduler")
 local weapons = require("primary_weapons")
 local Impacts = require("weapons.impacts")
 local Pilot = require("pilot")
+local tableutils = require("utils.table")
 
 local function vwing_thrust_effect(ship, uw, thrust)
 	if uw then
@@ -113,6 +114,7 @@ end
 
 local function on_ship_eject(ship)
 	Pilot.create(ship.pos, ship.player, ship.controller)
+	ship.controller = 0
 end
 
 local function ship_touch_greygoo(ship)

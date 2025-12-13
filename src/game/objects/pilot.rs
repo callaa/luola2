@@ -3,8 +3,9 @@ use crate::{
     game::{
         GameController, PlayerId,
         level::{LEVEL_SCALE, Level, terrain},
-        objects::{GameObject, PhysicalObject, TerrainCollisionMode},
+        objects::{GameObject, PhysicalObject, Ship, TerrainCollisionMode},
     },
+    gameobject_timer, get_state_method,
     gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt},
     math::Vec2,
 };
@@ -28,6 +29,8 @@ pub struct Pilot {
     aim_angle: f32, // -90 -- 90
     facing: i8,     // -1 or 1
     weapon_cooldown: f32,
+    timer: Option<f32>,
+    timer_accumulator: f32,
 }
 
 #[derive(Clone, Debug)]
@@ -46,10 +49,17 @@ impl mlua::UserData for Pilot {
         fields.add_field_method_get("vel", |_, this| Ok(this.phys.vel));
         fields.add_field_method_get("facing", |_, this| Ok(this.facing));
         fields.add_field_method_get("player", |_, this| Ok(this.player_id));
+        fields.add_field_method_get("controller", |_, this| Ok(this.controller));
         fields.add_field_method_get("state", |_, this| Ok(this.state.clone()));
 
         fields.add_field_method_set("weapon_cooldown", |_, this, cooldown| {
             this.weapon_cooldown = cooldown;
+            Ok(())
+        });
+
+        fields.add_field_method_get("timer", |_, this| Ok(this.timer));
+        fields.add_field_method_set("timer", |_, this, timeout: Option<f32>| {
+            this.timer = timeout;
             Ok(())
         });
     }
@@ -100,6 +110,8 @@ impl mlua::FromLua for Pilot {
                 aim_angle: 0.0,
                 facing: 1,
                 weapon_cooldown: 0.0,
+                timer: table.get("timer")?,
+                timer_accumulator: 0.0,
             })
         } else {
             Err(mlua::Error::FromLuaConversionError {
@@ -276,6 +288,13 @@ impl Pilot {
                 }
             }
 
+            if !self.aim_mode && ctrl.eject && self.weapon_cooldown <= 0.0 {
+                // Ship recall
+                // Note: this needs a cooldown too so we reuse the weapon cooldown.
+                call_state_method!(*self, lua, "on_ship_recall", ter);
+                self.weapon_cooldown = 0.5;
+            }
+
             if ctrl.jump && !self.aim_mode {
                 if matches!(self.mode, MotionMode::Parachuting) {
                     // Stop parachuting
@@ -312,6 +331,17 @@ impl Pilot {
         } else if terrain::is_water(ter) || matches!(self.mode, MotionMode::Parachuting) {
             self.jetpack_charge = (self.jetpack_charge + timestep * 0.1).min(1.0);
         }
+
+        gameobject_timer!(*self, lua, timestep);
+    }
+
+    pub fn touch_ship(&mut self, ship: &mut Ship, lua: &mlua::Lua) {
+        get_state_method!(self, lua, "on_touch_ship", (f, scope) => {
+            f.call::<Option<bool>>((
+                scope.create_userdata_ref_mut(self)?,
+                scope.create_userdata_ref_mut(ship)?,
+            ))
+        });
     }
 
     pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {

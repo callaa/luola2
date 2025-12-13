@@ -1,5 +1,7 @@
 local Impacts = require("weapons.impacts")
 local Scheduler = require("utils.scheduler")
+local Level = require("level")
+local Portals = require("portals")
 
 local Pilot = {}
 
@@ -57,6 +59,38 @@ local function on_bullet_hit(pilot, bullet, damage)
 	end
 end
 
+local function on_ship_recall(pilot, terrain)
+	-- First see if the ship still exists somewhere in the level
+	local found = nil
+	game.ships_iter(function(ship)
+		if ship.player == pilot.player and ship.controller == 0 then
+			found = ship.pos
+			return false
+		end
+	end)
+
+	if Level.is_base(terrain) then
+		-- If the pilot is standing on a base, they can teleport
+		-- their ship back or summon a replacement
+		local pos = pilot.pos + Vec2(0, -60)
+		if found then
+			Portals.create_portal_pair(found, pos)
+		else
+			Portals.create_exit_portal(pos)
+			create_ship_for_player(pilot.player, pos, false)
+		end
+	end
+end
+
+local function on_touch_ship(pilot, ship)
+	-- Claim unoccupied ship
+	if ship.controller == 0 then
+		ship.controller = pilot.controller
+		ship.player = pilot.player
+		pilot:destroy()
+	end
+end
+
 function Pilot.create(pos, player, controller)
 	game.effect("AddPilot",
 		{
@@ -67,7 +101,13 @@ function Pilot.create(pos, player, controller)
 				on_shoot = on_shoot,
 				on_jetpack = on_jetpack,
 				on_bullet_hit = on_bullet_hit,
+				on_ship_recall = on_ship_recall,
+				scheduler = Scheduler:new():add(2, function(pilot)
+					-- We don't want to immediately get back into a ship we just exited
+					pilot.state.on_touch_ship = on_touch_ship
+				end),
 			},
+			timer = 2,
 			walk_texture = textures.get("pilot_walk"),
 			swim_texture = textures.get("pilot_swim"),
 			jetpack_texture = textures.get("pilot_jetpack"),

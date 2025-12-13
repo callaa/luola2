@@ -15,7 +15,7 @@ controller = 1
 ship = "deltabomber"
 weapon = "greygoo"
 spawn = [155, 942]
-#pilot_spawn = [185, 942]
+pilot_spawn = [185, 942]
 
 [[player]]
 controller = 2
