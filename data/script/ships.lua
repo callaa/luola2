@@ -3,7 +3,7 @@ local weapons = require("primary_weapons")
 local Impacts = require("weapons.impacts")
 local Pilot = require("pilot")
 
-local function ship_thrust_effect(ship, uw, thrust)
+local function vwing_thrust_effect(ship, uw, thrust)
 	if uw then
 		local a = math.floor(thrust * 0x66) << 24
 		for i = 0, 5 do
@@ -27,6 +27,41 @@ local function ship_thrust_effect(ship, uw, thrust)
 			texture = textures.get("dot8x8"),
 		})
 	end
+end
+
+local function deltabomber_thrust_effect(ship, uw, thrust)
+	local tex
+	local a
+	local vel
+	if uw then
+		a = math.floor(thrust * 0x66) << 24
+		tex = textures.get("dot3x3")
+		vel = Vec2_for_angle(-ship.angle - 180 + math.random(-60, 60), 100)
+	else
+		a = math.floor(thrust * 0xff) << 24
+		tex = textures.get("dot8x8")
+		vel = Vec2_for_angle(-ship.angle - 180, 300) + ship.vel
+	end
+
+	-- twin engines
+	game.effect("AddParticle", {
+		pos = ship.pos + Vec2_for_angle(-ship.angle - 180 - 35, 32),
+		vel = vel,
+		color = 0x00ffffff | a,
+		target_color = 0x00ff0000,
+		lifetime = 0.15,
+		texture = tex,
+	})
+
+	game.effect("AddParticle", {
+		pos = ship.pos + Vec2_for_angle(-ship.angle - 180 + 35, 32),
+		vel = vel,
+		color = 0x00ffffff | a,
+		target_color = 0x00ff0000,
+		lifetime = 0.15,
+		texture = tex,
+	})
+	
 end
 
 local function ship_on_base(ship, timestep)
@@ -124,6 +159,7 @@ end
 local ships = {
 	vwing = {
 		title = "V-Wing",
+		description = "An all-purpose fighter craft capable of operating in the atmosphere, underwater, and space.",
 		template = {
 			texture = textures.get("vwing"),
 			mass = 1000,
@@ -136,7 +172,30 @@ local ships = {
 				on_fire_primary = weapons.cannon,
 				on_destroyed = on_ship_destroyed,
 				on_base = ship_on_base,
-				on_thrust = ship_thrust_effect,
+				on_thrust = vwing_thrust_effect,
+				on_touch_greygoo = ship_touch_greygoo,
+				on_eject = on_ship_eject,
+				on_bullet_hit = ship_bullet_hit,
+			}
+		},
+	},
+	deltabomber = {
+		title = "Delta Bomber",
+		description = "A heavy bomber that exchanges manoeuvrability for extra armor plating and cargo capacity.",
+		template = {
+			texture = textures.get("deltabomber"),
+			mass = 3000,
+			ammo = 160,
+			drag = 0.05,
+			radius = 18,
+			thrust = 30,
+			turn_speed = 220,
+			hitpoints = 200,
+			state = {
+				on_fire_primary = weapons.delta_cannon,
+				on_destroyed = on_ship_destroyed,
+				on_base = ship_on_base,
+				on_thrust = deltabomber_thrust_effect,
 				on_touch_greygoo = ship_touch_greygoo,
 				on_eject = on_ship_eject,
 				on_bullet_hit = ship_bullet_hit,

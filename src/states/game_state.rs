@@ -138,7 +138,8 @@ impl StackableState for GameState {
             self.substate = GameSubState::SelectWeapons;
         } else if let Some(weapons) = retval.downcast_ref::<SelectedWeapons>() {
             self.players.iter_mut().zip(&weapons.0).for_each(|(p, w)| {
-                p.weapon = w.clone();
+                p.ship = w.0.clone();
+                p.weapon = w.1.clone();
             });
             self.substate = GameSubState::PlayRound;
         } else if let Some(winner) = retval.downcast_ref::<RoundWinner>() {

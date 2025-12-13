@@ -7,6 +7,15 @@ angles = 12
 width = 80
 height = 80
 
+[deltabomber]
+file = "deltabomber.png"
+subrect = [0, 0, 960, 80]
+alts.Decal.subrect = [0, 80, 960, 80]
+alts.Damage.subrect = [0, 160, 960, 80]
+angles = 12
+width = 80
+height = 80
+
 [pilot_stand]
 file = "pilot.png"
 subrect = [0, 0, 32, 32]

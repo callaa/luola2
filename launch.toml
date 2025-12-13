@@ -12,7 +12,7 @@ rounds = 10
 
 [[player]]
 controller = 1
-ship = "vwing"
+ship = "deltabomber"
 weapon = "greygoo"
 spawn = [155, 942]
 #pilot_spawn = [185, 942]

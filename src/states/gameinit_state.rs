@@ -27,7 +27,7 @@ use crate::{
     menu::AnimatedStarfield,
     states::{
         MainMenu,
-        game_assets::{GameAssets, SelectableWeapon},
+        game_assets::{GameAssets, SelectableShip, SelectableWeapon},
         game_state::GameState,
     },
 };
@@ -89,9 +89,7 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
 
     lua.load(r#"require "luola_main""#).exec()?;
 
-    let secondary_weapon_table = lua
-        .globals()
-        .get::<mlua::Table>("luola_secondary_weapons")?;
+    let secondary_weapon_table = lua.globals().get::<mlua::Table>("luola_weapons")?;
 
     let mut weapons: Vec<_> = secondary_weapon_table
         .pairs::<String, mlua::Table>()
@@ -114,7 +112,47 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
 
     weapons.sort_by(|a, b| a.title.cmp(&b.title));
 
-    Ok(Rc::new(GameAssets { levels, weapons }))
+    let default_weapon = lua.globals().get("luola_weapons_default")?;
+    if !weapons.iter().any(|s| s.name == default_weapon) {
+        return Err(anyhow!("Default weapon \"{}\" not found!", default_weapon));
+    }
+
+    let ship_table = lua.globals().get::<mlua::Table>("luola_ships")?;
+    let mut ships: Vec<_> = ship_table
+        .pairs::<String, mlua::Table>()
+        .map(|pair| {
+            let (name, v) = pair?;
+            let title = v.get("title")?;
+            let flavortext = v.get("description")?;
+            let texture = v.get("texture")?;
+
+            Ok(SelectableShip {
+                name,
+                title,
+                flavortext,
+                texture,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    if ships.is_empty() {
+        return Err(anyhow!("No ships defined!"));
+    }
+
+    ships.sort_by(|a, b| a.title.cmp(&b.title));
+
+    let default_ship = lua.globals().get("luola_ships_default")?;
+    if !ships.iter().any(|s| s.name == default_ship) {
+        return Err(anyhow!("Default ship \"{}\" not found!", default_ship));
+    }
+
+    Ok(Rc::new(GameAssets {
+        levels,
+        weapons,
+        ships,
+        default_ship,
+        default_weapon,
+    }))
 }
 
 impl StackableState for GameInitState {

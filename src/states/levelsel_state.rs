@@ -135,7 +135,7 @@ impl LevelSelection {
         );
 
         // Level thumbnails
-        let selected_level = &self.levelboxes[self.selection as usize];
+        let selected_level = &self.levelboxes[self.selection];
         let offset = center.0 - self.selector_offset; //selected_level.xpos - selected_level.w / 2.0;
         for (i, level) in self.levelboxes.iter().enumerate() {
             if let Some(t) = &level.thumbnail {
@@ -188,13 +188,13 @@ impl StackableState for LevelSelection {
             }
             MenuButton::Start | MenuButton::Select(_) => {
                 return StackableStateResult::Return(Box::new(
-                    self.assets.levels[self.selection as usize].clone(),
+                    self.assets.levels[self.selection].clone(),
                 ));
             }
             _ => {}
         }
 
-        let selected_level = &self.levelboxes[self.selection as usize];
+        let selected_level = &self.levelboxes[self.selection];
         self.selector_offset_target = selected_level.xpos + selected_level.w / 2.0;
         StackableStateResult::Continue
     }

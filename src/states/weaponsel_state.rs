@@ -20,15 +20,21 @@ use anyhow::Result;
 
 use super::{StackableState, StackableStateResult};
 use crate::{
-    game::{GameControllerSet, MenuButton, Player, PlayerId, level::LEVEL_SCALE},
+    game::{GameControllerSet, MappedKey, MenuButton, Player, PlayerId, level::LEVEL_SCALE},
     gfx::{
-        Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
-        TextOutline, Texture, make_button_icon,
+        Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
+        Text, TextOutline, Texture, make_button_icon,
     },
     math::{RectF, Vec2},
     menu::AnimatedStarfield,
-    states::game_assets::{GameAssets, SelectableWeapon},
+    states::game_assets::GameAssets,
 };
+
+struct Texts {
+    menu: Text,
+    flavor_title: Text,
+    flavor_text: Text,
+}
 
 pub struct WeaponSelection {
     starfield: Rc<RefCell<AnimatedStarfield>>,
@@ -39,7 +45,7 @@ pub struct WeaponSelection {
     round_text: Text,
     renderer: Rc<RefCell<Renderer>>,
     players: Vec<PlayerWeaponChoice>,
-    weapon_texts: Vec<(Text, Text, Text)>,
+    texts: Vec<Texts>,
     longest_weapon_text_width: f32,
     flavortext_selection: usize,
     fade_timer: f32,
@@ -49,54 +55,79 @@ pub struct WeaponSelection {
 struct PlayerWeaponChoice {
     controller: usize,
     selection: usize,
-    player_text: Text,
+    ship_selection: usize,
+    up_button_icon: Texture,
+    down_button_icon: Texture,
     left_button_icon: Texture,
     right_button_icon: Texture,
     select_button_icon: Texture,
     decided: bool,
 }
 
-pub struct SelectedWeapons(pub Vec<String>);
+pub struct SelectedWeapons(pub Vec<(String, String)>);
 
 impl PlayerWeaponChoice {
     fn from_weapon_name(
         player: &Player,
-        player_id: PlayerId,
-        weapon_list: &[SelectableWeapon],
+        assets: &GameAssets,
         renderer: &Renderer,
         controllers: &GameControllerSet,
     ) -> Result<Self> {
-        let selection = weapon_list
+        let selection = assets
+            .weapons
             .iter()
-            .enumerate()
-            .find(|(_, w)| w.name == player.weapon)
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .position(|w| w.name == player.weapon)
+            .unwrap_or(
+                assets
+                    .weapons
+                    .iter()
+                    .position(|s| s.name == assets.default_weapon)
+                    .expect("A default weapon should have been set in luola_main.lua"),
+            );
+
+        let ship_selection = assets
+            .ships
+            .iter()
+            .position(|s| s.name == player.ship)
+            .unwrap_or(
+                assets
+                    .ships
+                    .iter()
+                    .position(|s| s.name == assets.default_ship)
+                    .expect("A default ship should have been set in luola_main.lua"),
+            );
 
         Ok(Self {
             controller: player.controller as usize - 1,
+            ship_selection,
             selection,
-            player_text: renderer
-                .fontset()
-                .menu
-                .create_text(renderer, &format!("Player {}", player_id))?
-                .with_color(Color::player_color(player_id))
-                .with_outline_color(Color::BLACK),
+            up_button_icon: make_button_icon(
+                player.controller,
+                MappedKey::Up,
+                renderer,
+                controllers,
+            )?,
+            down_button_icon: make_button_icon(
+                player.controller,
+                MappedKey::Down,
+                renderer,
+                controllers,
+            )?,
             left_button_icon: make_button_icon(
                 player.controller,
-                crate::game::MappedKey::Left,
+                MappedKey::Left,
                 renderer,
                 controllers,
             )?,
             right_button_icon: make_button_icon(
                 player.controller,
-                crate::game::MappedKey::Right,
+                MappedKey::Right,
                 renderer,
                 controllers,
             )?,
             select_button_icon: make_button_icon(
                 player.controller,
-                crate::game::MappedKey::Fire1,
+                MappedKey::Fire1,
                 renderer,
                 controllers,
             )?,
@@ -124,38 +155,55 @@ impl WeaponSelection {
 
         let flavortext_max_width = Self::flavortext_max_width(renderer.borrow().width());
 
-        let weapon_texts = assets
+        let texts = assets
             .weapons
             .iter()
             .map(|w| {
                 let r = renderer.borrow();
-                Ok((
-                    r.fontset().menu.create_text(&r, &w.title)?,
-                    r.fontset()
+                Ok(Texts {
+                    menu: r.fontset().menu.create_text(&r, &w.title)?,
+                    flavor_title: r
+                        .fontset()
                         .flavotext
                         .create_text(&r, &w.title)?
                         .with_color(Color::new(1.0, 1.0, 0.8)),
-                    r.fontset()
+                    flavor_text: r
+                        .fontset()
                         .flavotext
                         .create_text(&r, &w.flavortext)?
                         .with_color(Color::new(0.9, 0.9, 0.9))
                         .with_wrapwidth(flavortext_max_width),
-                ))
+                })
             })
+            .chain(assets.ships.iter().map(|s| {
+                let r = renderer.borrow();
+                Ok(Texts {
+                    menu: r.fontset().menu.create_text(&r, &s.title)?,
+                    flavor_title: r
+                        .fontset()
+                        .flavotext
+                        .create_text(&r, &s.title)?
+                        .with_color(Color::new(1.0, 0.9, 0.9)),
+                    flavor_text: r
+                        .fontset()
+                        .flavotext
+                        .create_text(&r, &s.flavortext)?
+                        .with_color(Color::new(0.9, 0.9, 0.9))
+                        .with_wrapwidth(flavortext_max_width),
+                })
+            }))
             .collect::<Result<Vec<_>>>()?;
 
-        let longest_weapon_text_width = weapon_texts
+        let longest_weapon_text_width = texts
             .iter()
-            .fold(0.0, |acc, t| f32::max(acc, t.0.width()));
+            .fold(0.0, |acc, t| f32::max(acc, t.menu.width()));
 
         let choices = players
             .iter()
-            .enumerate()
-            .map(|(idx, player)| {
+            .map(|player| {
                 PlayerWeaponChoice::from_weapon_name(
                     player,
-                    idx as PlayerId + 1,
-                    &assets.weapons,
+                    &assets,
                     &renderer.borrow(),
                     controllers,
                 )
@@ -174,7 +222,7 @@ impl WeaponSelection {
             background,
             background_rect,
             background_scroll: Vec2(15.0, 8.0),
-            weapon_texts,
+            texts,
             players: choices,
             round_text,
             starfield,
@@ -206,24 +254,60 @@ impl WeaponSelection {
         self.players.iter_mut().find(|p| p.controller == controller)
     }
 
-    fn render_player_box(&self, player: &PlayerWeaponChoice, rect: RectF) {
+    fn render_player_box(&self, player_id: PlayerId, player: &PlayerWeaponChoice, rect: RectF) {
         let renderer = &self.renderer.borrow();
 
-        // Player name
+        // Selected ship
         let mut x = rect.x() + 8.0;
-        player.player_text.render(&RenderTextOptions {
-            dest: RenderTextDest::TopLeft(Vec2(x, rect.y())),
-            outline: TextOutline::Outline,
-            ..Default::default()
-        });
-
-        x += player.player_text.width() + 8.0;
-
-        // Selected weapon
         let icon_w = player.left_button_icon.width();
         let icon_h = player.left_button_icon.height();
+        let text_h = self.texts[0].menu.height();
 
-        let title_text = &self.weapon_texts[player.selection].0;
+        if !player.decided {
+            player.up_button_icon.render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::Centered(Vec2(
+                        x + icon_w / 2.0,
+                        rect.y() + (text_h - icon_h) / 2.0,
+                    )),
+                    ..Default::default()
+                },
+            );
+            player.down_button_icon.render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::Centered(Vec2(
+                        x + icon_w / 2.0,
+                        rect.y() + (text_h + icon_h) / 2.0,
+                    )),
+                    ..Default::default()
+                },
+            );
+
+            x += icon_w + 8.0;
+        }
+
+        let shiptexid = self.assets.ships[player.ship_selection].texture;
+        let shiptex = renderer.texture_store().get_texture(shiptexid);
+        let mut ship_render = RenderOptions {
+            dest: RenderDest::Centered(Vec2(x + shiptex.width() / 2.0, rect.y() + text_h / 2.0)),
+            mode: RenderMode::Rotated(if player.decided { 0.0 } else { 90.0 }, false),
+            ..Default::default()
+        };
+
+        shiptex.render(renderer, &ship_render);
+        ship_render.color = Color::player_color(player_id);
+        renderer
+            .texture_store()
+            .get_texture_alt(shiptexid, crate::gfx::TexAlt::Decal)
+            .expect("Ships should have a Decal alt-texture")
+            .render(renderer, &ship_render);
+
+        x += shiptex.width() + 8.0;
+
+        // Selected weapon
+        let title_text = &self.texts[player.selection].menu;
 
         if !player.decided {
             player.left_button_icon.render(
@@ -234,7 +318,7 @@ impl WeaponSelection {
                 },
             );
 
-            x += player.left_button_icon.width() + 8.0;
+            x += icon_w + 8.0;
         }
 
         title_text.render(&RenderTextOptions {
@@ -292,12 +376,16 @@ impl WeaponSelection {
         });
 
         // Player weapon selection boxes
-        let (_, flavor_title, flavor_text) = &self.weapon_texts[self.flavortext_selection];
-        let flavortext_box_w = flavor_title.width().max(flavor_text.width());
+        let texts = &self.texts[self.flavortext_selection];
+        let flavortext_box_w = texts.flavor_title.width().max(texts.flavor_text.width());
         let flavortext_box_x = renderer.width() as f32 - flavortext_box_w - 32.0;
 
-        let player_box_w = self.players[0].player_text.width() + self.longest_weapon_text_width;
-        let player_box_h = self.players[0].player_text.height() + 32.0;
+        let player_box_w = 90.0 + self.longest_weapon_text_width;
+        let player_box_h = self.texts[0]
+            .menu
+            .height()
+            .max(self.players[0].up_button_icon.height() * 2.0)
+            + 16.0;
 
         let mut player_box = RectF::new(
             (renderer.width() as f32 - player_box_w) / 2.0,
@@ -310,13 +398,13 @@ impl WeaponSelection {
             player_box = player_box + Vec2(flavortext_box_x - player_box.right(), 0.0);
         }
 
-        for player in &self.players {
-            self.render_player_box(player, player_box);
+        for (idx, player) in self.players.iter().enumerate() {
+            self.render_player_box(idx as PlayerId + 1, player, player_box);
             player_box = player_box + Vec2(0.0, player_box_h);
         }
 
         // Weapon flavor text box
-        let flavortext_box_h = flavor_title.height() + flavor_text.height();
+        let flavortext_box_h = texts.flavor_title.height() + texts.flavor_text.height();
         let hint_box = RectF::new(
             flavortext_box_x,
             renderer.height() as f32 - flavortext_box_h - 32.0,
@@ -325,13 +413,13 @@ impl WeaponSelection {
         );
 
         renderer.draw_filled_rectangle(hint_box, &Color::new_rgba(0.1, 0.1, 0.2, 0.9));
-        flavor_title.render(&RenderTextOptions {
+        texts.flavor_title.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(hint_box.topleft() + Vec2(hint_box.w() / 2.0, 8.0)),
             ..Default::default()
         });
-        flavor_text.render(&RenderTextOptions {
+        texts.flavor_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopLeft(
-                hint_box.topleft() + Vec2(8.0, flavor_title.height() + 16.0),
+                hint_box.topleft() + Vec2(8.0, texts.flavor_title.height() + 16.0),
             ),
             ..Default::default()
         });
@@ -352,10 +440,31 @@ impl WeaponSelection {
 impl StackableState for WeaponSelection {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         let weapon_count = self.assets.weapons.len();
+        let ship_count = self.assets.ships.len();
 
         match button {
             MenuButton::Back => {
                 return StackableStateResult::Pop;
+            }
+            MenuButton::Up(plr) if plr > 0 => {
+                if let Some(p) = self.find_player_mut(plr)
+                    && !p.decided
+                {
+                    if p.ship_selection > 0 {
+                        p.ship_selection -= 1;
+                    } else {
+                        p.ship_selection = ship_count - 1;
+                    }
+                    self.flavortext_selection = weapon_count + p.ship_selection;
+                }
+            }
+            MenuButton::Down(plr) if plr > 0 => {
+                if let Some(p) = self.find_player_mut(plr)
+                    && !p.decided
+                {
+                    p.ship_selection = (p.ship_selection + 1) % ship_count;
+                    self.flavortext_selection = weapon_count + p.ship_selection;
+                }
             }
             MenuButton::Left(plr) if plr > 0 => {
                 if let Some(p) = self.find_player_mut(plr)
@@ -398,9 +507,9 @@ impl StackableState for WeaponSelection {
             .update_screensize(self.renderer.borrow().size());
 
         let ww = Self::flavortext_max_width(self.renderer.borrow().width());
-        self.weapon_texts
+        self.texts
             .iter_mut()
-            .for_each(|(_, _, t)| t.set_wrapwidth(ww));
+            .for_each(|t| t.flavor_text.set_wrapwidth(ww));
 
         if let Some(bg) = &self.background {
             self.background_rect = Self::make_background_rect(bg, &self.renderer.borrow());
@@ -437,7 +546,12 @@ impl StackableState for WeaponSelection {
                     return StackableStateResult::Return(Box::new(SelectedWeapons(
                         self.players
                             .iter()
-                            .map(|p| self.assets.weapons[p.selection].name.clone())
+                            .map(|p| {
+                                (
+                                    self.assets.ships[p.ship_selection].name.clone(),
+                                    self.assets.weapons[p.selection].name.clone(),
+                                )
+                            })
                             .collect(),
                     )));
                 }

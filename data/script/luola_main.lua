@@ -23,15 +23,15 @@ local Turrets = require("turrets")
 function luola_init_game(settings)
 	-- Create a ship for each player
 	for _, p in ipairs(settings.players) do
-		local tpl = ships["vwing"].template
+		local tpl = ships[p.ship].template
 		local pos = p.spawn
 		if pos == nil then
 			pos = game.find_spawnpoint()
 		end
 
-		local controller = p.controller
-		if p.pilot_spawn ~= nil then
-			controller = 0
+		local ship_controller = p.controller
+		if p.pilot_spawn then
+			ship_controller = 0
 			Pilot.create(p.pilot_spawn, p.player, p.controller)
 		end
 
@@ -39,10 +39,10 @@ function luola_init_game(settings)
 			"AddShip",
 			tableutils.combined(tpl, {
 				pos = pos,
-				controller = controller,
+				controller = ship_controller,
 				player = p.player,
 				state = tableutils.combined(tpl.state, {
-					on_fire_secondary = luola_secondary_weapons[p.weapon].fire_func,
+					on_fire_secondary = luola_weapons[p.weapon].fire_func,
 				})
 			})
 		)
@@ -176,8 +176,9 @@ function luola_on_global_timer(timestep)
 end
 
 -- List of special weapons
--- This is referenced by the weapon selection screen
-luola_secondary_weapons = {
+-- This is referenced by the weapon selection screen and luola_init_game()
+luola_weapons_default = "grenade"
+luola_weapons = {
 	grenade = {
 		title = "Grenade",
 		fire_func = sweapons.grenade,
@@ -290,3 +291,15 @@ luola_secondary_weapons = {
 		description = "Generates a wormhole allowing instantaneous travel across any distance.",
 	},
 }
+
+-- List of selectable ships
+-- This is used in the ship/weapon selection screen
+luola_ships = {}
+luola_ships_default = "vwing"
+for name, ship in pairs(ships) do
+	luola_ships[name] = {
+		title = ship.title,
+		description = ship.description,
+		texture = ship.template.texture,
+	}
+end
