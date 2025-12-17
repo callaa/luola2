@@ -30,7 +30,7 @@ cp -r /app/data AppDir/usr/bin/
 rm -rf AppDir/usr/bin/data/levels/demos
 
 # Package AppImage
-linuxdeploy --appimage-extract-and-run --appdir AppDir --output appimage
+LDAI_RUNTIME_FILE=/usr/local/bin/appimage-runtime linuxdeploy --appimage-extract-and-run --appdir AppDir --output appimage
 
 mv Luola_2-x86_64.AppImage /build/Luola2-$VERSION-x86_64.Appimage
 rm -rf AppDir

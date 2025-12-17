@@ -11,6 +11,7 @@ RUN rustup target add x86_64-pc-windows-gnu
 
 # AppImage build tool
 RUN wget -O /usr/local/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage ; chmod a+x /usr/local/bin/linuxdeploy
+RUN wget -O /usr/local/bin/appimage-runtime https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
 
 # Build directory
 RUN mkdir /target ; chmod a+rwx /target
