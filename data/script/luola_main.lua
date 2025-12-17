@@ -297,9 +297,14 @@ luola_weapons = {
 	},
 	jumpengine = {
 		title = "Jump engine",
-		fire_func= sweapons.jumpengine,
+		fire_func = sweapons.jumpengine,
 		description = "Generates a wormhole allowing instantaneous travel across any distance.",
 	},
+	autorepair = {
+		title = "Repair Droid",
+		fire_func = sweapons.autorepair,
+		description = "Equip the ship with an AutoMech droid capable of carrying out repairs on the fly."
+	}
 }
 
 -- List of selectable ships

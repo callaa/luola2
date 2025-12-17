@@ -134,6 +134,7 @@ impl UserData for Ship {
             Ok(())
         });
         fields.add_field_method_get("health", |_, this| Ok(this.hitpoints));
+        fields.add_field_method_get("max_health", |_, this| Ok(this.max_hitpoints));
         fields.add_field_method_get("ammo", |_, this| Ok(this.ammo_remaining));
         fields.add_field_method_set("ammo", |_, this, ammo: f32| {
             this.ammo_remaining = ammo.clamp(0.0, this.max_ammo);

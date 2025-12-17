@@ -415,4 +415,37 @@ function weapons.jumpengine(ship, trigger)
 	end
 end
 
+function weapons.autorepair(ship, trigger)
+	if not trigger then return end
+
+	if ship.state.autorepair then
+		ship.state.autorepair = false
+	elseif ship.ammo >= 1 then
+		ship.state.autorepair = true
+		Scheduler.add_to_object(ship, 0.1, function(ship)
+			if ship.state.autorepair and ship.health < ship.max_health then
+				ship:damage(-0.25)
+
+				local r = ship.radius
+				game.effect("AddParticle", {
+					pos = ship.pos + Vec2(math.random() * r * 2 - r, math.random() * r * 2 - r),
+					vel = Vec2(math.random(-60, 60), -160),
+					a = Vec2(0, 9.8 * 50),
+					color = 0xffffaa00,
+					target_color = 0x00660000,
+					lifetime = 1,
+				})
+
+				local ammo = ship.ammo - 0.5
+				if ammo > 0 then
+					ship.ammo = ammo
+					return 0.1
+				end
+			end
+
+			ship.state.autorepair = false
+		end)
+	end
+end
+
 return weapons
