@@ -96,6 +96,10 @@ pub struct Ship {
     /// Ship is frozen. Special rendering mode is used and controls are locked
     frozen: bool,
 
+    /// Is the fire2 button being held down? Used to detect leading-edge input event
+    /// for weapons that should fire only once per trigger pull.
+    fire2_down: bool,
+
     /// Object scheduler
     timer: Option<f32>,
     timer_accumulator: f32,
@@ -220,6 +224,7 @@ impl mlua::FromLua for Ship {
                 cloaked: false,
                 ghostmode: false,
                 frozen: false,
+                fire2_down: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
             })
@@ -409,6 +414,8 @@ impl Ship {
                 call_state_method!(ship, lua, "on_eject");
             }
         } else if let Some(controller) = controller {
+            let fire2_down = controller.fire_secondary;
+
             if controller.eject {
                 call_state_method!(ship, lua, "on_eject");
             } else {
@@ -425,8 +432,11 @@ impl Ship {
                 }
 
                 if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
-                    call_state_method!(ship, lua, "on_fire_secondary");
+                    // second parameter is true on leading edge of trigger pull
+                    call_state_method!(ship, lua, "on_fire_secondary", fire2_down & !self.fire2_down);
                 }
+
+                ship.fire2_down = fire2_down;
             }
         }
 

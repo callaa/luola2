@@ -68,13 +68,16 @@ function weapons.magmine(ship)
 	end
 end
 
-function weapons.landmine(ship)
-	if Mines.detonate_landmine(ship.player) then
-		ship.secondary_weapon_cooldown = 0.2
+function weapons.landmine(ship, trigger)
+	if not trigger then
 		return
 	end
 
-	if ship:consume_ammo(10, 0.2) then
+	if Mines.detonate_landmine(ship.player) then
+		return
+	end
+
+	if ship:consume_ammo(10, 0) then
 		Mines.create_landmine(ship.pos, ship.angle, ship.player)
 	end
 end
@@ -117,8 +120,9 @@ function weapons.tank(ship)
 	end
 end
 
-function weapons.cloaking_device(ship)
-	ship.secondary_weapon_cooldown = 0.6
+function weapons.cloaking_device(ship, trigger)
+	if not trigger then return end
+
 	if ship.cloaked then
 		ship.cloaked = false
 	elseif ship.ammo >= 0.5 then
@@ -150,8 +154,9 @@ function weapons.cloaking_device(ship)
 	end
 end
 
-function weapons.ghostship(ship)
-	ship.secondary_weapon_cooldown = 0.6
+function weapons.ghostship(ship, trigger)
+	if not trigger then return end
+
 	if ship.ghostmode then
 		ship.ghostmode = false
 	elseif ship.ammo > 0.9 then
@@ -182,8 +187,9 @@ function weapons.moving_gravmine(ship)
 	end
 end
 
-function weapons.shield(ship)
-	ship.secondary_weapon_cooldown = 0.2
+function weapons.shield(ship, trigger)
+	if not trigger then return end
+
 	if ship.state.forcefield ~= nil then
 		Grav.deactivate_shield(ship)
 	elseif ship.ammo > 1 then
@@ -333,8 +339,10 @@ function weapons.chemtrail(ship)
 	end
 end
 
-function weapons.jumpengine(ship)
-	if ship:consume_ammo(10, 1) then
+function weapons.jumpengine(ship, trigger)
+	if not trigger then return end
+
+	if ship:consume_ammo(10, 0.5) then
 		Portals.activate_jumpengine(ship)
 	end
 end
