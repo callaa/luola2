@@ -385,13 +385,13 @@ impl Ship {
         } else if terrain::is_greygoo(ter) {
             call_state_method!(ship, lua, "on_touch_greygoo");
         } else if terrain::is_damaging(ter) {
+            call_state_method!(ship, lua, "on_terrain_damage", 15.0 * timestep, ter);
             ship.damage(15.0 * timestep);
         }
 
         if terrain::is_solid(ter) && impact_speed_squared > 100000.0 {
             // TODO scale damage based on speed?
-            ship.damage(1.0);
-            ship.frozen = false;
+            call_state_method!(ship, lua, "on_terrain_damage", 1.0, ter);
         }
 
         if terrain::is_indestructible_solid(ter)
@@ -433,7 +433,12 @@ impl Ship {
 
                 if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
                     // second parameter is true on leading edge of trigger pull
-                    call_state_method!(ship, lua, "on_fire_secondary", fire2_down & !self.fire2_down);
+                    call_state_method!(
+                        ship,
+                        lua,
+                        "on_fire_secondary",
+                        fire2_down & !self.fire2_down
+                    );
                 }
 
                 ship.fire2_down = fire2_down;

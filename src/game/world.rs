@@ -22,7 +22,7 @@ use smallvec::SmallVec;
 
 use crate::{
     game::{
-        Player, PlayerId, PlayerState,
+        GameControllerSet, Player, PlayerId, PlayerState,
         hud::{PlayerHud, draw_hud, draw_minimap},
         level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
         objects::{
@@ -146,6 +146,7 @@ impl World {
         players: &[Player],
         levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
+        controllers: Rc<RefCell<GameControllerSet>>,
     ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
             &renderer.borrow(),
@@ -170,6 +171,7 @@ impl World {
             mines.clone(),
             critters.clone(),
             fixedobjects.clone(),
+            controllers,
         )?;
 
         if let Some(levelscript) = levelinfo.script_path() {

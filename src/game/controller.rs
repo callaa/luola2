@@ -27,7 +27,8 @@ use sdl3_sys::{
         SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START,
         SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
         SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
-        SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
+        SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_RumbleGamepad, SDL_SetGamepadLED,
+        SDL_SetGamepadPlayerIndex,
     },
     guid::SDL_GUID,
     joystick::{SDL_JOYSTICK_AXIS_MAX, SDL_JoystickID},
@@ -533,6 +534,28 @@ impl GameControllerSet {
                     SDL_SetGamepadLED(ctrl.gamepad, 0, 0, 0);
                     SDL_SetGamepadPlayerIndex(ctrl.gamepad, -1);
                 }
+            }
+        }
+    }
+
+    pub fn rumble(&self, controller_id: i32, low_freq: f32, high_freq: f32, duration: f32) {
+        debug_assert!(duration >= 0.0);
+
+        if controller_id <= KEYBOARDS as i32 || controller_id > self.states.len() as i32 {
+            return;
+        }
+
+        let ctrl = &self.states[controller_id as usize - 1];
+        if !ctrl.gamepad.is_null() {
+            const MAX_FREQ: f32 = 0xffff as _;
+
+            unsafe {
+                SDL_RumbleGamepad(
+                    ctrl.gamepad,
+                    (low_freq * MAX_FREQ).clamp(0.0, MAX_FREQ) as u16,
+                    (high_freq * MAX_FREQ).clamp(0.0, MAX_FREQ) as u16,
+                    (duration * 1000.0) as u32,
+                );
             }
         }
     }

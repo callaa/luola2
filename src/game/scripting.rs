@@ -30,7 +30,7 @@ use crate::game::objects::{
     Projectile, Ship, TerrainParticle,
 };
 use crate::game::world::WorldEffect;
-use crate::game::{PlayerId, PlayerState};
+use crate::game::{GameControllerSet, PlayerId, PlayerState};
 use crate::gfx::{Color, Renderer};
 use crate::math::{LineF, RectF, Vec2};
 
@@ -124,6 +124,7 @@ impl ScriptEnvironment {
         mine_list: Rc<RefCell<GameObjectArray<Projectile>>>,
         critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
         fixedobj_list: Rc<RefCell<GameObjectArray<FixedObject>>>,
+        controllers: Rc<RefCell<GameControllerSet>>,
     ) -> LuaResult<()> {
         let api = self.lua.create_table().unwrap();
 
@@ -296,19 +297,19 @@ impl ScriptEnvironment {
         // Note: not double buffered so can't be used in FixedObject callbacks. Change this if needed
         api.set(
             "fixedobjs_iter_mut",
-            self.lua.create_function(
-                move |lua, callback: Function| {
-                    let mut fixedobjs = fixedobj_list.borrow_mut();
-                    lua.scope(|scope| {
-                        for fobj in fixedobjs.iter_mut() {
-                            let res = callback.call::<Option<bool>>(scope.create_userdata_ref_mut(fobj))?;
-                            if let Some(false) = res {
-                                break;
-                            }
+            self.lua.create_function(move |lua, callback: Function| {
+                let mut fixedobjs = fixedobj_list.borrow_mut();
+                lua.scope(|scope| {
+                    for fobj in fixedobjs.iter_mut() {
+                        let res =
+                            callback.call::<Option<bool>>(scope.create_userdata_ref_mut(fobj))?;
+                        if let Some(false) = res {
+                            break;
                         }
-                        Ok(())
-                    })
-                })?
+                    }
+                    Ok(())
+                })
+            })?,
         )?;
 
         // Change the world.
@@ -397,6 +398,19 @@ impl ScriptEnvironment {
                                 return Err(
                                     anyhow!("hud_overlay requires a valid player index").into()
                                 );
+                            }
+                        }
+                        b"rumble" => {
+                            // Note: player_id is actually controller_id in this case
+                            if let Some(table) = props.as_table() {
+                                controllers.borrow().rumble(
+                                    player_id,
+                                    table.get::<Option<f32>>("low")?.unwrap_or(0.0),
+                                    table.get::<Option<f32>>("high")?.unwrap_or(0.0),
+                                    table.get("duration")?,
+                                );
+                            } else {
+                                return Err(anyhow!("Expected a props table").into());
                             }
                         }
                         unknown => {

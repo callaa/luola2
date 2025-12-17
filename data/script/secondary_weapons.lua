@@ -24,6 +24,10 @@ function weapons.grenade(ship)
 				on_impact = Impacts.grenade,
 			}
 		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.25,
+			duration = 0.1,
+		})
 	end
 end
 
@@ -41,30 +45,50 @@ function weapons.megabomb(ship)
 				on_impact = Impacts.megabomb,
 			},
 		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.6,
+			duration = 0.2,
+		})
 	end
 end
 
 function weapons.rocket(ship)
 	if ship:consume_ammo(10, 1.0) then
 		Rockets.rocket(ship.pos, ship.vel, -ship.angle, ship.player)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.5,
+			duration = 0.1,
+		})
 	end
 end
 
 function weapons.missile(ship)
 	if ship:consume_ammo(8, 1.0) then
 		Rockets.homing_missile(ship.pos, ship.vel, -ship.angle, ship.player)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.5,
+			duration = 0.1,
+		})
 	end
 end
 
 function weapons.mine(ship)
 	if ship:consume_ammo(10, 0.4) then
 		Mines.create_mine(ship.pos, ship.player)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.1,
+			duration = 0.05,
+		})
 	end
 end
 
 function weapons.magmine(ship)
 	if ship:consume_ammo(10, 0.4) then
 		Mines.create_magmine(ship.pos, ship.player)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.1,
+			duration = 0.05,
+		})
 	end
 end
 
@@ -74,11 +98,19 @@ function weapons.landmine(ship, trigger)
 	end
 
 	if Mines.detonate_landmine(ship.player) then
+		game.player_effect("rumble", ship.controller, {
+			low = 0.25,
+			duration = 0.3,
+		})
 		return
 	end
 
 	if ship:consume_ammo(10, 0) then
 		Mines.create_landmine(ship.pos, ship.angle, ship.player)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.1,
+			duration = 0.05,
+		})
 	end
 end
 
@@ -89,6 +121,10 @@ function weapons.drone(ship)
 		if Drone.count(ship.player, ship.pos) < 3 then
 			ship.ammo = ammo
 			Drone.create(ship.pos, ship.player)
+			game.player_effect("rumble", ship.controller, {
+				high = 0.1,
+				duration = 0.05,
+			})
 		else
 			game.player_effect("hud_overlay", ship.player, {
 				text = textures.font("menu", "Cannot deploy more drones here!"),
@@ -108,6 +144,10 @@ function weapons.tank(ship)
 		if Tank.count(ship.player, ship.pos) < 3 then
 			ship.ammo = ammo
 			Tank.create(ship.pos, ship.player)
+			game.player_effect("rumble", ship.controller, {
+				high = 0.1,
+				duration = 0.05,
+			})
 		else
 			game.player_effect("hud_overlay", ship.player, {
 				text = textures.font("menu", "Cannot deploy more tanks here!"),
@@ -169,6 +209,10 @@ function weapons.ghostship(ship, trigger)
 					return
 				end
 				ship.ammo = ammo
+				game.player_effect("rumble", ship.controller, {
+					low = 0.01,
+					duration = 0.1,
+				})
 				return 0.1
 			end
 		end)
@@ -178,12 +222,20 @@ end
 function weapons.gravmine(ship)
 	if ship:consume_ammo(33, 2.0) then
 		Grav.create_gravmine(ship.pos)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.1,
+			duration = 0.05,
+		})
 	end
 end
 
 function weapons.moving_gravmine(ship)
 	if ship:consume_ammo(33, 2.0) then
 		Grav.create_moving_gravmine(ship.pos, -ship.angle + 180)
+		game.player_effect("rumble", ship.controller, {
+			high = 0.1,
+			duration = 0.05,
+		})
 	end
 end
 
@@ -212,6 +264,10 @@ function weapons.foam_grenade(ship)
 				on_impact = Impacts.foam_grenade,
 			}
 		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.25,
+			duration = 0.1,
+		})
 	end
 end
 
@@ -229,6 +285,10 @@ function weapons.greygoo(ship)
 			state = {
 				on_impact = Impacts.greygoo,
 			}
+		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.25,
+			duration = 0.1,
 		})
 	end
 end
@@ -257,6 +317,10 @@ function weapons.freezer(ship)
 			},
 			timer = 0,
 		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.25,
+			duration = 0.1,
+		})
 	end
 end
 
@@ -275,6 +339,10 @@ function weapons.nitroglycerin(ship)
 				is_nitro = true,
 				on_impact = Impacts.nitroglycerin,
 			},
+		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.25,
+			duration = 0.1,
 		})
 	end
 end

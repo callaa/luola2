@@ -94,6 +94,12 @@ local function on_ship_destroyed(ship)
 	-- but changes to those haven't been committed yet.
 	Scheduler.add_global(1, check_round_end_condition)
 
+	game.player_effect("rumble", ship.controller, {
+		low = 1.0,
+		high = 0.1,
+		duration = 0.6,
+	})
+
 	game.effect("MakeBigHole", { pos = ship.pos, r = 16 })
 	for i = 0, 2 do
 		game.effect("AddParticle", {
@@ -131,6 +137,10 @@ local function ship_touch_greygoo(ship)
 			})
 
 			ship:damage(1)
+			game.player_effect("rumble", ship.controller, {
+				low = math.random(),
+				duration = 0.5,
+			})
 			ship.state.greygoo = ship.state.greygoo - 1
 			Impacts.make_shrapnell(5, ship.pos, {
 				mass = 50,
@@ -156,6 +166,19 @@ end
 
 local function ship_bullet_hit(ship, bullet, damage)
 	ship:damage(damage)
+	game.player_effect("rumble", ship.controller, {
+		low = 0.25,
+		duration = 0.1,
+	})
+end
+
+-- Take damage from terrain (either because terrain is damaging or due to high impact speed)
+local function ship_terrain_damage(ship, damage, terrain)
+	ship:damage(damage)
+	game.player_effect("rumble", ship.controller, {
+		low = 0.3,
+		duration = 0.2,
+	})
 end
 
 local ships = {
@@ -178,6 +201,7 @@ local ships = {
 				on_touch_greygoo = ship_touch_greygoo,
 				on_eject = on_ship_eject,
 				on_bullet_hit = ship_bullet_hit,
+				on_terrain_damage = ship_terrain_damage,
 			}
 		},
 	},
@@ -201,6 +225,7 @@ local ships = {
 				on_touch_greygoo = ship_touch_greygoo,
 				on_eject = on_ship_eject,
 				on_bullet_hit = ship_bullet_hit,
+				on_terrain_damage = ship_terrain_damage,
 			}
 		},
 	},

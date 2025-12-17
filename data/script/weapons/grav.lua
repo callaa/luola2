@@ -73,6 +73,10 @@ function Grav._consume_shield_energy(ship)
 	if ship.state.forcefield ~= nil then
 		ship.ammo = ship.ammo - 1
 		if ship.ammo > 0 then
+			game.player_effect("rumble", ship.controller, {
+				low = 0.01,
+				duration = 0.1,
+			})
 			return 0.1
 		else
 			Grav.deactivate_shield(ship)
