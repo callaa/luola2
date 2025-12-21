@@ -40,6 +40,10 @@ function settings_menu()
 			action = game_menu,
 		}),
 		Link({
+			label = "Gamepad",
+			action = gamepad_menu,
+		}),
+		Link({
 			label = "Keyboard",
 			action = keyboard_menu,
 		}),
@@ -102,6 +106,30 @@ function game_menu()
 			value = Value.Toggle(SETTINGS.game.baseregen),
 			action = function(item)
 				SETTINGS.game.baseregen = item:toggle()
+				SETTINGS_CHANGED = true
+			end,
+		}),
+		Spacer(16),
+		Link({
+			label = "Back",
+			action = Action.Pop,
+		}),
+	}))
+end
+
+function gamepad_menu()
+	return Action.Push(Menu({
+		Heading({
+			label = "Gamepad options",
+			center = true,
+			font = "caption",
+		}),
+		Spacer(32),
+		Link({
+			label = "Rumble: ",
+			value = Value.Toggle(SETTINGS.gamepad.rumble),
+			action = function(item)
+				SETTINGS.gamepad.rumble = item:toggle()
 				SETTINGS_CHANGED = true
 			end,
 		}),

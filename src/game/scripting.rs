@@ -22,6 +22,7 @@ use anyhow::{Result, anyhow};
 use log::error;
 use mlua::{FromLua, Function, Lua, Result as LuaResult, String as LuaString, Table, Value};
 
+use crate::configfile::GAME_CONFIG;
 use crate::fs::find_datafile_path;
 use crate::game::hud::HudOverlay;
 use crate::game::level::{DynamicTerrainCell, Forcefield, Level, TerrainLineHit};
@@ -384,6 +385,8 @@ impl ScriptEnvironment {
         )?;
 
         // Player effects
+        let rumble_enabled = GAME_CONFIG.read().unwrap().gamepad.rumble;
+
         api.set(
             "player_effect",
             self.lua.create_function(
@@ -401,16 +404,18 @@ impl ScriptEnvironment {
                             }
                         }
                         b"rumble" => {
-                            // Note: player_id is actually controller_id in this case
-                            if let Some(table) = props.as_table() {
-                                controllers.borrow().rumble(
-                                    player_id,
-                                    table.get::<Option<f32>>("low")?.unwrap_or(0.0),
-                                    table.get::<Option<f32>>("high")?.unwrap_or(0.0),
-                                    table.get("duration")?,
-                                );
-                            } else {
-                                return Err(anyhow!("Expected a props table").into());
+                            if rumble_enabled {
+                                // Note: player_id is actually controller_id in this case
+                                if let Some(table) = props.as_table() {
+                                    controllers.borrow().rumble(
+                                        player_id,
+                                        table.get::<Option<f32>>("low")?.unwrap_or(0.0),
+                                        table.get::<Option<f32>>("high")?.unwrap_or(0.0),
+                                        table.get("duration")?,
+                                    );
+                                } else {
+                                    return Err(anyhow!("Expected a props table").into());
+                                }
                             }
                         }
                         unknown => {

@@ -16,15 +16,29 @@
 
 use std::{
     fs::{read_to_string, write},
-    sync::RwLock,
+    sync::{LazyLock, RwLock},
 };
 
 use log::{error, info, warn};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::value::Error as SerdeError, de::value::MapDeserializer};
 
 use crate::{events::push_config_changed_event, fs::get_savefile_path, game::PlayerKeymap};
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+macro_rules! default_from_serde {
+    ($typ:ident) => {
+        impl Default for $typ {
+            fn default() -> Self {
+                Self::deserialize(MapDeserializer::<_, SerdeError>::new(std::iter::empty::<(
+                    (),
+                    (),
+                )>()))
+                .expect("config should have a default for all values")
+            }
+        }
+    };
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct VideoConfig {
     #[serde(default)]
     pub fullscreen: bool,
@@ -42,38 +56,33 @@ pub struct GameOptions {
     pub baseregen: bool,
 }
 
-impl Default for GameOptions {
-    fn default() -> Self {
-        Self {
-            minimap: true,
-            baseregen: true,
-        }
-    }
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GamepadOptions {
+    #[serde(default = "default_true")]
+    pub rumble: bool,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UserConfig {
     #[serde(default)]
     pub video: VideoConfig,
     #[serde(default)]
     pub game: GameOptions,
+    #[serde(default)]
+    pub gamepad: GamepadOptions,
     pub keymap1: Option<PlayerKeymap>,
     pub keymap2: Option<PlayerKeymap>,
     pub keymap3: Option<PlayerKeymap>,
     pub keymap4: Option<PlayerKeymap>,
 }
 
-pub static GAME_CONFIG: RwLock<UserConfig> = RwLock::new(UserConfig {
-    video: VideoConfig { fullscreen: false },
-    game: GameOptions {
-        minimap: true,
-        baseregen: true,
-    },
-    keymap1: None,
-    keymap2: None,
-    keymap3: None,
-    keymap4: None,
-});
+default_from_serde!(VideoConfig);
+default_from_serde!(GameOptions);
+default_from_serde!(GamepadOptions);
+default_from_serde!(UserConfig);
+
+pub static GAME_CONFIG: LazyLock<RwLock<UserConfig>> =
+    LazyLock::new(|| RwLock::new(UserConfig::default()));
 
 pub fn load_user_config() {
     let filename = get_savefile_path("settings.toml");
