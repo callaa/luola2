@@ -19,8 +19,7 @@ use sdl3_sys::blendmode::SDL_BLENDMODE_BLEND;
 use sdl3_sys::mouse::{SDL_HideCursor, SDL_ShowCursor};
 use sdl3_sys::rect::SDL_FPoint;
 use sdl3_sys::render::{
-    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint,
-    SDL_RenderPoints, SDL_SetRenderDrawBlendMode, SDL_SetRenderDrawColorFloat,
+    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint, SDL_RenderPoints, SDL_RenderReadPixels, SDL_SetRenderDrawBlendMode, SDL_SetRenderDrawColorFloat
 };
 use sdl3_sys::video::{SDL_SetWindowFullscreen, SDL_WINDOW_FULLSCREEN, SDL_WINDOW_RESIZABLE};
 use sdl3_ttf_sys::ttf::{
@@ -30,7 +29,7 @@ use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::ptr::{null, null_mut};
 
-use crate::gfx::FontSet;
+use crate::gfx::{FontSet, Image};
 use crate::math::{LineF, Rect, RectF, Vec2};
 
 use super::texturestore::*;
@@ -303,5 +302,14 @@ impl Renderer {
         unsafe {
             SDL_RenderPresent(self.renderer);
         }
+    }
+
+    pub fn screenshot(&self) -> Result<Image> {
+        let surface = unsafe { SDL_RenderReadPixels(self.renderer, null()) };
+        if surface.is_null() {
+            return Err(SdlError::get_error("screenshot").into());
+        }
+
+        Ok(Image(surface))
     }
 }

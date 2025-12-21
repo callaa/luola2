@@ -3,15 +3,17 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     game::MenuButton,
-    gfx::Renderer,
-    math::{RectF},
-    menu::{LuaMenu},
+    gfx::{Color, RenderDest, RenderOptions, Renderer, Texture},
+    math::RectF,
+    menu::LuaMenu,
     states::{StackableState, StackableStateResult},
 };
 
 pub struct PauseState {
     menu: LuaMenu,
+    background: Texture,
     renderer: Rc<RefCell<Renderer>>,
+    alpha: f32,
 }
 
 pub enum PauseReturn {
@@ -25,15 +27,24 @@ impl PauseState {
         let size = renderer.borrow().size();
         let menu = LuaMenu::new("menus.pause", renderer.clone(), RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32))?;
 
+        let background = Texture::from_image(&renderer.borrow(), &renderer.borrow().screenshot()?)?;
+
         Ok(Self {
             renderer,
             menu,
+            background,
+            alpha: 1.0,
         })
     }
 
     pub fn render(&self) {
         let renderer = self.renderer.borrow();
         renderer.clear();
+        self.background.render(&renderer, &RenderOptions{
+            dest: RenderDest::Fill,
+            color: Color::WHITE.with_alpha(self.alpha),
+            ..Default::default()
+        });
         self.menu.render();
         renderer.present();
     }
@@ -66,6 +77,11 @@ impl StackableState for PauseState {
         if let Err(e) = self.menu.step(timestep) {
             return StackableStateResult::Error(e.into());
         }
+
+        if self.alpha > 0.3 {
+            self.alpha -= timestep;
+        }
+
         self.render();
         StackableStateResult::Continue
     }
