@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-mod menu;
+mod luamenu;
 mod starbg;
 
-pub use menu::*;
+pub use luamenu::*;
 pub use starbg::*;

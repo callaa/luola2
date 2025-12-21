@@ -54,6 +54,7 @@ pub struct Text {
 #[derive(Clone, Copy)]
 pub enum RenderTextDest {
     TopLeft(Vec2),
+    TopRight(Vec2),
     TopCenter(Vec2),
     BottomLeft(Vec2),
     BottomCenter(Vec2),
@@ -286,6 +287,7 @@ impl Text {
     pub fn render(&self, opts: &RenderTextOptions) {
         let pos = match opts.dest {
             RenderTextDest::TopLeft(p) => p,
+            RenderTextDest::TopRight(p) => p - Vec2(self.width, 0.0),
             RenderTextDest::Centered(p) => p - Vec2(self.width / 2.0, self.height / 2.0),
             RenderTextDest::TopCenter(p) => p - Vec2(self.width / 2.0, 0.0),
             RenderTextDest::BottomLeft(p) => p - Vec2(0.0, self.height),

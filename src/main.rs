@@ -195,7 +195,7 @@ impl AppState {
                 } else if t.0 == custom.menu_button {
                     let userev = unsafe { &event.user };
                     self.statestack
-                        .handle_menu_button(MenuButton::from_event_code(userev.code));
+                        .handle_menu_button(MenuButton::from_event_code(userev.code, userev.data1));
                 }
             }
             _ => {}

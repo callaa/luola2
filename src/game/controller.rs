@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, ffi::CStr, ptr::null_mut};
+use std::{collections::HashMap, ffi::{CStr, c_void}, ptr::{self, null_mut}};
 
 use sdl3_sys::{
     events::SDL_KeyboardEvent,
@@ -36,7 +36,7 @@ use sdl3_sys::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{configfile::GAME_CONFIG, events::push_menu_button_event, gfx::Color};
+use crate::{configfile::GAME_CONFIG, events::push_menu_button_event, game::PlayerId, gfx::Color};
 
 /// How many controllers are reserved for keyboard use.
 /// All other controllers are gamepads.
@@ -78,14 +78,15 @@ pub struct PlayerKeymap {
 #[derive(Clone, Copy)]
 pub enum MenuButton {
     None,
-    Up(i32),
-    Right(i32),
-    Down(i32),
-    Left(i32),
-    Select(i32),
+    Up(PlayerId),
+    Right(PlayerId),
+    Down(PlayerId),
+    Left(PlayerId),
+    Select(PlayerId),
     Start,
     Back,
     Debug,
+    GrabbedKey(u32),
 }
 
 impl MenuButton {
@@ -93,30 +94,33 @@ impl MenuButton {
         matches!(self, Self::None)
     }
 
-    pub fn to_event_code(self) -> i32 {
+    /// Return a (code, data1) pair to be used in a custom SDL event
+    pub fn to_event_code(self) -> (i32, *mut c_void) {
         match self {
-            Self::None => 0,
-            Self::Up(p) => 0x010000 | p,
-            Self::Right(p) => 0x020000 | p,
-            Self::Down(p) => 0x030000 | p,
-            Self::Left(p) => 0x040000 | p,
-            Self::Select(p) => 0x050000 | p,
-            Self::Start => 0x060000,
-            Self::Back => 0x070000,
-            Self::Debug => 0x080000,
+            Self::None => (0, null_mut()),
+            Self::Up(p) => (1, ptr::without_provenance_mut(p as usize)),
+            Self::Right(p) => (2, ptr::without_provenance_mut(p as usize)),
+            Self::Down(p) => (3, ptr::without_provenance_mut(p as usize)),
+            Self::Left(p) => (4, ptr::without_provenance_mut(p as usize)),
+            Self::Select(p) => (5, ptr::without_provenance_mut(p as usize)),
+            Self::Start => (6, null_mut()),
+            Self::Back => (7, null_mut()),
+            Self::Debug => (8, null_mut()),
+            Self::GrabbedKey(k) => (9, ptr::without_provenance_mut(k as usize)),
         }
     }
 
-    pub fn from_event_code(code: i32) -> MenuButton {
-        match code & 0xff0000 {
-            0x010000 => Self::Up(code & 0xffff),
-            0x020000 => Self::Right(code & 0xffff),
-            0x030000 => Self::Down(code & 0xffff),
-            0x040000 => Self::Left(code & 0xffff),
-            0x050000 => Self::Select(code & 0xffff),
-            0x060000 => Self::Start,
-            0x070000 => Self::Back,
-            0x080000 => Self::Debug,
+    pub fn from_event_code(code: i32, data1: *mut c_void) -> MenuButton {
+        match code {
+            1 => Self::Up(data1 as PlayerId),
+            2 => Self::Right(data1 as PlayerId),
+            3 => Self::Down(data1 as PlayerId),
+            4 => Self::Left(data1 as PlayerId),
+            5 => Self::Select(data1 as PlayerId),
+            6 => Self::Start,
+            7 => Self::Back,
+            8 => Self::Debug,
+            9 => Self::GrabbedKey(data1 as u32),
             _ => Self::None,
         }
     }
@@ -156,9 +160,8 @@ pub struct GameControllerSet {
     /// so the indices will remain stable.
     pub states: Vec<GameController>,
 
-    /// The last key up event keycode
-    /// This is used for key grabbing
-    pub last_grabbed_key: u32,
+
+    /// In key grab mode, the next button press will emit a GrabbedKey menu button event
     key_grabbing: bool,
 
     keymap: HashMap<u32, (MappedKey, usize)>,
@@ -169,7 +172,6 @@ impl GameControllerSet {
         Self {
             states: vec![GameController::new(); KEYBOARDS],
             keymap: HashMap::new(),
-            last_grabbed_key: 0,
             key_grabbing: false,
         }
     }
@@ -245,8 +247,8 @@ impl GameControllerSet {
     }
 
     pub fn start_keygrab(&mut self) {
-        self.last_grabbed_key = 0;
         self.key_grabbing = true;
+        log::debug!("Started keygrab mode");
     }
 
     pub fn reload_keymaps(&mut self) {
@@ -310,8 +312,9 @@ impl GameControllerSet {
 
     pub fn handle_sdl_key_event(&mut self, key: &SDL_KeyboardEvent) {
         if self.key_grabbing && !key.down {
-            self.last_grabbed_key = key.key;
             self.key_grabbing = false;
+            log::debug!("Grabbed key 0x{:x}", key.key);
+            push_menu_button_event(MenuButton::GrabbedKey(key.key));
             return;
         }
 

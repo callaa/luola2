@@ -56,14 +56,15 @@ pub fn push_config_changed_event() {
 }
 
 pub fn push_menu_button_event(button: MenuButton) {
+    let (code, data1) = button.to_event_code();
     let mut ev = SDL_Event {
         user: SDL_UserEvent {
             r#type: CUSTOM_EVENTS.menu_button,
             reserved: 0,
             timestamp: 0,
             windowID: 0,
-            code: button.to_event_code(),
-            data1: null_mut(),
+            code,
+            data1,
             data2: null_mut(),
         },
     };
