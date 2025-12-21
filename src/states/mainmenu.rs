@@ -34,7 +34,7 @@ pub struct MainMenu {
     luamenu: LuaMenu,
 
     background: TextureId,
-    starfield: AnimatedStarfield,
+    starfield: Rc<RefCell<AnimatedStarfield>>,
 
     anim_state: AnimState,
     intro_outro_anim: f32,
@@ -65,7 +65,7 @@ impl MainMenu {
 
         let r = renderer.borrow();
         let background = r.texture_store().find_texture(b"menubackground")?;
-        let starfield = AnimatedStarfield::new(200, r.width() as f32, r.height() as f32);
+        let starfield = Rc::new(RefCell::new(Self::new_starfield(r.size())));
 
         drop(r);
 
@@ -81,6 +81,10 @@ impl MainMenu {
         })
     }
 
+    fn new_starfield(screen_size: (i32, i32)) -> AnimatedStarfield {
+        AnimatedStarfield::new(200, screen_size.0 as f32, screen_size.1 as f32)
+    }
+
     pub fn render(&self) {
         let renderer = self.renderer.borrow();
         renderer.clear();
@@ -88,7 +92,7 @@ impl MainMenu {
         let bg = renderer.texture_store().get_texture(self.background);
 
         // Background: starfield
-        self.starfield.render(&renderer);
+        self.starfield.borrow().render(&renderer);
 
         // Background: top and bottom halves
         let bgoffset = self.intro_outro_anim * self.intro_outro_anim * bg.height() / 2.0;
@@ -151,7 +155,7 @@ impl StackableState for MainMenu {
     fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         match retval.downcast::<AnimatedStarfield>() {
             Ok(s) => {
-                self.starfield = *s;
+                self.starfield.replace(*s);
                 StackableStateResult::Continue
             }
             Err(e) => StackableStateResult::Error(anyhow!(
@@ -165,7 +169,7 @@ impl StackableState for MainMenu {
         let size = self.renderer.borrow().size();
         self.luamenu
             .relayout(RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32));
-        self.starfield.update_screensize(size);
+        self.starfield.borrow_mut().update_screensize(size);
     }
 
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
@@ -183,7 +187,7 @@ impl StackableState for MainMenu {
                 self.anim_state =
                     AnimState::Outro(StackableStateResult::Push(Box::new(PlayerSelection::new(
                         self.assets.clone(),
-                        Rc::new(RefCell::new(self.starfield.clone())),
+                        self.starfield.clone(),
                         self.controllers.clone(),
                         self.renderer.clone(),
                     ))))
@@ -212,10 +216,6 @@ impl StackableState for MainMenu {
             AnimState::Outro(_) => self.intro_outro_anim += timestep,
         };
 
-        // Note: star animation is not updated here so we get a static starfield.
-        // Updates start in the next state, giving us a nice warp effect.
-        //self.starfield.step(timestep);
-
         self.render();
 
         match self.anim_state {
@@ -227,6 +227,8 @@ impl StackableState for MainMenu {
             }
             AnimState::Normal => {}
             AnimState::Outro(_) => {
+                // Note: starfield is static until the game starts
+                self.starfield.borrow_mut().step(timestep);
                 if self.intro_outro_anim > 1.0 {
                     self.intro_outro_anim = 1.0;
                     let ret = std::mem::replace(&mut self.anim_state, AnimState::Intro);
@@ -235,7 +237,10 @@ impl StackableState for MainMenu {
                     }
 
                     return match ret {
-                        AnimState::Outro(ret) => ret,
+                        AnimState::Outro(ret) => {
+                            self.starfield = Rc::new(RefCell::new(Self::new_starfield(self.renderer.borrow().size())));
+                            ret
+                        }
                         _ => unreachable!(),
                     };
                 }
