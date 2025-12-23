@@ -20,11 +20,28 @@ use anyhow::Result;
 
 use crate::{
     game::{MenuButton, Player, PlayerId},
-    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text},
-    math::Vec2,
+    gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
+    math::{Vec2, interpolation},
     menu::AnimatedStarfield,
     states::{StackableState, StackableStateResult},
 };
+
+enum AnimationState {
+    // Initial game-over text fade-in
+    FadeIn(f32),
+
+    // Text scrolls up, reveals ranking table
+    Scroll(f32),
+
+    // Reveal round results list
+    RoundResults(f32),
+
+    // Wait for any key
+    Wait,
+
+    // Fade out
+    Exit(f32),
+}
 
 pub struct GameResultsState {
     players: Vec<Player>,
@@ -34,15 +51,9 @@ pub struct GameResultsState {
     starfield: AnimatedStarfield,
     gameover_text: Text,
     player_numbers: Vec<Text>,
-    player_results: Vec<(i32, i32, Text)>,
-    winner_text: Text,
-
-    rounds_shown_anim: usize,
-    results_shown_anim: usize,
-    results_box_size: (f32, f32),
-    timer: f32,
-    exit_timer: Option<f32>,
-    alpha_mod: f32,
+    player_ranking: Vec<(i32, i32, Text)>,
+    ranking_table_size: (f32, f32),
+    anim: AnimationState,
 }
 
 impl GameResultsState {
@@ -53,8 +64,10 @@ impl GameResultsState {
     ) -> Result<Self> {
         let r = renderer.borrow();
 
+        // New static background which will be passed to the main menu state
         let starfield = AnimatedStarfield::new(200, r.width() as f32, r.height() as f32);
 
+        // Player numbers used to indicate round winners. Player 0 means tie
         let mut player_numbers = Vec::with_capacity(players.len() + 1);
         player_numbers.push(
             r.fontset()
@@ -72,7 +85,8 @@ impl GameResultsState {
             );
         }
 
-        let mut player_results = players
+        // Player ranking table
+        let mut player_ranking = players
             .iter()
             .enumerate()
             .map(|(idx, p)| {
@@ -89,38 +103,20 @@ impl GameResultsState {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        player_results.sort_by(|a, b| b.0.cmp(&a.0));
+        player_ranking.sort_by(|a, b| a.0.cmp(&b.0));
 
-        let results_box_size = player_results
+        let ranking_table_size = player_ranking
             .iter()
             .map(|(_, _, txt)| (txt.width(), txt.height()))
             .reduce(|acc, (w, h)| (acc.0.max(w), acc.1 + h))
             .expect("There should be at least one player");
 
+        // The headline
         let gameover_text = r
             .fontset()
             .menu_big
             .create_text(&r, "Game Over!")?
-            .with_color(Color::new(0.9, 0.1, 0.1));
-
-        let is_draw = player_results[0].0 == 0;
-
-        let winner_text = if is_draw {
-            r.fontset()
-                .menu_big
-                .create_text(&r, "Nobody wins!")?
-                .with_color(Color::new(0.5, 0.5, 0.5))
-        } else {
-            r.fontset()
-                .menu_big
-                .create_text(&r, &format!("Player {} wins!", player_results[0].1))?
-                .with_color(Color::player_color(player_results[0].1))
-        };
-
-        let results_box_size = (
-            results_box_size.0,
-            results_box_size.1 + winner_text.height(),
-        );
+            .with_outline_color(Color::new(0.2, 0.2, 0.4));
 
         drop(r);
 
@@ -131,14 +127,9 @@ impl GameResultsState {
             starfield,
             gameover_text,
             player_numbers,
-            player_results,
-            winner_text,
-            results_box_size,
-            rounds_shown_anim: 0,
-            results_shown_anim: 0,
-            timer: 0.0,
-            exit_timer: None,
-            alpha_mod: 1.0,
+            player_ranking,
+            ranking_table_size,
+            anim: AnimationState::FadeIn(0.0),
         })
     }
 
@@ -147,61 +138,91 @@ impl GameResultsState {
 
         r.clear();
 
-        self.starfield.render(&r);
+        let w = r.width() as f32;
+        let h = r.height() as f32;
+
+        let alpha = match self.anim {
+            AnimationState::FadeIn(t) => t,
+            AnimationState::Exit(t) => 1.0 - t,
+            _ => 1.0,
+        };
+
+        // Starfield does not fade out as its shared with the main menu this state returns to
+        self.starfield.render_with_alpha(
+            &r,
+            match self.anim {
+                AnimationState::FadeIn(t) => t,
+                _ => 1.0,
+            },
+        );
 
         const SPACING: f32 = 5.0;
 
         // Heading
-        if self.results_shown_anim <= self.player_results.len() {
-            self.gameover_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopCenter(Vec2(r.width() as f32 / 2.0, SPACING)),
-                alpha: self.alpha_mod,
-                ..Default::default()
-            });
-        }
+        let heading_y = match self.anim {
+            AnimationState::FadeIn(_) => h / 2.0,
+            AnimationState::Scroll(t) => {
+                interpolation::linear(h / 2.0, self.gameover_text.height() / 2.0 + SPACING, t)
+            }
+            _ => self.gameover_text.height() / 2.0 + SPACING,
+        };
+
+        self.gameover_text.render(&RenderTextOptions {
+            dest: RenderTextDest::Centered(Vec2(r.width() as f32 / 2.0, heading_y)),
+            outline: TextOutline::Shadow,
+            alpha,
+            ..Default::default()
+        });
 
         // Round result table
-        let rounds_width =
-            (self.player_numbers[0].width() + SPACING) * self.round_winners.len() as f32;
+        let rounds_shown = match self.anim {
+            AnimationState::FadeIn(_) => 0,
+            AnimationState::Scroll(_) => 0,
+            AnimationState::RoundResults(t) => (self.round_winners.len() as f32 * t) as usize,
+            _ => self.round_winners.len(),
+        };
 
-        let mut rounds_x = (r.width() as f32 - rounds_width) / 2.0;
-        let rounds_y = self.gameover_text.height() + SPACING * 3.0;
+        if rounds_shown > 0 {
+            let rounds_width =
+                (self.player_numbers[0].width() + SPACING) * self.round_winners.len() as f32;
 
-        for r in self.round_winners.iter().take(self.rounds_shown_anim) {
-            let text = &self.player_numbers[*r as usize];
-            text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopLeft(Vec2(rounds_x, rounds_y)),
-                alpha: self.alpha_mod,
-                ..Default::default()
-            });
-            rounds_x += text.width() + SPACING;
+            let mut rounds_x = (w - rounds_width) / 2.0;
+            let rounds_y = self.gameover_text.height() + SPACING * 3.0;
+
+            for r in self.round_winners.iter().take(rounds_shown) {
+                let text = &self.player_numbers[*r as usize];
+                text.render(&RenderTextOptions {
+                    dest: RenderTextDest::TopLeft(Vec2(rounds_x, rounds_y)),
+                    alpha,
+                    ..Default::default()
+                });
+                rounds_x += text.width() + SPACING;
+            }
         }
 
-        // Player ranking
-        let x = (r.width() as f32 - self.results_box_size.0) / 2.0;
-        let mut y = (r.height() as f32 - self.results_box_size.1) / 2.0 + self.results_box_size.1;
+        // Player ranking table
+        let ranking_alpha = match self.anim {
+            AnimationState::FadeIn(_) => 0.0,
+            AnimationState::Scroll(t) => t,
+            _ => alpha,
+        };
 
-        for (_, _, res) in self
-            .player_results
-            .iter()
-            .rev()
-            .take(self.results_shown_anim)
-        {
-            res.render(&RenderTextOptions {
-                dest: RenderTextDest::TopLeft(Vec2(x, y)),
-                alpha: self.alpha_mod,
-                ..Default::default()
-            });
+        if ranking_alpha > 0.0 {
+            let x = (w - self.ranking_table_size.0) / 2.0;
+            let mut y = (h + self.ranking_table_size.1) / 2.0;
 
-            y -= res.height() + SPACING;
-        }
+            let heading_y = heading_y + self.gameover_text.height();
+            for (_, _, res) in self.player_ranking.iter() {
+                if y > heading_y {
+                    res.render(&RenderTextOptions {
+                        dest: RenderTextDest::TopLeft(Vec2(x, y)),
+                        alpha: ranking_alpha,
+                        ..Default::default()
+                    });
 
-        if self.results_shown_anim == self.player_results.len() + 1 {
-            self.winner_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopCenter(Vec2(r.width() as f32 / 2.0, SPACING)),
-                alpha: self.alpha_mod,
-                ..Default::default()
-            });
+                    y -= res.height() + SPACING;
+                }
+            }
         }
 
         r.present();
@@ -211,11 +232,13 @@ impl GameResultsState {
 impl StackableState for GameResultsState {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
-            MenuButton::Back | MenuButton::Start => {
-                if self.exit_timer.is_none() {
-                    self.exit_timer = Some(1.0)
-                }
-            }
+            MenuButton::Back | MenuButton::Start | MenuButton::Select(_) => match self.anim {
+                AnimationState::FadeIn(_)
+                | AnimationState::Scroll(_)
+                | AnimationState::RoundResults(_) => self.anim = AnimationState::Wait,
+                AnimationState::Wait => self.anim = AnimationState::Exit(0.0),
+                AnimationState::Exit(_) => return StackableStateResult::Pop,
+            },
             _ => {}
         }
         StackableStateResult::Continue
@@ -227,24 +250,45 @@ impl StackableState for GameResultsState {
     }
 
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
-        if self.rounds_shown_anim < self.round_winners.len() && self.timer > 0.05 {
-            self.rounds_shown_anim += 1;
-            self.timer = 0.0;
-        } else if self.results_shown_anim <= self.player_results.len() && self.timer > 0.5 {
-            self.results_shown_anim += 1;
-            self.timer = 0.0;
-        } else {
-            self.timer += timestep;
-        }
-
-        if let Some(mut exit) = self.exit_timer {
-            exit -= timestep;
-            if exit <= 0.0 {
-                return StackableStateResult::Return(Box::new(self.starfield.clone()));
+        self.anim = match self.anim {
+            AnimationState::FadeIn(t) => {
+                let t = t + timestep;
+                if t > 1.0 {
+                    AnimationState::Scroll(0.0)
+                } else {
+                    AnimationState::FadeIn(t)
+                }
             }
-            self.exit_timer = Some(exit);
-            self.alpha_mod = exit;
-        }
+
+            AnimationState::Scroll(t) => {
+                let t = t + timestep;
+                if t > 1.0 {
+                    AnimationState::RoundResults(0.0)
+                } else {
+                    AnimationState::Scroll(t)
+                }
+            }
+
+            AnimationState::RoundResults(t) => {
+                let t = t + timestep;
+                if t > 1.0 {
+                    AnimationState::Wait
+                } else {
+                    AnimationState::RoundResults(t)
+                }
+            }
+
+            AnimationState::Wait => AnimationState::Wait,
+
+            AnimationState::Exit(t) => {
+                let t = t + timestep;
+                if t > 1.0 {
+                    return StackableStateResult::Return(Box::new(self.starfield.clone()));
+                } else {
+                    AnimationState::Exit(t)
+                }
+            }
+        };
 
         self.render();
         StackableStateResult::Continue

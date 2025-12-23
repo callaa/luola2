@@ -5,10 +5,10 @@
 level = "demo"
 rounds = 10
 
-#gameover = true # skip straight to game-over screen
+gameover = true # skip straight to game-over screen
 
 # prefill history for past rounds
-#winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
+winners = [1, 0, 1, 1, 2, 2, 2, 2, 3]
 
 [[player]]
 controller = 1
@@ -22,7 +22,7 @@ controller = 2
 ship = "vwing"
 weapon = "laser"
 
-#[[player]]
-#controller = 3
-#ship = "vwing"
-#weapon = "grenade"
+[[player]]
+controller = 3
+ship = "vwing"
+weapon = "grenade"
