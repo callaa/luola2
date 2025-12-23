@@ -59,8 +59,6 @@ struct JoiningPlayer {
 }
 
 impl PlayerSelection {
-    const START_TIMER: f32 = 1.0;
-
     pub fn new(
         assets: Rc<GameAssets>,
         starfield: Rc<RefCell<AnimatedStarfield>>,
@@ -84,7 +82,8 @@ impl PlayerSelection {
         let start_text = font
             .create_text(&r, "Press Enter to start the game!")
             .unwrap()
-            .with_color(red);
+            //.with_color(red);
+            .with_outline_color(Color::new(0.2, 0.2, 0.4));
 
         let rounds_to_win = 5;
         let rounds_to_win_text = r
@@ -117,9 +116,9 @@ impl PlayerSelection {
         let h = renderer.height() as f32;
 
         let fadeout = if let Some(f) = self.start_timer {
-            f / Self::START_TIMER
+            f
         } else {
-            1.0
+            0.0
         };
 
         // Background
@@ -134,7 +133,7 @@ impl PlayerSelection {
             });
         } else {
             for p in &self.players {
-                let rect = p.rect.offset(((1.0 - fadeout) * w).powf(1.2), 0.0);
+                let rect = p.rect.offset(fadeout.powf(2.0) * (w - p.rect.x()), 0.0);
 
                 p.icon.render(
                     &renderer,
@@ -155,26 +154,31 @@ impl PlayerSelection {
         }
 
         // Round selector
-        let offset_x = ((1.0 - fadeout) * w).powf(1.2);
+        let offset_x = fadeout.powf(2.0) * w / 2.0;
         let offset_y = 10.0;
 
         self.rounds_to_win_text.render(&RenderTextOptions {
-            dest: RenderTextDest::BottomCenter(Vec2(
+            dest: RenderTextDest::TopCenter(Vec2(
                 w / 2.0 - offset_x,
-                h - self.rounds_text.height() - offset_y,
+                //h - self.rounds_text.height() - offset_y,
+                offset_y,
             )),
             ..Default::default()
         });
 
         self.rounds_text.render(&RenderTextOptions {
-            dest: RenderTextDest::BottomCenter(Vec2(w / 2.0 - offset_x, h - offset_y)),
+            dest: RenderTextDest::TopCenter(Vec2(
+                w / 2.0 - offset_x,
+                offset_y + self.rounds_to_win_text.height(),
+            )),
             ..Default::default()
         });
 
         // Start game prompt
         if !self.players.is_empty() {
             self.start_text.render(&RenderTextOptions {
-                dest: RenderTextDest::TopCenter(Vec2(w / 2.0 - offset_x, offset_y)),
+                dest: RenderTextDest::BottomCenter(Vec2(w / 2.0 - offset_x, h - offset_y)),
+                outline: TextOutline::Shadow,
                 ..Default::default()
             });
         }
@@ -246,7 +250,7 @@ impl StackableState for PlayerSelection {
             }
             MenuButton::Start => {
                 if !self.players.is_empty() {
-                    self.start_timer = Some(Self::START_TIMER);
+                    self.start_timer = Some(0.0);
                 }
             }
             MenuButton::Select(controller) if controller > 0 => {
@@ -321,9 +325,8 @@ impl StackableState for PlayerSelection {
 
         // Fadeout then start game
         if let Some(mut start) = self.start_timer {
-            start -= timestep;
-            if start <= 0.0 {
-                self.start_timer = None;
+            start += timestep * 3.0;
+            if start > 1.0 {
                 let players: Vec<Player> = self
                     .players
                     .iter()

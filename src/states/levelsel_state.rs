@@ -34,11 +34,16 @@ pub struct LevelSelection {
     starfield: Rc<RefCell<AnimatedStarfield>>,
     assets: Rc<GameAssets>,
     levelboxes: Vec<LevelBox>,
+    prev_round_text: Option<Text>,
+    fadein_round_text: bool,
     round_text: Text,
     selection: usize,
     selector_offset: f32,
     selector_offset_target: f32,
     renderer: Rc<RefCell<Renderer>>,
+    fadein: f32,
+    fadeout: f32,
+    start: bool,
 }
 
 struct LevelBox {
@@ -59,6 +64,7 @@ impl LevelSelection {
     pub fn new(
         assets: Rc<GameAssets>,
         round: i32,
+        fadein_round_text: bool,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
         selection: usize,
@@ -70,6 +76,19 @@ impl LevelSelection {
             .menu_big
             .create_text(&renderer.borrow(), &format!("Round {}", round))?
             .with_color(Color::new(0.9, 0.2, 0.2));
+
+        let prev_round_text = if round > 1 {
+            Some(
+                renderer
+                    .borrow()
+                    .fontset()
+                    .menu_big
+                    .create_text(&renderer.borrow(), &format!("Round {}", round - 1))?
+                    .with_color(Color::new(0.9, 0.2, 0.2)),
+            )
+        } else {
+            None
+        };
 
         let mut last_xpos = 0.0;
 
@@ -106,12 +125,17 @@ impl LevelSelection {
         Ok(Self {
             assets,
             round_text,
+            prev_round_text,
+            fadein_round_text,
             starfield,
             levelboxes,
             selection,
             selector_offset,
             selector_offset_target: selector_offset,
             renderer,
+            fadein: 0.0,
+            fadeout: 1.0,
+            start: false,
         })
     }
 
@@ -123,9 +147,38 @@ impl LevelSelection {
         self.starfield.borrow().render(renderer);
 
         // Round number
+        let round_fadein = if self.fadein < 1.0 && self.fadein_round_text {
+            self.fadein
+        } else {
+            1.0
+        };
+
+        if round_fadein < 1.0
+            && let Some(prev_round_text) = &self.prev_round_text
+        {
+            prev_round_text.render(&RenderTextOptions {
+                dest: RenderTextDest::TopCenter(Vec2(
+                    renderer.width() as f32 / 2.0,
+                    10.0 - prev_round_text.height()
+                        + prev_round_text.height() * (1.0 - round_fadein).powf(2.0),
+                )),
+                outline: TextOutline::Outline,
+                alpha: 1.0 - round_fadein,
+                ..Default::default()
+            });
+        }
+
         self.round_text.render(&RenderTextOptions {
-            dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
+            dest: RenderTextDest::TopCenter(Vec2(
+                renderer.width() as f32 / 2.0,
+                10.0 + if self.prev_round_text.is_some() {
+                    self.round_text.height() * (1.0 - round_fadein).powf(2.0)
+                } else {
+                    0.0
+                },
+            )),
             outline: TextOutline::Outline,
+            alpha: round_fadein,
             ..Default::default()
         });
 
@@ -150,9 +203,10 @@ impl LevelSelection {
                             level.h,
                         )),
                         color: if d > 0.0 {
-                            Color::WHITE.with_alpha(1.0 / (2.0 + d * d))
-                        } else {
                             Color::WHITE
+                                .with_alpha(self.fadein * self.fadeout * (1.0 / (2.0 + d * d)))
+                        } else {
+                            Color::WHITE.with_alpha(self.fadein * self.fadeout)
                         },
                         ..Default::default()
                     },
@@ -161,9 +215,19 @@ impl LevelSelection {
         }
 
         // Selected level info
+        let mut levelinfo_center = center + Vec2(0.0, 512.0 / 2.0 + 10.0);
+        if self.fadeout < 1.0 {
+            levelinfo_center = Vec2(
+                levelinfo_center.0,
+                levelinfo_center.1
+                    + (renderer.height() as f32 - levelinfo_center.1)
+                        * (1.0 - self.fadeout.powf(2.0)),
+            );
+        }
         selected_level.title.render(&RenderTextOptions {
-            dest: RenderTextDest::TopCenter(center + Vec2(0.0, 512.0 / 2.0 + 10.0)),
+            dest: RenderTextDest::TopCenter(levelinfo_center),
             outline: TextOutline::Shadow,
+            alpha: self.fadein,
             ..Default::default()
         });
 
@@ -174,22 +238,18 @@ impl LevelSelection {
 impl StackableState for LevelSelection {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
-            MenuButton::Right(_) => {
+            MenuButton::Right(_) if !self.start => {
                 self.selection = (self.selection + 1) % self.levelboxes.len();
             }
-            MenuButton::Left(_) => {
+            MenuButton::Left(_) if !self.start => {
                 self.selection =
                     (self.selection as i32 - 1).rem_euclid(self.levelboxes.len() as i32) as usize;
             }
-            MenuButton::Up(_) => {}
-            MenuButton::Down(_) => {}
             MenuButton::Back => {
                 return StackableStateResult::Pop;
             }
             MenuButton::Start | MenuButton::Select(_) => {
-                return StackableStateResult::Return(Box::new(
-                    self.assets.levels[self.selection].clone(),
-                ));
+                self.start = true;
             }
             _ => {}
         }
@@ -203,13 +263,27 @@ impl StackableState for LevelSelection {
         self.starfield
             .borrow_mut()
             .update_screensize(self.renderer.borrow().size());
-
-        //self.update_levelbox_rects();
     }
 
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
         // Animate background
         self.starfield.borrow_mut().step(timestep);
+
+        // Fadein (note: background is shared with other states and does not need to fade in)
+        if self.fadein < 1.0 {
+            self.fadein += timestep;
+        }
+
+        // Animated transition to next state
+        if self.start {
+            self.fadeout -= timestep * 2.0;
+
+            if self.fadeout <= 0.0 {
+                return StackableStateResult::Return(Box::new(
+                    self.assets.levels[self.selection].clone(),
+                ));
+            }
+        }
 
         // Animate level boxes
         self.selector_offset +=

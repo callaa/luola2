@@ -50,9 +50,14 @@ pub struct GameRoundState {
     filler_logo: TextureId,
     filler_logo_rect: RectF,
     filler_logo_vel: Vec2,
+
+    // Exit substate
+    winner: Option<RoundWinner>,
+    fadeout: f32,
 }
 
 /// Return round winner (0 for draw) and whether to quit the game early
+#[derive(Clone)]
 pub struct RoundWinner(pub PlayerId, pub bool);
 
 impl GameRoundState {
@@ -101,6 +106,8 @@ impl GameRoundState {
             filler_logo,
             filler_logo_rect: RectF::new(0.0, 0.0, 1.0, 1.0),
             filler_logo_vel: Vec2(5.0 + fastrand::f32() * 10.0, 5.0 + fastrand::f32() * 10.0),
+            winner: None,
+            fadeout: 0.0,
         };
 
         game.resize_screen();
@@ -128,20 +135,21 @@ impl StackableState for GameRoundState {
     fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         if let Some(pauseret) = retval.downcast_ref::<PauseReturn>() {
             match pauseret {
-                PauseReturn::Resume => StackableStateResult::Continue,
+                PauseReturn::Resume => {},
                 PauseReturn::EndRound => {
-                    StackableStateResult::Return(Box::new(RoundWinner(0, false)))
+                    self.winner = Some(RoundWinner(0, false));
                 }
                 PauseReturn::EndGame => {
-                    StackableStateResult::Return(Box::new(RoundWinner(0, true)))
+                    self.winner = Some(RoundWinner(0, true));
                 }
             }
         } else {
-            StackableStateResult::Error(anyhow!(
+            return StackableStateResult::Error(anyhow!(
                 "Unhandled game state return type: {:?}",
                 retval.type_id()
             ))
         }
+        StackableStateResult::Continue
     }
 
     fn resize_screen(&mut self) {
@@ -180,8 +188,8 @@ impl StackableState for GameRoundState {
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
         let winner = self.world.step(&self.controllers.borrow().states, timestep);
 
-        if let Some(winner) = winner {
-            return StackableStateResult::Return(Box::new(RoundWinner(winner, false)));
+        if self.winner.is_none() && let Some(winner) = winner {
+            self.winner = Some(RoundWinner(winner, false));
         }
 
         let mut renderer = self.renderer.borrow_mut();
@@ -238,6 +246,13 @@ impl StackableState for GameRoundState {
                 );
         }
 
+        if let Some(winner) = &self.winner {
+            self.fadeout += timestep;
+            if self.fadeout > 1.0 {
+                return StackableStateResult::Return(Box::new(winner.clone()));
+            }
+            renderer.draw_filled_rectangle(RectF::new(0.0, 0.0, renderer.width() as f32, renderer.height() as f32), &Color::new_rgba(0.0, 0.0, 0.0, self.fadeout));
+        }
         renderer.present();
         StackableStateResult::Continue
     }

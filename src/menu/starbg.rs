@@ -106,6 +106,13 @@ impl AnimatedStarfield {
         );
     }
 
+    pub fn render_with_alpha(&self, renderer: &Renderer, alpha: f32) {
+        renderer.draw_line_segments_iter(
+            Color::WHITE.with_alpha(alpha),
+            self.stars.iter().map(|s| (s.px, s.py, s.px2, s.py2)),
+        );
+    }
+
     fn make_star(start_x: f32, start_y: f32, z: f32, width: f32, height: f32, scale: f32) -> Star {
         let target_x = ((start_x - width / 2.0) + fastrand::f32() * 20.0 - 10.0) * scale;
         let target_y = ((start_y - height / 2.0) + fastrand::f32() * 20.0 - 10.0) * scale;

@@ -27,6 +27,7 @@ use crate::{
         gameresults_state::GameResultsState,
         levelsel_state::LevelSelection,
         round_state::{GameRoundState, RoundWinner},
+        roundresults_state::RoundResultsState,
         weaponsel_state::{SelectedWeapons, WeaponSelection},
     },
 };
@@ -46,9 +47,11 @@ pub struct GameState {
 
 #[derive(PartialEq)]
 enum GameSubState {
-    SelectLevel,
+    SelectLevel,     // return from SelectWeapons state without fadein animation
+    SelectNextLevel, // same as SelectLevel except use fadein animation
     SelectWeapons,
     PlayRound,
+    RoundResults,
     GameResults,
 }
 
@@ -68,7 +71,7 @@ impl GameState {
             rounds,
             round_winners: Vec::new(),
             level: None,
-            substate: GameSubState::SelectLevel,
+            substate: GameSubState::SelectNextLevel,
             controllers,
             renderer,
         }
@@ -81,7 +84,7 @@ impl GameState {
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
     ) -> Result<Self> {
-        let mut substate = GameSubState::SelectLevel;
+        let mut substate = GameSubState::SelectNextLevel;
 
         let level = if config.gameover.unwrap_or(false) {
             // Gameover: jump straight to the game over screen
@@ -151,7 +154,7 @@ impl StackableState for GameState {
             if winner.1 || self.round_winners.len() as i32 >= self.rounds {
                 self.substate = GameSubState::GameResults;
             } else {
-                self.substate = GameSubState::SelectLevel;
+                self.substate = GameSubState::RoundResults;
             }
         } else {
             return StackableStateResult::Error(anyhow!(
@@ -177,7 +180,28 @@ impl StackableState for GameState {
         // By default, the next state is always GameResults to handle the case
         // where the player chooses to cancel the game early.
         match self.substate {
-            GameSubState::SelectLevel => {
+            GameSubState::RoundResults => {
+                self.substate = GameSubState::SelectNextLevel;
+                let last_winner = *self
+                    .round_winners
+                    .last()
+                    .expect("last winner should have been set");
+                StackableStateResult::Push(Box::new(
+                    match RoundResultsState::new(
+                        self.round_winners.len() as i32,
+                        last_winner,
+                        self.starfield.clone(),
+                        self.renderer.clone(),
+                    ) {
+                        Ok(s) => s,
+                        Err(err) => {
+                            return StackableStateResult::Error(err);
+                        }
+                    },
+                ))
+            }
+            GameSubState::SelectNextLevel | GameSubState::SelectLevel => {
+                let fadein_round_text = matches!(self.substate, GameSubState::SelectNextLevel);
                 self.substate = GameSubState::GameResults;
                 let selection = if let Some(level) = &self.level {
                     self.assets.levels.iter().position(|l| {
@@ -192,6 +216,7 @@ impl StackableState for GameState {
                     match LevelSelection::new(
                         self.assets.clone(),
                         self.round_winners.len() as i32 + 1,
+                        fadein_round_text,
                         self.starfield.clone(),
                         self.renderer.clone(),
                         selection,

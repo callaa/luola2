@@ -48,7 +48,8 @@ pub struct WeaponSelection {
     texts: Vec<Texts>,
     longest_weapon_text_width: f32,
     flavortext_selection: usize,
-    fade_timer: f32,
+    fadein: f32,
+    background_fadein: f32,
     start_timer: Option<f32>,
 }
 
@@ -230,7 +231,8 @@ impl WeaponSelection {
             longest_weapon_text_width,
             flavortext_selection,
             start_timer: None,
-            fade_timer: 0.0,
+            fadein: 0.0,
+            background_fadein: 0.0,
         })
     }
 
@@ -263,6 +265,8 @@ impl WeaponSelection {
         let icon_h = player.left_button_icon.height();
         let text_h = self.texts[0].menu.height();
 
+        let white = Color::WHITE.with_alpha(self.fadein);
+
         if !player.decided {
             player.up_button_icon.render(
                 renderer,
@@ -271,6 +275,7 @@ impl WeaponSelection {
                         x + icon_w / 2.0,
                         rect.y() + (text_h - icon_h) / 2.0,
                     )),
+                    color: white,
                     ..Default::default()
                 },
             );
@@ -281,6 +286,7 @@ impl WeaponSelection {
                         x + icon_w / 2.0,
                         rect.y() + (text_h + icon_h) / 2.0,
                     )),
+                    color: white,
                     ..Default::default()
                 },
             );
@@ -293,11 +299,13 @@ impl WeaponSelection {
         let mut ship_render = RenderOptions {
             dest: RenderDest::Centered(Vec2(x + shiptex.width() / 2.0, rect.y() + text_h / 2.0)),
             mode: RenderMode::Rotated(if player.decided { 0.0 } else { 90.0 }, false),
+            color: white,
+
             ..Default::default()
         };
 
         shiptex.render(renderer, &ship_render);
-        ship_render.color = Color::player_color(player_id);
+        ship_render.color = Color::player_color(player_id).with_alpha(self.fadein);
         renderer
             .texture_store()
             .get_texture_alt(shiptexid, crate::gfx::TexAlt::Decal)
@@ -314,6 +322,7 @@ impl WeaponSelection {
                 renderer,
                 &RenderOptions {
                     dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
+                    color: white,
                     ..Default::default()
                 },
             );
@@ -324,6 +333,7 @@ impl WeaponSelection {
         title_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopLeft(Vec2(x, rect.y())),
             outline: TextOutline::Outline,
+            alpha: self.fadein,
             ..Default::default()
         });
 
@@ -334,6 +344,7 @@ impl WeaponSelection {
                 renderer,
                 &RenderOptions {
                     dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
+                    color: white,
                     ..Default::default()
                 },
             );
@@ -344,6 +355,7 @@ impl WeaponSelection {
                 renderer,
                 &RenderOptions {
                     dest: RenderDest::Centered(Vec2(x + icon_w / 2.0, rect.y() + icon_h / 2.0)),
+                    color: white,
                     ..Default::default()
                 },
             );
@@ -362,13 +374,13 @@ impl WeaponSelection {
                 &RenderOptions {
                     source: Some(self.background_rect),
                     dest: RenderDest::Fill,
-                    color: Color::WHITE.with_alpha(self.fade_timer / FADE_TIME * 0.7),
+                    color: Color::WHITE.with_alpha(self.background_fadein),
                     ..Default::default()
                 },
             );
         }
 
-        // Round number
+        // Round number (shared with previous state so not faded in)
         self.round_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(Vec2(renderer.width() as f32 / 2.0, 10.0)),
             outline: TextOutline::Outline,
@@ -519,9 +531,9 @@ impl StackableState for WeaponSelection {
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
         // Animate background
         self.starfield.borrow_mut().step(timestep);
-        if self.fade_timer < FADE_TIME {
-            self.fade_timer = (self.fade_timer + timestep).min(FADE_TIME);
-        }
+
+        self.fadein = (self.fadein + timestep).min(1.0);
+        self.background_fadein = (self.background_fadein + timestep * 0.3).min(1.0);
 
         if let Some(bg) = &self.background {
             self.background_rect = self.background_rect + self.background_scroll * timestep;
@@ -564,5 +576,3 @@ impl StackableState for WeaponSelection {
         StackableStateResult::Continue
     }
 }
-
-const FADE_TIME: f32 = 3.0;
