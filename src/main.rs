@@ -41,7 +41,8 @@ use crate::gfx::{Renderer, SdlError};
 use crate::states::{GameInitState, StateStack};
 
 mod configfile;
-pub mod events;
+mod demos;
+mod events;
 mod fs;
 mod game;
 mod gfx;

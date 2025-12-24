@@ -272,3 +272,7 @@ height = 64
 frames = 12
 duration = 0.4
 blend = "Add"
+
+[sparkle]
+file = "sparkle.png"
+blend = "Add"

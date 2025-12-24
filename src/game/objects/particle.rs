@@ -30,17 +30,16 @@ use crate::{
  */
 #[derive(Clone, Debug)]
 pub struct Particle {
-    pos: Vec2,
-    vel: Vec2,
-    a: Vec2,
-    angle: f32,
-    reveal_in: f32,
-    lifetime: f32,
-    texture: Option<AnimatedTexture>,
-    color: Color,
-    target_color: Color,
-    dcolor: ColorDiff,
-    wind: bool,
+    pub pos: Vec2,
+    pub vel: Vec2,
+    pub a: Vec2,
+    pub angle: f32,
+    pub reveal_in: f32,
+    pub lifetime: f32,
+    pub texture: Option<AnimatedTexture>,
+    pub color: Color,
+    pub dcolor: ColorDiff,
+    pub wind: bool,
 }
 
 impl Particle {
@@ -116,7 +115,6 @@ impl mlua::FromLua for Particle {
                 reveal_in: table.get::<Option<f32>>("reveal_in")?.unwrap_or(0.0),
                 texture: tex.map(AnimatedTexture::new),
                 color,
-                target_color,
                 dcolor,
                 wind: table.get::<Option<bool>>("wind")?.unwrap_or(false),
             })

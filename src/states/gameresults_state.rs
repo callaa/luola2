@@ -19,6 +19,7 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::Result;
 
 use crate::{
+    demos::Fireworks,
     game::{MenuButton, Player, PlayerId},
     gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
     math::{Vec2, interpolation},
@@ -53,6 +54,10 @@ pub struct GameResultsState {
     player_numbers: Vec<Text>,
     player_ranking: Vec<(i32, i32, Text)>,
     ranking_table_size: (f32, f32),
+    winning_player: PlayerId,
+    fireworks: Fireworks,
+    firework_timer: f32,
+
     anim: AnimationState,
 }
 
@@ -103,7 +108,7 @@ impl GameResultsState {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        player_ranking.sort_by(|a, b| a.0.cmp(&b.0));
+        player_ranking.sort_by(|a, b| b.0.cmp(&a.0));
 
         let ranking_table_size = player_ranking
             .iter()
@@ -118,6 +123,14 @@ impl GameResultsState {
             .create_text(&r, "Game Over!")?
             .with_outline_color(Color::new(0.2, 0.2, 0.4));
 
+        // There must be a clear winner to count
+        let winning_player =
+            if player_ranking.len() > 1 && player_ranking[0].0 > player_ranking[1].0 {
+                player_ranking[0].1
+            } else {
+                0
+            };
+
         drop(r);
 
         Ok(Self {
@@ -129,6 +142,9 @@ impl GameResultsState {
             player_numbers,
             player_ranking,
             ranking_table_size,
+            winning_player,
+            fireworks: Fireworks::new(),
+            firework_timer: 0.0,
             anim: AnimationState::FadeIn(0.0),
         })
     }
@@ -155,6 +171,9 @@ impl GameResultsState {
                 _ => 1.0,
             },
         );
+
+        // Fireworks in the background but over the stars
+        self.fireworks.render(&r);
 
         const SPACING: f32 = 5.0;
 
@@ -193,6 +212,7 @@ impl GameResultsState {
                 let text = &self.player_numbers[*r as usize];
                 text.render(&RenderTextOptions {
                     dest: RenderTextDest::TopLeft(Vec2(rounds_x, rounds_y)),
+                    outline: TextOutline::Outline,
                     alpha,
                     ..Default::default()
                 });
@@ -209,19 +229,37 @@ impl GameResultsState {
 
         if ranking_alpha > 0.0 {
             let x = (w - self.ranking_table_size.0) / 2.0;
-            let mut y = (h + self.ranking_table_size.1) / 2.0;
+            let mut y = (h - self.ranking_table_size.1) / 2.0;
 
             let heading_y = heading_y + self.gameover_text.height();
-            for (_, _, res) in self.player_ranking.iter() {
+            for (_, _plr, res) in self.player_ranking.iter() {
                 if y > heading_y {
                     res.render(&RenderTextOptions {
                         dest: RenderTextDest::TopLeft(Vec2(x, y)),
+                        outline: TextOutline::Outline,
                         alpha: ranking_alpha,
                         ..Default::default()
                     });
 
-                    y -= res.height() + SPACING;
+                    /* TODO render trophy to mark winning player?
+                    if *plr == self.winning_player {
+                        if let Ok(tex) = r.texture_store().find_texture(b"trophy") {
+                            let tex = r.texture_store().get_texture(tex);
+                            tex.render_simple(
+                                &r,
+                                None,
+                                Some(RectF::new(
+                                    x + res.width() + 10.0,
+                                    y,
+                                    tex.width(),
+                                    tex.height(),
+                                )),
+                            );
+                        }
+                    }
+                    */
                 }
+                y += res.height() + SPACING;
             }
         }
 
@@ -289,6 +327,29 @@ impl StackableState for GameResultsState {
                 }
             }
         };
+
+        if self.winning_player > 0 {
+            self.firework_timer -= timestep;
+            if self.firework_timer < 0.0
+                && matches!(
+                    self.anim,
+                    AnimationState::RoundResults(_) | AnimationState::Wait
+                )
+            {
+                let screen_size = self.renderer.borrow().size();
+                self.firework_timer = fastrand::f32() * 3.0;
+
+                self.fireworks.add_firework(
+                    Vec2(
+                        fastrand::i32(100..(screen_size.0 - 100)) as f32,
+                        fastrand::i32(100..(screen_size.1 - 100)) as f32,
+                    ),
+                    Color::player_color(self.winning_player),
+                );
+            }
+
+            self.fireworks.step(timestep);
+        }
 
         self.render();
         StackableStateResult::Continue
