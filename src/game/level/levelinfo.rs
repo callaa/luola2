@@ -29,7 +29,10 @@ use anyhow::{Result, anyhow};
 
 use super::terrain::*;
 use crate::{
-    fs::glob_datafiles, game::level::LEVEL_SCALE, gfx::{Renderer, Texture}, math::RectF
+    fs::glob_datafiles,
+    game::level::LEVEL_SCALE,
+    gfx::{Renderer, Texture},
+    math::RectF,
 };
 
 #[derive(Clone)]
@@ -80,7 +83,7 @@ struct LevelInfoToml {
 
 #[derive(serde::Deserialize, Clone, Debug)]
 struct NoSpawnZoneToml {
-    rect: (i32, i32, i32, i32)
+    rect: (i32, i32, i32, i32),
 }
 
 #[derive(serde::Deserialize, Clone, Debug, Default)]
@@ -115,9 +118,18 @@ impl LevelInfo {
             }
         };
 
-        let nospawnzones = info.nospawnzones.iter().map(|n| {
-            RectF::new(n.rect.0 as f32 * LEVEL_SCALE, n.rect.1 as f32 * LEVEL_SCALE, n.rect.2 as f32 *LEVEL_SCALE, n.rect.3 as f32 * LEVEL_SCALE)
-        }).collect();
+        let nospawnzones = info
+            .nospawnzones
+            .iter()
+            .map(|n| {
+                RectF::new(
+                    n.rect.0 as f32 * LEVEL_SCALE,
+                    n.rect.1 as f32 * LEVEL_SCALE,
+                    n.rect.2 as f32 * LEVEL_SCALE,
+                    n.rect.3 as f32 * LEVEL_SCALE,
+                )
+            })
+            .collect();
 
         Ok(LevelInfo {
             root,

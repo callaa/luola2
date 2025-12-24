@@ -14,7 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, ffi::{CStr, c_void}, ptr::{self, null_mut}};
+use std::{
+    collections::HashMap,
+    ffi::{CStr, c_void},
+    ptr::{self, null_mut},
+};
 
 use sdl3_sys::{
     events::SDL_KeyboardEvent,
@@ -159,7 +163,6 @@ pub struct GameControllerSet {
     /// Disconnected gamepads will not be removed from the list
     /// so the indices will remain stable.
     pub states: Vec<GameController>,
-
 
     /// In key grab mode, the next button press will emit a GrabbedKey menu button event
     key_grabbing: bool,

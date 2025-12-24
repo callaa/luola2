@@ -229,14 +229,12 @@ impl<'a> LevelEditor<'a> {
                     tile.artwork[offset] = Color::from_argb_u32(color)
                         .blend(Color::from_argb_u32(self.water_color).with_alpha(0.5))
                         .as_argb_u32();
+                } else if color & 0xff000000 != 0xff000000 {
+                    tile.artwork[offset] = Color::from_argb_u32(tile.artwork[offset])
+                        .blend(Color::from_argb_u32(color))
+                        .as_argb_u32();
                 } else {
-                    if color & 0xff000000 != 0xff000000 {
-                        tile.artwork[offset] = Color::from_argb_u32(tile.artwork[offset])
-                            .blend(Color::from_argb_u32(color))
-                            .as_argb_u32();
-                    } else {
-                        tile.artwork[offset] = color;
-                    }
+                    tile.artwork[offset] = color;
                 }
                 tile.terrain[offset] =
                     (tile.terrain[offset] & !TER_MASK_SOLID) | TER_BIT_DESTRUCTIBLE | solid;

@@ -179,7 +179,7 @@ impl mlua::FromLua for Critter {
                 texture: AnimatedTexture::new(table.get("texture")?),
                 action_texture: table
                     .get::<Option<TextureId>>("action_texture")?
-                    .map(|id| AnimatedTexture::new(id)),
+                    .map(AnimatedTexture::new),
                 destroyed: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,

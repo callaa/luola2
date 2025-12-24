@@ -25,7 +25,11 @@ pub enum PauseReturn {
 impl PauseState {
     pub fn new(renderer: Rc<RefCell<Renderer>>) -> Result<Self> {
         let size = renderer.borrow().size();
-        let menu = LuaMenu::new("menus.pause", renderer.clone(), RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32))?;
+        let menu = LuaMenu::new(
+            "menus.pause",
+            renderer.clone(),
+            RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32),
+        )?;
 
         let background = Texture::from_image(&renderer.borrow(), &renderer.borrow().screenshot()?)?;
 
@@ -40,11 +44,14 @@ impl PauseState {
     pub fn render(&self) {
         let renderer = self.renderer.borrow();
         renderer.clear();
-        self.background.render(&renderer, &RenderOptions{
-            dest: RenderDest::Fill,
-            color: Color::WHITE.with_alpha(self.alpha),
-            ..Default::default()
-        });
+        self.background.render(
+            &renderer,
+            &RenderOptions {
+                dest: RenderDest::Fill,
+                color: Color::WHITE.with_alpha(self.alpha),
+                ..Default::default()
+            },
+        );
         self.menu.render();
         renderer.present();
     }
@@ -53,12 +60,13 @@ impl PauseState {
 impl StackableState for PauseState {
     fn resize_screen(&mut self) {
         let size = self.renderer.borrow().size();
-        self.menu.relayout(RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32));
+        self.menu
+            .relayout(RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32));
     }
 
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         if matches!(button, MenuButton::Back) {
-            return StackableStateResult::Return(Box::new(PauseReturn::Resume))
+            return StackableStateResult::Return(Box::new(PauseReturn::Resume));
         }
 
         match self.menu.handle_button(button) {
@@ -68,7 +76,7 @@ impl StackableState for PauseState {
                 "endround" => StackableStateResult::Return(Box::new(PauseReturn::EndRound)),
                 "endgame" => StackableStateResult::Return(Box::new(PauseReturn::EndGame)),
                 x => StackableStateResult::Error(anyhow!("Unhandled pause menu result: {}", x)),
-            }
+            },
             Err(e) => StackableStateResult::Error(e),
         }
     }

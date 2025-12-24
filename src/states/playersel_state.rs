@@ -115,11 +115,7 @@ impl PlayerSelection {
         let w = renderer.width() as f32;
         let h = renderer.height() as f32;
 
-        let fadeout = if let Some(f) = self.start_timer {
-            f
-        } else {
-            0.0
-        };
+        let fadeout = self.start_timer.unwrap_or(0.0);
 
         // Background
         self.starfield.borrow().render(&renderer);

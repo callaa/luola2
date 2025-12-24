@@ -1,7 +1,11 @@
 use mlua::UserData;
 
 use crate::{
-    call_state_method, game::objects::PhysicalObject, gameobject_timer, get_state_method, gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId}, math::Vec2
+    call_state_method,
+    game::objects::PhysicalObject,
+    gameobject_timer, get_state_method,
+    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
+    math::Vec2,
 };
 
 use super::GameObject;

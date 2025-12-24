@@ -135,7 +135,7 @@ impl StackableState for GameRoundState {
     fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         if let Some(pauseret) = retval.downcast_ref::<PauseReturn>() {
             match pauseret {
-                PauseReturn::Resume => {},
+                PauseReturn::Resume => {}
                 PauseReturn::EndRound => {
                     self.winner = Some(RoundWinner(0, false));
                 }
@@ -147,7 +147,7 @@ impl StackableState for GameRoundState {
             return StackableStateResult::Error(anyhow!(
                 "Unhandled game state return type: {:?}",
                 retval.type_id()
-            ))
+            ));
         }
         StackableStateResult::Continue
     }
@@ -188,7 +188,9 @@ impl StackableState for GameRoundState {
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult {
         let winner = self.world.step(&self.controllers.borrow().states, timestep);
 
-        if self.winner.is_none() && let Some(winner) = winner {
+        if self.winner.is_none()
+            && let Some(winner) = winner
+        {
             self.winner = Some(RoundWinner(winner, false));
         }
 
@@ -251,7 +253,10 @@ impl StackableState for GameRoundState {
             if self.fadeout > 1.0 {
                 return StackableStateResult::Return(Box::new(winner.clone()));
             }
-            renderer.draw_filled_rectangle(RectF::new(0.0, 0.0, renderer.width() as f32, renderer.height() as f32), &Color::new_rgba(0.0, 0.0, 0.0, self.fadeout));
+            renderer.draw_filled_rectangle(
+                RectF::new(0.0, 0.0, renderer.width() as f32, renderer.height() as f32),
+                &Color::new_rgba(0.0, 0.0, 0.0, self.fadeout),
+            );
         }
         renderer.present();
         StackableStateResult::Continue

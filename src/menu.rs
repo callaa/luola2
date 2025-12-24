@@ -187,7 +187,6 @@ fn make_text(renderer: &Renderer, text: &LuaString, font: Option<LuaString>) -> 
 fn make_menu(table: Table, window: RectF) -> mlua::Result<MenuScreen> {
     let mut items = table
         .sequence_values::<MenuItem>()
-        .into_iter()
         .collect::<mlua::Result<Vec<_>>>()?;
 
     let current = items.iter().position(|i| i.is_selectable()).unwrap_or(0);
@@ -476,10 +475,10 @@ impl LuaMenu {
         }
 
         // Menus are always removed from the top of the stack
-        if let Some(top) = self.menu_stack.last() {
-            if !top.state.is_visible() {
-                self.menu_stack.pop();
-            }
+        if let Some(top) = self.menu_stack.last()
+            && !top.state.is_visible()
+        {
+            self.menu_stack.pop();
         }
 
         // Cursor animation

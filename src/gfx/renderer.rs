@@ -19,7 +19,9 @@ use sdl3_sys::blendmode::SDL_BLENDMODE_BLEND;
 use sdl3_sys::mouse::{SDL_HideCursor, SDL_ShowCursor};
 use sdl3_sys::rect::SDL_FPoint;
 use sdl3_sys::render::{
-    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint, SDL_RenderPoints, SDL_RenderReadPixels, SDL_SetRenderDrawBlendMode, SDL_SetRenderDrawColorFloat
+    SDL_DestroyRenderer, SDL_RenderDebugText, SDL_RenderFillRect, SDL_RenderPoint,
+    SDL_RenderPoints, SDL_RenderReadPixels, SDL_SetRenderDrawBlendMode,
+    SDL_SetRenderDrawColorFloat,
 };
 use sdl3_sys::video::{SDL_SetWindowFullscreen, SDL_WINDOW_FULLSCREEN, SDL_WINDOW_RESIZABLE};
 use sdl3_ttf_sys::ttf::{
