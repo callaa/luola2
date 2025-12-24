@@ -20,13 +20,13 @@ use anyhow::Result;
 
 use super::{StackableState, StackableStateResult};
 use crate::{
+    demos::AnimatedStarfield,
     game::MenuButton,
     gfx::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
         TextOutline, Texture,
     },
     math::{RectF, Vec2},
-    menu::AnimatedStarfield,
     states::game_assets::GameAssets,
 };
 

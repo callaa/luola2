@@ -18,13 +18,13 @@ use std::{cell::RefCell, rc::Rc};
 
 use super::{StackableState, StackableStateResult};
 use crate::{
+    demos::AnimatedStarfield,
     game::{GameControllerSet, MenuButton, Player},
     gfx::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
         TextOutline, Texture, make_controller_icon,
     },
     math::{RectF, Vec2},
-    menu::AnimatedStarfield,
     states::{GameState, game_assets::GameAssets},
 };
 

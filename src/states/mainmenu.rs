@@ -19,10 +19,11 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::{Result, anyhow};
 
 use crate::{
+    demos::AnimatedStarfield,
     game::{GameControllerSet, MenuButton},
     gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId},
     math::RectF,
-    menu::{AnimatedStarfield, LuaMenu},
+    menu::LuaMenu,
     states::{PlayerSelection, StackableState, StackableStateResult, game_assets::GameAssets},
 };
 
@@ -238,7 +239,9 @@ impl StackableState for MainMenu {
 
                     return match ret {
                         AnimState::Outro(ret) => {
-                            self.starfield = Rc::new(RefCell::new(Self::new_starfield(self.renderer.borrow().size())));
+                            self.starfield = Rc::new(RefCell::new(Self::new_starfield(
+                                self.renderer.borrow().size(),
+                            )));
                             ret
                         }
                         _ => unreachable!(),

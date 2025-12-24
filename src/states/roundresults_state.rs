@@ -19,10 +19,10 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::Result;
 
 use crate::{
+    demos::AnimatedStarfield,
     game::{MenuButton, PlayerId},
     gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
     math::Vec2,
-    menu::AnimatedStarfield,
     states::{StackableState, StackableStateResult},
 };
 

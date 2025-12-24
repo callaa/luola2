@@ -18,9 +18,9 @@ use anyhow::{Result, anyhow};
 use std::{cell::RefCell, mem::take, rc::Rc};
 
 use crate::{
+    demos::AnimatedStarfield,
     game::{GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId, level::LevelInfo},
     gfx::{Renderer, Texture},
-    menu::AnimatedStarfield,
     states::{
         StackableState, StackableStateResult,
         game_assets::GameAssets,

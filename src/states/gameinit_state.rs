@@ -18,13 +18,13 @@ use anyhow::{Result, anyhow};
 use std::{cell::RefCell, fs::read_to_string, rc::Rc};
 
 use crate::{
+    demos::AnimatedStarfield,
     fs::find_datafile_path,
     game::{
         GameControllerSet, GameInitConfig, MenuButton, level::LevelInfo,
         scripting::ScriptEnvironment,
     },
     gfx::Renderer,
-    menu::AnimatedStarfield,
     states::{
         MainMenu,
         game_assets::{GameAssets, SelectableShip, SelectableWeapon},
