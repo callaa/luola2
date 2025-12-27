@@ -21,6 +21,10 @@ impl Rope {
         }
     }
 
+    pub fn endpoint(&self) -> Vec2 {
+        self.endpoint
+    }
+
     pub fn length(&self) -> f32 {
         self.length
     }
@@ -29,11 +33,14 @@ impl Rope {
         self.length = (self.length + dl).max(1.0);
     }
 
-    pub fn render(&self, other_end: Vec2, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render_rope(start: Vec2, end: Vec2, renderer: &Renderer, camera_pos: Vec2) {
         renderer.draw_line(
             Color::new(1.0, 1.0, 1.0),
-            LineF(other_end - camera_pos, self.endpoint - camera_pos),
+            LineF(start - camera_pos, end - camera_pos),
         );
+    }
+    pub fn render(&self, other_end: Vec2, renderer: &Renderer, camera_pos: Vec2) {
+        Self::render_rope(other_end, self.endpoint, renderer, camera_pos);
     }
 
     /**

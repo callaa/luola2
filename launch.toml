@@ -5,7 +5,7 @@
 level = "demo"
 rounds = 10
 
-gameover = true # skip straight to game-over screen
+#gameover = true # skip straight to game-over screen
 
 # prefill history for past rounds
 winners = [1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3]

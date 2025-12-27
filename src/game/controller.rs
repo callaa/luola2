@@ -25,14 +25,14 @@ use sdl3_sys::{
     gamepad::{
         SDL_CloseGamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_LEFTX,
         SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHTX,
-        SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN, SDL_GAMEPAD_BUTTON_DPAD_LEFT,
-        SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_EAST,
-        SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_NORTH,
+        SDL_GAMEPAD_AXIS_RIGHTY, SDL_GAMEPAD_BUTTON_BACK, SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+        SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_UP,
+        SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_NORTH,
         SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_START,
-        SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType, SDL_GetGamepadAxis,
-        SDL_GetGamepadButton, SDL_GetGamepadGUIDForID, SDL_GetGamepadStringForType,
-        SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_RumbleGamepad, SDL_SetGamepadLED,
-        SDL_SetGamepadPlayerIndex,
+        SDL_GAMEPAD_BUTTON_WEST, SDL_Gamepad, SDL_GamepadAxis, SDL_GamepadButton, SDL_GamepadType,
+        SDL_GetGamepadAxis, SDL_GetGamepadButton, SDL_GetGamepadGUIDForID,
+        SDL_GetGamepadStringForType, SDL_GetGamepadTypeForID, SDL_OpenGamepad, SDL_RumbleGamepad,
+        SDL_SetGamepadLED, SDL_SetGamepadPlayerIndex,
     },
     guid::SDL_GUID,
     joystick::{SDL_JOYSTICK_AXIS_MAX, SDL_JoystickID},
@@ -54,9 +54,11 @@ pub struct GameController {
     pub thrust: f32,
     pub walk: f32, // left thumbstick X-axis: same as turn on keyboards
     pub turn: f32,
+    pub aim: f32, // right thumbstick Y-axis: shortcut for aim-mode + thrust up/down on gamepads only
     pub jump: bool, // same as thrust>0 on keyboards
-    pub fire_primary: bool,
-    pub fire_secondary: bool,
+    pub fire1: bool,
+    pub fire2: bool,
+    pub fire3: bool,
     pub eject: bool, // same as thrust<0 & fire_primary on keyboards
 
     guid: SDL_GUID,
@@ -70,8 +72,9 @@ pub struct PlayerKeymap {
     pub down: u32,
     pub left: u32,
     pub right: u32,
-    pub fire_primary: u32,
-    pub fire_secondary: u32,
+    pub fire1: u32,
+    pub fire2: u32,
+    pub fire3: u32,
 }
 
 /**
@@ -135,8 +138,10 @@ impl GameController {
             thrust: 0.0,
             walk: 0.0,
             turn: 0.0,
-            fire_primary: false,
-            fire_secondary: false,
+            aim: 0.0,
+            fire1: false,
+            fire2: false,
+            fire3: false,
             eject: false,
             jump: false,
             guid: SDL_GUID { data: [0; 16] },
@@ -154,6 +159,7 @@ pub enum MappedKey {
     Left,
     Fire1,
     Fire2,
+    Fire3,
 }
 
 pub struct GameControllerSet {
@@ -293,8 +299,9 @@ impl GameControllerSet {
             down: find_key(MappedKey::Down),
             left: find_key(MappedKey::Left),
             right: find_key(MappedKey::Right),
-            fire_primary: find_key(MappedKey::Fire1),
-            fire_secondary: find_key(MappedKey::Fire2),
+            fire1: find_key(MappedKey::Fire1),
+            fire2: find_key(MappedKey::Fire2),
+            fire3: find_key(MappedKey::Fire3),
         }
     }
 
@@ -308,9 +315,11 @@ impl GameControllerSet {
         self.keymap
             .insert(keymap.right, (MappedKey::Right, controller));
         self.keymap
-            .insert(keymap.fire_primary, (MappedKey::Fire1, controller));
+            .insert(keymap.fire1, (MappedKey::Fire1, controller));
         self.keymap
-            .insert(keymap.fire_secondary, (MappedKey::Fire2, controller));
+            .insert(keymap.fire2, (MappedKey::Fire2, controller));
+        self.keymap
+            .insert(keymap.fire3, (MappedKey::Fire3, controller));
     }
 
     pub fn handle_sdl_key_event(&mut self, key: &SDL_KeyboardEvent) {
@@ -336,7 +345,7 @@ impl GameControllerSet {
                 }
                 MappedKey::Down => {
                     state.thrust = if key.down { -1.0 } else { 0.0 };
-                    state.eject = state.fire_primary & (state.thrust < 0.0);
+                    state.eject = state.fire3 & (state.thrust < 0.0);
                     if !key.down {
                         menubtn = MenuButton::Down(*idx as i32 + 1);
                     }
@@ -356,13 +365,16 @@ impl GameControllerSet {
                     }
                 }
                 MappedKey::Fire1 => {
-                    state.fire_primary = key.down;
-                    state.eject = state.fire_primary & (state.thrust < 0.0);
+                    state.fire1 = key.down;
                     if !key.down {
                         menubtn = MenuButton::Select(*idx as i32 + 1);
                     }
                 }
-                MappedKey::Fire2 => state.fire_secondary = key.down,
+                MappedKey::Fire2 => state.fire2 = key.down,
+                MappedKey::Fire3 => {
+                    state.fire3 = key.down;
+                    state.eject = state.fire3 & (state.thrust < 0.0);
+                }
             };
         }
 
@@ -405,6 +417,10 @@ impl GameControllerSet {
             // Buff turning speed for gamepad users, since the thumb stick requires a bigger
             // motion compared to a key press
             state.turn = value * -1.15;
+        } else if axis == SDL_GAMEPAD_AXIS_RIGHTY {
+            // No equivalent for this on keyboard.
+            // Only aim-mode + thrust combo available there.
+            state.aim = -value;
         } else if axis == SDL_GAMEPAD_AXIS_LEFTY {
             state.thrust = -value;
         } else if axis == SDL_GAMEPAD_AXIS_LEFTX {
@@ -412,11 +428,11 @@ impl GameControllerSet {
         } else if axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER {
             // primary fire: also east button
             let firebtn = unsafe { SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_EAST) };
-            state.fire_primary = firebtn || value > 0.0;
+            state.fire1 = firebtn || value > 0.0;
         } else if axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER {
             // secondary fire: also south button
             let firebtn = unsafe { SDL_GetGamepadButton(state.gamepad, SDL_GAMEPAD_BUTTON_SOUTH) };
-            state.fire_secondary = firebtn || value > 0.0;
+            state.fire2 = firebtn || value > 0.0;
         }
     }
 
@@ -480,14 +496,17 @@ impl GameControllerSet {
                 let axis = Self::axis_value(unsafe {
                     SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)
                 });
-                state.fire_primary = down || axis > 0.0;
+                state.fire1 = down || axis > 0.0;
             }
             SDL_GAMEPAD_BUTTON_SOUTH => {
-                state.fire_secondary = down;
+                state.fire2 = down;
                 let axis = Self::axis_value(unsafe {
                     SDL_GetGamepadAxis(state.gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
                 });
-                state.fire_secondary = down || axis > 0.0;
+                state.fire2 = down || axis > 0.0;
+            }
+            SDL_GAMEPAD_BUTTON_WEST => {
+                state.fire3 = down;
             }
             SDL_GAMEPAD_BUTTON_NORTH => {
                 state.jump = down;
@@ -572,32 +591,36 @@ impl GameControllerSet {
             down: SDLK_DOWN,
             left: SDLK_LEFT,
             right: SDLK_RIGHT,
-            fire_primary: SDLK_RSHIFT,
-            fire_secondary: SDLK_RCTRL,
+            fire1: SDLK_RSHIFT,
+            fire2: SDLK_RCTRL,
+            fire3: SDLK_MINUS,
         },
         PlayerKeymap {
             thrust: SDLK_W,
             down: SDLK_S,
             left: SDLK_A,
             right: SDLK_D,
-            fire_primary: SDLK_LSHIFT,
-            fire_secondary: SDLK_LCTRL,
+            fire1: SDLK_LSHIFT,
+            fire2: SDLK_LCTRL,
+            fire3: SDLK_Q,
         },
         PlayerKeymap {
             thrust: SDLK_KP_8,
             down: SDLK_KP_5,
             left: SDLK_KP_4,
             right: SDLK_KP_6,
-            fire_primary: SDLK_KP_0,
-            fire_secondary: SDLK_KP_ENTER,
+            fire1: SDLK_KP_0,
+            fire2: SDLK_KP_ENTER,
+            fire3: SDLK_KP_1, // TODO
         },
         PlayerKeymap {
             thrust: SDLK_I,
             down: SDLK_K,
             left: SDLK_J,
             right: SDLK_L,
-            fire_primary: SDLK_Y,
-            fire_secondary: SDLK_H,
+            fire1: SDLK_Y,
+            fire2: SDLK_H,
+            fire3: SDLK_U,
         },
     ];
 }

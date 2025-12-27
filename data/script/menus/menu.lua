@@ -211,12 +211,17 @@ function keymap_menu(id)
 		}),
 		Link({
 			label = "Fire 1: ",
-			value = Value.KeyGrab(keymap.fire_primary),
+			value = Value.KeyGrab(keymap.fire1),
 			action = Action.KeyGrab,
 		}),
 		Link({
 			label = "Fire 2: ",
-			value = Value.KeyGrab(keymap.fire_secondary),
+			value = Value.KeyGrab(keymap.fire2),
+			action = Action.KeyGrab,
+		}),
+		Link({
+			label = "Action: ",
+			value = Value.KeyGrab(keymap.fire3),
 			action = Action.KeyGrab,
 		}),
 		
@@ -230,8 +235,9 @@ function keymap_menu(id)
 			keymap.down = values[4]
 			keymap.left = values[5]
 			keymap.right = values[6]
-			keymap.fire_primary = values[7]
-			keymap.fire_secondary = values[8]
+			keymap.fire1 = values[7]
+			keymap.fire2 = values[8]
+			keymap.fire3 = values[9]
 			SETTINGS["keymap" .. id] = keymap
 			SETTINGS_CHANGED = true
 		end,

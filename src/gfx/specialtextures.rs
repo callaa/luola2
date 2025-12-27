@@ -183,8 +183,9 @@ pub fn make_button_icon(
             MappedKey::Down => keymap.down,
             MappedKey::Right => keymap.right,
             MappedKey::Left => keymap.left,
-            MappedKey::Fire1 => keymap.fire_primary,
-            MappedKey::Fire2 => keymap.fire_secondary,
+            MappedKey::Fire1 => keymap.fire1,
+            MappedKey::Fire2 => keymap.fire2,
+            MappedKey::Fire3 => keymap.fire3,
         };
 
         make_single_key_icon(key, renderer)
@@ -197,6 +198,7 @@ pub fn make_button_icon(
             MappedKey::Left => 3,
             MappedKey::Fire1 => 6,
             MappedKey::Fire2 => 7,
+            MappedKey::Fire3 => 8,
         };
 
         let tex = renderer

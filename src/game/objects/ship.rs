@@ -410,12 +410,12 @@ impl Ship {
             if ship.hitpoints < -1000.0 || terrain::is_solid(ter) {
                 ship.destroy(lua);
             } else if let Some(controller) = controller
-                && (controller.fire_secondary || controller.eject)
+                && (controller.fire2 || controller.eject)
             {
                 call_state_method!(ship, lua, "on_eject");
             }
         } else if let Some(controller) = controller {
-            let fire2_down = controller.fire_secondary;
+            let fire2_down = controller.fire2;
 
             if controller.eject {
                 call_state_method!(ship, lua, "on_eject");
@@ -428,11 +428,11 @@ impl Ship {
                     ship.secondary_weapon_cooldown -= timestep;
                 }
 
-                if controller.fire_primary && ship.primary_weapon_cooldown <= 0.0 {
+                if controller.fire1 && ship.primary_weapon_cooldown <= 0.0 {
                     call_state_method!(ship, lua, "on_fire_primary");
                 }
 
-                if controller.fire_secondary && ship.secondary_weapon_cooldown <= 0.0 {
+                if controller.fire2 && ship.secondary_weapon_cooldown <= 0.0 {
                     // second parameter is true on leading edge of trigger pull
                     call_state_method!(
                         ship,

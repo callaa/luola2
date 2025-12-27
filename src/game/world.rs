@@ -40,7 +40,7 @@ use super::{
     scripting::ScriptEnvironment,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum WorldEffect {
     AddShip(Ship),
     AddPilot(Pilot),
@@ -378,7 +378,7 @@ impl World {
             pilot.set_autotarget(
                 self.ships_work
                     .borrow()
-                    .find_nearest(pilot.pos(), 600.0, |s| s.player_id() != pilot.player_id())
+                    .find_nearest(pilot.pos(), 400.0, |s| s.player_id() != pilot.player_id())
                     .map(|s| s.pos()),
             );
 

@@ -38,6 +38,25 @@ local function on_jetpack(pilot, dir)
 	end
 end
 
+local function on_ninjarope_swing(pilot, dir)
+	local tangent = pilot.rope_tangent
+	local exhaust_offset = Vec2(-8 * pilot.facing, -16)
+	if dir < 0 then
+		tangent = Vec2(-tangent.x, -tangent.y)
+	end
+
+	pilot:impulse(tangent * -2000)
+
+	game.effect("AddParticle", {
+		pos = pilot.pos + exhaust_offset,
+		vel = tangent * 300 + pilot.vel,
+		color = 0x80ffffff,
+		target_color = 0x00ff0000,
+		lifetime = 0.15,
+		texture = textures.get("dot8x8"),
+	})
+end
+
 local function on_bullet_hit(pilot, bullet, damage)
 	if damage <= 0 then
 		return
@@ -100,6 +119,7 @@ function Pilot.create(pos, player, controller)
 			state = {
 				on_shoot = on_shoot,
 				on_jetpack = on_jetpack,
+				on_ninjarope_swing = on_ninjarope_swing,
 				on_bullet_hit = on_bullet_hit,
 				on_ship_recall = on_ship_recall,
 				scheduler = Scheduler:new():add(2, function(pilot)
