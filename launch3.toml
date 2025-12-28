@@ -1,0 +1,8 @@
+level = "demo3"
+rounds = 5
+
+[[player]]
+controller = 1
+ship = "vwing"
+weapon = "grenade"
+spawn = [98, 481]

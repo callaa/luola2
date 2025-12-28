@@ -19,6 +19,8 @@ use std::collections::HashMap;
 
 use mlua;
 
+use crate::game::level::terrain::Terrain;
+
 #[derive(Clone, Copy, Debug)]
 pub enum DynamicTerrainCell {
     /// Expanding foam. Expansion starts when counter reaches zero
@@ -54,6 +56,16 @@ pub enum DynamicTerrainCell {
     Toxin {
         limit: i32,
     },
+
+    // Dynamic sand activation wave
+    LooseningSand,
+
+    // Falling sand
+    Sand {
+        terrain: Terrain,
+        solidify: u16,
+        color: u32,
+    },
 }
 
 impl DynamicTerrainCell {
@@ -69,7 +81,12 @@ impl DynamicTerrainCell {
             } | DynamicTerrainCell::Fire {
                 counter: _,
                 cinder: _,
-            }
+            } | DynamicTerrainCell::LooseningSand
+                | DynamicTerrainCell::Sand {
+                    terrain: _,
+                    solidify: _,
+                    color: _
+                }
         )
     }
 

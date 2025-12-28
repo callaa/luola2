@@ -349,6 +349,20 @@ impl Level {
         self.windspeed = ws
     }
 
+    pub fn pixel_at_lc(&self, pos: (i32, i32)) -> u32 {
+        let xq = pos.0 / TILE_SIZE;
+        let yq = pos.1 / TILE_SIZE;
+
+        if pos.0 < 0 || xq >= self.tiles_wide || pos.1 < 0 || yq >= self.tiles_high {
+            0
+        } else {
+            let xr = pos.0 % TILE_SIZE;
+            let yr = pos.1 % TILE_SIZE;
+
+            self.tiles[(yq * self.tiles_wide + xq) as usize].artwork[(yr * TILE_SIZE + xr) as usize]
+        }
+    }
+
     /// Return the terrain type at the given coordinates, using unscaled level coordinates
     pub fn terrain_at_lc(&self, pos: (i32, i32)) -> terrain::Terrain {
         let xq = pos.0 / TILE_SIZE;

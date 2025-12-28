@@ -23,8 +23,9 @@ use crate::{
             dynter::{DynamicTerrainCell, DynamicTerrainMap},
             rectiter::MutableRectIterator,
             terrain::{
-                self, TER_BIT_DESTRUCTIBLE, TER_BIT_WATER, TER_MASK_SOLID, TER_TYPE_DAMAGE,
-                TER_TYPE_GREYGOO, TER_TYPE_GROUND, TER_TYPE_HIGH_EXPLOSIVE, TER_TYPE_ICE, Terrain,
+                self, TER_BIT_DESTRUCTIBLE, TER_BIT_DYNAMIC, TER_BIT_WATER, TER_MASK_SOLID,
+                TER_TYPE_DAMAGE, TER_TYPE_GREYGOO, TER_TYPE_GROUND, TER_TYPE_HIGH_EXPLOSIVE,
+                TER_TYPE_ICE, Terrain,
             },
         },
         objects::TerrainParticle,
@@ -150,8 +151,18 @@ impl<'a> LevelEditor<'a> {
                                         );
                                     }
                                 }
+                            } else if terrain::is_dynamic(*ter) {
+                                // This is called for destroyed terrain because
+                                // LooseningSand will spread to adjacent non-destroyed pixels
+                                scripting.add_effect(WorldEffect::AddDynamicTerrain(
+                                    Vec2(
+                                        (tile_rect.x() + rect_in_tile.x() + row_x as i32) as f32
+                                            * LEVEL_SCALE,
+                                        (tile_rect.y() + y as i32) as f32 * LEVEL_SCALE,
+                                    ),
+                                    DynamicTerrainCell::LooseningSand,
+                                ));
                             } else if fastrand::f32() < dust_chance {
-                                // create dust
                                 let pos = Vec2(
                                     (tile_rect.x() + rect_in_tile.x() + row_x as i32) as f32
                                         * LEVEL_SCALE,
@@ -214,11 +225,11 @@ impl<'a> LevelEditor<'a> {
     // Replace a point with a solid or an empty space.
     // underwater bit is preserved.
     fn replace_point_lc(&mut self, pos: (i32, i32), solid: Terrain, color: u32) {
-        debug_assert!((solid & !TER_MASK_SOLID) == 0);
+        debug_assert!((solid & !(TER_MASK_SOLID | TER_BIT_DYNAMIC)) == 0);
 
         if let Some((tile, offset, tilepos)) = self.level.tile_at_lc_mut(pos) {
             if solid == 0 {
-                tile.terrain[offset] &= !(TER_BIT_DESTRUCTIBLE | TER_MASK_SOLID);
+                tile.terrain[offset] &= !(TER_BIT_DESTRUCTIBLE | TER_MASK_SOLID | TER_BIT_DYNAMIC);
                 if terrain::is_underwater(tile.terrain[offset]) {
                     tile.artwork[offset] = self.water_color;
                 } else {
@@ -302,7 +313,7 @@ impl<'a> LevelEditor<'a> {
 
         let mut new_cells = DynamicTerrainMap::new();
 
-        for (&pos, &cell) in old_cells.iter() {
+        'outer: for (&pos, &cell) in old_cells.iter() {
             match cell {
                 DynamicTerrainCell::Foam { limit } => {
                     self.replace_point_lc(
@@ -494,6 +505,66 @@ impl<'a> LevelEditor<'a> {
                                 }
                             }
                         });
+                    }
+                }
+                DynamicTerrainCell::LooseningSand => {
+                    let terrain = self.level.terrain_at_lc(pos);
+                    if terrain::is_dynamic(terrain) && !new_cells.contains_key(&pos) {
+                        new_cells.insert(
+                            pos,
+                            DynamicTerrainCell::Sand {
+                                terrain: terrain & (TER_MASK_SOLID | TER_BIT_DYNAMIC),
+                                solidify: 60 * 10,
+                                color: self.level.pixel_at_lc(pos),
+                            },
+                        );
+                    }
+
+                    Self::neighbors(&NEIGHBORS8, pos).for_each(|p| {
+                        let ter_at_p = self.level.terrain_at_lc(p);
+                        if terrain::is_dynamic(ter_at_p)
+                            && !new_cells.contains_key(&p)
+                            && !old_cells.contains_key(&p)
+                        {
+                            new_cells.insert(p, DynamicTerrainCell::LooseningSand);
+                        }
+                    });
+                }
+
+                DynamicTerrainCell::Sand {
+                    terrain,
+                    solidify,
+                    color,
+                } => {
+                    if solidify > 0
+                        && self.level.terrain_at_lc(pos) & (TER_MASK_SOLID | TER_BIT_DYNAMIC)
+                            == terrain
+                    {
+                        const FLOW: [(i32, i32); 5] = [(0, 1), (-1, 1), (1, 1), (-2, 1), (2, 1)];
+                        for f in FLOW {
+                            let p = (pos.0 + f.0, pos.1 + f.1);
+                            if !terrain::is_solid(self.level.terrain_at_lc(p)) {
+                                self.replace_point_lc(pos, 0, 0);
+                                self.replace_point_lc(p, terrain, color);
+                                new_cells.insert(
+                                    p,
+                                    DynamicTerrainCell::Sand {
+                                        terrain,
+                                        solidify,
+                                        color,
+                                    },
+                                );
+                                continue 'outer;
+                            }
+                        }
+                        new_cells.insert(
+                            pos,
+                            DynamicTerrainCell::Sand {
+                                terrain,
+                                solidify: solidify - 1,
+                                color,
+                            },
+                        );
                     }
                 }
             }

@@ -279,6 +279,8 @@ fn parse_palette_mapping(table: &toml::Table) -> Result<TerrainPalette> {
                 mods_set |= TER_BIT_WATER;
             } else if part == "i" {
                 mods_clear |= TER_BIT_DESTRUCTIBLE;
+            } else if part == "dyn" {
+                mods_set |= TER_BIT_DYNAMIC;
             } else {
                 return Err(anyhow!("Unknown terrain type modifier: {}", part));
             }

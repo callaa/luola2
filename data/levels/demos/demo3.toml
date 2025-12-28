@@ -1,0 +1,29 @@
+# Name and thumbnail shown in level selection screen
+title = "Dynamic Terrain Demo"
+thumbnail = "demo3-thumb.png"
+
+terrain = "demo3-level.png"
+artwork = "demo3-level.png"
+
+# Mapping of terrain types to palette indices
+# All unmapped colors will be mapped to "ground"
+[terrain-palette]
+space = [0, "48-60"]
+ground = "1-15"
+ground-i = "16-31"
+water = 32
+ground-uw = "33-47"
+paint-uw = 61
+paint = [62, 63] # space whose pixels can be cleared by explosions
+base = [64, 65]
+base-i = [66, 67]
+base-uw = [68, 69] # underwater bases re-orient the ship downwards
+base-uw-i = [70, 71]
+explosive = [72, 73]
+highexplosive = [74, 75]
+ice = [80, 81]
+ice-uw = [82, 83]
+
+# Dynamic ground (sand-like)
+ground-dyn = [84,85]
+

@@ -18,7 +18,8 @@ pub type Terrain = u8;
 
 pub(super) const TER_BIT_WATER: Terrain = 0b10000000;
 pub(super) const TER_BIT_DESTRUCTIBLE: Terrain = 0b01000000;
-pub(super) const TER_MASK_SOLID: Terrain = 0b00111111;
+pub(super) const TER_BIT_DYNAMIC: Terrain = 0b00100000;
+pub(super) const TER_MASK_SOLID: Terrain = 0b00011111;
 pub(super) const TER_TYPE_GROUND: Terrain = 1;
 pub(super) const TER_TYPE_BURNABLE: Terrain = 2;
 pub(super) const TER_TYPE_CINDER: Terrain = 3;
@@ -52,6 +53,15 @@ pub fn is_water(t: Terrain) -> bool {
 /// Is this terrain underwater? (solid or free space)
 pub fn is_underwater(t: Terrain) -> bool {
     t & TER_BIT_WATER == TER_BIT_WATER
+}
+
+/// Is this dynamic terrain?
+/// Solid ground is animated as falling sand. Dynamic terrain is not initially active,
+/// but shooting at it will trigger an activation wave with "LooseningSand" cells.
+/// After remaining still for a while, sand deactivates again.
+/// Dynamic water is not implemented at the moment.
+pub fn is_dynamic(t: Terrain) -> bool {
+    t & TER_BIT_DYNAMIC == TER_BIT_DYNAMIC
 }
 
 /// Is this terrain point something you can't fly through?

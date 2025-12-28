@@ -17,7 +17,7 @@ local Level = {
 }
 
 function Level.mask_solid(ter)
-	return ter & 0x3f
+	return ter & 0x1f
 end
 
 function Level.is_water(ter)
