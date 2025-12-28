@@ -24,7 +24,10 @@ use crate::{
     game::{
         GameControllerSet, Player, PlayerId, PlayerState,
         hud::{PlayerHud, draw_hud, draw_minimap},
-        level::{DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield, terrain::Terrain},
+        level::{
+            DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield,
+            terrain::{self, Terrain},
+        },
         objects::{
             Critter, FixedObject, GameObjectArray, HitscanProjectile, Pilot, TerrainParticle,
         },
@@ -431,6 +434,17 @@ impl World {
                 } else {
                     self.scripting
                         .add_effect(WorldEffect::AddPixel(e.0, e.1, e.2));
+                    if !terrain::is_ice(e.1) {
+                        // snow is sticky and doesn't slide off
+                        self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
+                            e.0,
+                            DynamicTerrainCell::Sand {
+                                terrain: e.1 & terrain::TER_MASK_SOLID,
+                                solidify: 60,
+                                color: e.2.as_argb_u32(),
+                            },
+                        ));
+                    }
                 }
             }
         }
