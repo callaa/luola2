@@ -93,6 +93,7 @@ pub enum MenuButton {
     Start,
     Back,
     Debug,
+    Screenshot,
     GrabbedKey(u32),
 }
 
@@ -113,7 +114,8 @@ impl MenuButton {
             Self::Start => (6, null_mut()),
             Self::Back => (7, null_mut()),
             Self::Debug => (8, null_mut()),
-            Self::GrabbedKey(k) => (9, ptr::without_provenance_mut(k as usize)),
+            Self::Screenshot => (9, null_mut()),
+            Self::GrabbedKey(k) => (10, ptr::without_provenance_mut(k as usize)),
         }
     }
 
@@ -127,7 +129,8 @@ impl MenuButton {
             6 => Self::Start,
             7 => Self::Back,
             8 => Self::Debug,
-            9 => Self::GrabbedKey(data1 as u32),
+            9 => Self::Screenshot,
+            10 => Self::GrabbedKey(data1 as u32),
             _ => Self::None,
         }
     }
@@ -387,7 +390,8 @@ impl GameControllerSet {
                 SDLK_RIGHT => MenuButton::Right(0),
                 SDLK_RETURN => MenuButton::Start,
                 SDLK_ESCAPE => MenuButton::Back,
-                SDLK_F12 => MenuButton::Debug,
+                SDLK_F11 => MenuButton::Debug,
+                SDLK_F12 => MenuButton::Screenshot,
                 _ => MenuButton::None,
             }
         }

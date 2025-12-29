@@ -15,7 +15,9 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::{Result, anyhow};
-use sdl3_sys::filesystem::{SDL_GetBasePath, SDL_GetPrefPath, SDL_GlobDirectory};
+use sdl3_sys::filesystem::{
+    SDL_Folder, SDL_GetBasePath, SDL_GetPrefPath, SDL_GetUserFolder, SDL_GlobDirectory,
+};
 use sdl3_sys::stdinc::SDL_free;
 use std::collections::HashSet;
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
@@ -182,6 +184,25 @@ pub fn glob_datafiles(path: &str, pattern: &str) -> Result<Vec<PathBuf>> {
  */
 pub fn get_savefile_path(path: &str) -> PathBuf {
     [&USERPATH, path].iter().collect()
+}
+
+/**
+ * Find the root path for screenshot folder
+ */
+pub fn get_screenshot_path() -> Result<PathBuf> {
+    let mut root = unsafe { SDL_GetUserFolder(SDL_Folder::SCREENSHOTS) };
+
+    if root.is_null() {
+        root = unsafe { SDL_GetUserFolder(SDL_Folder::PICTURES) };
+    }
+
+    if root.is_null() {
+        return Err(anyhow!("Could not find suitable path for screenshots!"));
+    }
+
+    let p = unsafe { CStr::from_ptr(root) };
+
+    Ok(p.to_str()?.into())
 }
 
 /**

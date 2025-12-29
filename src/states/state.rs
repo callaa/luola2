@@ -17,9 +17,15 @@
 use anyhow::anyhow;
 use log::error;
 use sdl3_main::AppResult;
-use std::{any::Any, cell::RefCell, rc::Rc};
+use std::{any::Any, cell::RefCell, rc::Rc, time::SystemTime};
 
-use crate::{game::MenuButton, gfx::Renderer, states::ErrorScreenState};
+use crate::{
+    fs::get_screenshot_path,
+    game::MenuButton,
+    gfx::{Color, Renderer},
+    math::RectF,
+    states::ErrorScreenState,
+};
 
 pub enum StackableStateResult {
     Continue,
@@ -101,11 +107,17 @@ impl StateStack {
     }
 
     pub fn handle_menu_button(&mut self, button: MenuButton) {
-        let result = match self.states.last_mut() {
-            Some(s) => s.handle_menu_button(button),
-            None => return,
-        };
-        self.handle_state_result(result);
+        if matches!(button, MenuButton::Screenshot) {
+            if let Err(e) = self.take_screenshot() {
+                log::warn!("Couldn't save screenshot: {e}");
+            }
+        } else {
+            let result = match self.states.last_mut() {
+                Some(s) => s.handle_menu_button(button),
+                None => return,
+            };
+            self.handle_state_result(result);
+        }
     }
 
     pub fn state_iterate(&mut self, timestep: f32) -> AppResult {
@@ -122,5 +134,26 @@ impl StateStack {
         } else {
             AppResult::Continue
         }
+    }
+
+    fn take_screenshot(&self) -> anyhow::Result<()> {
+        let image = self.renderer.borrow().screenshot()?;
+        let mut path = get_screenshot_path()?;
+        let ts = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .expect("valid time expected");
+        path.push(format!("luola2-{}.bmp", ts.as_secs()));
+
+        log::info!("Saving screenshot to: {:?}", path);
+        image.save_bmp(path)?;
+
+        // Flash the screen to indicate a screenshot was taken
+        let r = self.renderer.borrow_mut();
+        r.draw_filled_rectangle(
+            RectF::new(0.0, 0.0, r.width() as f32, r.height() as f32),
+            &Color::WHITE,
+        );
+        r.present();
+        Ok(())
     }
 }
