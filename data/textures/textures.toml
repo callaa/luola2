@@ -276,3 +276,6 @@ blend = "Add"
 [sparkle]
 file = "sparkle.png"
 blend = "Add"
+
+[trophy]
+file = "trophy.png"

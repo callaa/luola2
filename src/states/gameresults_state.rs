@@ -19,11 +19,10 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::Result;
 
 use crate::{
-    demos::AnimatedStarfield,
-    demos::Fireworks,
+    demos::{AnimatedStarfield, Fireworks},
     game::{MenuButton, Player, PlayerId},
     gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
-    math::{Vec2, interpolation},
+    math::{RectF, Vec2, interpolation},
     states::{StackableState, StackableStateResult},
 };
 
@@ -232,7 +231,7 @@ impl GameResultsState {
             let mut y = (h - self.ranking_table_size.1) / 2.0;
 
             let heading_y = heading_y + self.gameover_text.height();
-            for (_, _plr, res) in self.player_ranking.iter() {
+            for (_, plr, res) in self.player_ranking.iter() {
                 if y > heading_y {
                     res.render(&RenderTextOptions {
                         dest: RenderTextDest::TopLeft(Vec2(x, y)),
@@ -241,23 +240,21 @@ impl GameResultsState {
                         ..Default::default()
                     });
 
-                    /* TODO render trophy to mark winning player?
-                    if *plr == self.winning_player {
-                        if let Ok(tex) = r.texture_store().find_texture(b"trophy") {
-                            let tex = r.texture_store().get_texture(tex);
-                            tex.render_simple(
-                                &r,
-                                None,
-                                Some(RectF::new(
-                                    x + res.width() + 10.0,
-                                    y,
-                                    tex.width(),
-                                    tex.height(),
-                                )),
-                            );
-                        }
+                    if *plr == self.winning_player
+                        && let Ok(tex) = r.texture_store().find_texture(b"trophy")
+                    {
+                        let tex = r.texture_store().get_texture(tex);
+                        tex.render_simple(
+                            &r,
+                            None,
+                            Some(RectF::new(
+                                x + res.width() + 10.0,
+                                y - (tex.height() - res.height()) / 2.0,
+                                tex.width(),
+                                tex.height(),
+                            )),
+                        );
                     }
-                    */
                 }
                 y += res.height() + SPACING;
             }
