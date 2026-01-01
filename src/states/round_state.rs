@@ -136,11 +136,22 @@ impl StackableState for GameRoundState {
         if let Some(pauseret) = retval.downcast_ref::<PauseReturn>() {
             match pauseret {
                 PauseReturn::Resume => {}
-                PauseReturn::EndRound => {
-                    self.winner = Some(RoundWinner(0, false));
-                }
-                PauseReturn::EndGame => {
-                    self.winner = Some(RoundWinner(0, true));
+                PauseReturn::EndRound | PauseReturn::EndGame => {
+                    // check winner via script for consistency. It's possible
+                    // for a level script to customize the round end condition.
+                    let winner = match self
+                        .world
+                        .scripting()
+                        .get_function("luola_get_round_winner")
+                        .and_then(|f| f.call::<Option<PlayerId>>(()))
+                    {
+                        Ok(winner) => winner,
+                        Err(e) => return StackableStateResult::Error(e.into()),
+                    };
+                    self.winner = Some(RoundWinner(
+                        winner.unwrap_or(0),
+                        matches!(pauseret, PauseReturn::EndGame),
+                    ));
                 }
             }
         } else {

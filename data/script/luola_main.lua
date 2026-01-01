@@ -154,8 +154,10 @@ function luola_splash(pos, vel, imass)
 	end
 end
 
--- End the round if end condition holds
-function check_round_end_condition()
+-- Check if the round has a winner
+-- Returns the player ID if there is, 0 if the round is tied or nil
+-- if the round is still ongoing
+function luola_get_round_winner()
 	local last_player_standing = 0
 	local count = 0
 
@@ -172,7 +174,16 @@ function check_round_end_condition()
 	end)
 
 	if count <= 1 then
-		game.effect("EndRound", last_player_standing)
+		return last_player_standing
+	end
+	return nil
+end
+
+-- End the round if end condition holds
+function check_round_end_condition()
+	local winner = luola_get_round_winner()
+	if winner ~= nil then
+		game.effect("EndRound", winner)
 	end
 end
 
