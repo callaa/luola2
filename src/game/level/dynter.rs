@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use mlua;
 
-use crate::game::level::terrain::Terrain;
+use crate::game::level::{LevelCoordinate, terrain::Terrain};
 
 #[derive(Clone, Copy, Debug)]
 pub enum DynamicTerrainCell {
@@ -126,4 +126,4 @@ impl DynamicTerrainCell {
     }
 }
 
-pub(super) type DynamicTerrainMap = HashMap<(i32, i32), DynamicTerrainCell>;
+pub(super) type DynamicTerrainMap = HashMap<LevelCoordinate, DynamicTerrainCell>;

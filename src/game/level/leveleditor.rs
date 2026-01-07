@@ -19,14 +19,11 @@ use std::collections::HashSet;
 use crate::{
     game::{
         level::{
-            Forcefield, LEVEL_SCALE, RegeneratingTerrain, TILE_SIZE, TileContentHint,
-            dynter::{DynamicTerrainCell, DynamicTerrainMap},
-            rectiter::MutableRectIterator,
-            terrain::{
+            Forcefield, LEVEL_SCALE, LevelCoordinate, RegeneratingTerrain, TILE_SIZE, TileContentHint, dynter::{DynamicTerrainCell, DynamicTerrainMap}, rectiter::MutableRectIterator, terrain::{
                 self, TER_BIT_DESTRUCTIBLE, TER_BIT_DYNAMIC, TER_BIT_WATER, TER_MASK_SOLID,
                 TER_TYPE_DAMAGE, TER_TYPE_GREYGOO, TER_TYPE_GROUND, TER_TYPE_HIGH_EXPLOSIVE,
                 TER_TYPE_ICE, Terrain,
-            },
+            }
         },
         objects::TerrainParticle,
         scripting::ScriptEnvironment,
@@ -96,7 +93,7 @@ impl<'a> LevelEditor<'a> {
 
         let hole_rect = Rect::new(center_x - r, center_y - r, r * 2, r * 2);
 
-        for (i, j, tile) in self.level.tile_iterator_mut(hole_rect) {
+        for (i, j, tile) in self.level.tile_iterator_lc_mut(hole_rect) {
             if let TileContentHint::Destructible = tile.content_hint {
                 let mut dirty = false;
                 let tile_rect = Rect::new(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -224,7 +221,7 @@ impl<'a> LevelEditor<'a> {
 
     // Replace a point with a solid or an empty space.
     // underwater bit is preserved.
-    fn replace_point_lc(&mut self, pos: (i32, i32), solid: Terrain, color: u32) {
+    fn replace_point_lc(&mut self, pos: LevelCoordinate, solid: Terrain, color: u32) {
         debug_assert!((solid & !(TER_MASK_SOLID | TER_BIT_DYNAMIC)) == 0);
 
         if let Some((tile, offset, tilepos)) = self.level.tile_at_lc_mut(pos) {
@@ -290,7 +287,7 @@ impl<'a> LevelEditor<'a> {
         {
             let mut cells = self.level.dynterrain.take();
             cells.insert(
-                ((pos.0 / LEVEL_SCALE) as i32, (pos.1 / LEVEL_SCALE) as i32),
+                LevelCoordinate::from_world_coordinate(pos),
                 dter,
             );
 
@@ -299,8 +296,8 @@ impl<'a> LevelEditor<'a> {
     }
 
     #[inline]
-    fn neighbors(n: &[(i32, i32)], pos: (i32, i32)) -> impl Iterator<Item = (i32, i32)> {
-        n.iter().map(move |&p| (p.0 + pos.0, p.1 + pos.1))
+    fn neighbors(n: &[LevelCoordinate], pos: LevelCoordinate) -> impl Iterator<Item = LevelCoordinate> {
+        n.iter().map(move |&p| p + pos)
     }
 
     /// Perform a dynamic terrain simulation step
@@ -463,7 +460,7 @@ impl<'a> LevelEditor<'a> {
                                     if fastrand::f32() < 0.05 {
                                         // icicles
                                         for y in 1..4 {
-                                            let icepos = (pos.0, pos.1 + y);
+                                            let icepos = LevelCoordinate(pos.0, pos.1 + y);
                                             if terrain::is_space(self.level.terrain_at_lc(icepos)) {
                                                 self.replace_point_lc(
                                                     icepos,
@@ -540,9 +537,9 @@ impl<'a> LevelEditor<'a> {
                         && self.level.terrain_at_lc(pos) & (TER_MASK_SOLID | TER_BIT_DYNAMIC)
                             == terrain
                     {
-                        const FLOW: [(i32, i32); 5] = [(0, 1), (-1, 1), (1, 1), (-2, 1), (2, 1)];
+                        const FLOW: [LevelCoordinate; 5] = [LevelCoordinate(0, 1), LevelCoordinate(-1, 1), LevelCoordinate(1, 1), LevelCoordinate(-2, 1), LevelCoordinate(2, 1)];
                         for f in FLOW {
-                            let p = (pos.0 + f.0, pos.1 + f.1);
+                            let p = pos + f;
                             if !terrain::is_solid(self.level.terrain_at_lc(p)) {
                                 self.replace_point_lc(pos, 0, 0);
                                 self.replace_point_lc(p, terrain, color);
@@ -625,33 +622,38 @@ impl<'a> LevelEditor<'a> {
 }
 
 /// Von Neumann neighborhood
-static NEIGHBORS4: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
-
-/// Moore neighborhood
-static NEIGHBORS8: [(i32, i32); 8] = [
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (-1, 0),
-    (1, 0),
-    (-1, 1),
-    (-1, 1),
-    (1, 1),
+static NEIGHBORS4: [LevelCoordinate; 4] = [
+    LevelCoordinate(0, -1),
+    LevelCoordinate(1, 0),
+    LevelCoordinate(0, 1),
+    LevelCoordinate(-1, 0)
 ];
 
-static NEIGHBORS_ROUNDISH: [(i32, i32); 12] = [
-    (0, -1),
-    (1, 0),
-    (0, 1),
-    (-1, 0),
-    (-1, -2),
-    (1, -2),
-    (-2, -1),
-    (2, -1),
-    (-2, 1),
-    (2, 1),
-    (-1, 2),
-    (1, 2),
+/// Moore neighborhood
+static NEIGHBORS8: [LevelCoordinate; 8] = [
+    LevelCoordinate(-1, -1),
+    LevelCoordinate(0, -1),
+    LevelCoordinate(1, -1),
+    LevelCoordinate(-1, 0),
+    LevelCoordinate(1, 0),
+    LevelCoordinate(-1, 1),
+    LevelCoordinate(-1, 1),
+    LevelCoordinate(1, 1),
+];
+
+static NEIGHBORS_ROUNDISH: [LevelCoordinate; 12] = [
+    LevelCoordinate(0, -1),
+    LevelCoordinate(1, 0),
+    LevelCoordinate(0, 1),
+    LevelCoordinate(-1, 0),
+    LevelCoordinate(-1, -2),
+    LevelCoordinate(1, -2),
+    LevelCoordinate(-2, -1),
+    LevelCoordinate(2, -1),
+    LevelCoordinate(-2, 1),
+    LevelCoordinate(2, 1),
+    LevelCoordinate(-1, 2),
+    LevelCoordinate(1, 2),
 ];
 impl<'a> Drop for LevelEditor<'a> {
     fn drop(&mut self) {

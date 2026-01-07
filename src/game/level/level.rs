@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::cell::Cell;
+use std::{cell::Cell, ops::Add};
 
 use super::{
     LevelInfo,
@@ -35,13 +35,32 @@ use fastrand;
 use log::error;
 use mlua;
 use sdl3_sys::pixels::SDL_PIXELFORMAT_ARGB8888;
+use serde::Deserialize;
 
 pub const LEVEL_SCALE: f32 = 3.0; // Scaling factor: 1 level pixel equals this many world coordinates
 pub const TILE_SIZE: i32 = 64;
 pub const TILE_LENGTH: usize = (TILE_SIZE * TILE_SIZE) as usize;
 
-pub fn to_level_scale(pos: (i32, i32)) -> Vec2 {
-    Vec2(pos.0 as f32 * LEVEL_SCALE, pos.1 as f32 * LEVEL_SCALE)
+/// A point in unscaled level coordinates
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, Deserialize)]
+pub struct LevelCoordinate(pub i32, pub i32);
+
+impl LevelCoordinate {
+    pub fn from_world_coordinate(v: Vec2) -> Self {
+        Self((v.0 / LEVEL_SCALE) as i32, (v.1 / LEVEL_SCALE) as i32)
+    }
+
+    pub fn as_world_coordinate(&self) -> Vec2 {
+        Vec2(self.0 as f32 * LEVEL_SCALE, self.1 as f32 * LEVEL_SCALE)
+    }
+}
+
+impl Add for LevelCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
+    }
 }
 
 /**
@@ -349,7 +368,8 @@ impl Level {
         self.windspeed = ws
     }
 
-    pub fn pixel_at_lc(&self, pos: (i32, i32)) -> u32 {
+    /// Return the color at the given point
+    pub fn pixel_at_lc(&self, pos: LevelCoordinate) -> u32 {
         let xq = pos.0 / TILE_SIZE;
         let yq = pos.1 / TILE_SIZE;
 
@@ -363,8 +383,8 @@ impl Level {
         }
     }
 
-    /// Return the terrain type at the given coordinates, using unscaled level coordinates
-    pub fn terrain_at_lc(&self, pos: (i32, i32)) -> terrain::Terrain {
+    /// Return the terrain type at the given point
+    pub fn terrain_at_lc(&self, pos: LevelCoordinate) -> terrain::Terrain {
         let xq = pos.0 / TILE_SIZE;
         let yq = pos.1 / TILE_SIZE;
 
@@ -378,7 +398,7 @@ impl Level {
         }
     }
 
-    /// Return the terrain type at the given coordinates
+    /// Return the terrain type at the given point in world coordinates
     /// If out of bounds, will return the special "level bounds" terrain type
     pub fn terrain_at(&self, pos: Vec2) -> terrain::Terrain {
         let (x, y) = (pos.0, pos.1);
@@ -557,7 +577,10 @@ impl Level {
     /**
      * Return a mutable tile iterator to the tiles intersecting the given rect (in unscaled coordinates)
      */
-    pub(super) fn tile_iterator_mut(&mut self, rect: Rect) -> MutableTileIterator<'_, TerrainTile> {
+    pub(super) fn tile_iterator_lc_mut(
+        &mut self,
+        rect: Rect,
+    ) -> MutableTileIterator<'_, TerrainTile> {
         let w = self.tiles_wide - 1;
         let h = self.tiles_high - 1;
 
@@ -579,7 +602,7 @@ impl Level {
     /// Get tile, offset to point in tile, and tile position (or None if out of bounds)
     pub(super) fn tile_at_lc_mut(
         &mut self,
-        pos: (i32, i32),
+        pos: LevelCoordinate,
     ) -> Option<(&mut TerrainTile, usize, (i32, i32))> {
         let tx = pos.0 / TILE_SIZE;
         let ty = pos.1 / TILE_SIZE;

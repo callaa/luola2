@@ -17,6 +17,7 @@
 use serde::Deserialize;
 
 use crate::game::hud::{HudOverlay, PlayerHud};
+use crate::game::level::LevelCoordinate;
 use crate::math::{Rect, Vec2};
 
 #[derive(Deserialize)]
@@ -44,10 +45,10 @@ pub struct Player {
     pub weapon: String,
 
     /// Player spawn point in level coordinates (if unspecified, a random spawn point will be used)
-    pub spawn: Option<(i32, i32)>,
+    pub spawn: Option<LevelCoordinate>,
 
     /// Pilot spawn point in level coordinates (if specified, pilot will start outside the ship)
-    pub pilot_spawn: Option<(i32, i32)>,
+    pub pilot_spawn: Option<LevelCoordinate>,
 
     /// Number of rounds won by this player
     #[serde(skip)]

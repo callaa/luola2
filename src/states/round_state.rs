@@ -20,11 +20,7 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::{Result, anyhow};
 
 use crate::{
-    game::{
-        GameControllerSet, MenuButton, Player, PlayerId,
-        level::{LevelInfo, to_level_scale},
-        world::World,
-    },
+    game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
     gfx::{Color, RenderOptions, Renderer, TextureId},
     math::{Rect, RectF, Vec2},
     states::{
@@ -78,8 +74,11 @@ impl GameRoundState {
             player.set("controller", p.controller)?;
             player.set("ship", p.ship.clone())?;
             player.set("weapon", p.weapon.clone())?;
-            player.set("spawn", p.spawn.map(to_level_scale))?;
-            player.set("pilot_spawn", p.pilot_spawn.map(to_level_scale))?;
+            player.set("spawn", p.spawn.map(|p| p.as_world_coordinate()))?;
+            player.set(
+                "pilot_spawn",
+                p.pilot_spawn.map(|p| p.as_world_coordinate()),
+            )?;
             player_settings.push(player)?;
         }
 
