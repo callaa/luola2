@@ -25,6 +25,6 @@ mkdir luola2
 cp x86_64-pc-windows-gnu/release/luola2.exe luola2/
 cp /app/{README,LICENSE}.md luola2/
 cp -r /app/data luola2/
-zip -r -n .png:.jpeg luola2-$VERSION.zip luola2/ -x "data/levels/demos/*"
+zip -r -n .png:.jpeg luola2-$VERSION.zip luola2/ -x "luola2/data/levels/demos/*"
 mv luola2-$VERSION.zip /build/
 rm -rf luola2/
