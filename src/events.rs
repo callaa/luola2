@@ -17,6 +17,7 @@
 use std::{ptr::null_mut, sync::LazyLock};
 
 use sdl3_sys::events::{SDL_Event, SDL_PushEvent, SDL_RegisterEvents, SDL_UserEvent};
+use sdl3_sys::video::SDL_WindowID;
 
 use crate::game::MenuButton;
 
@@ -62,7 +63,7 @@ pub fn push_menu_button_event(button: MenuButton) {
             r#type: CUSTOM_EVENTS.menu_button,
             reserved: 0,
             timestamp: 0,
-            windowID: 0,
+            windowID: SDL_WindowID(0),
             code,
             data1,
             data2: null_mut(),

@@ -17,7 +17,6 @@
 #![allow(dead_code)] // TODO remove later
 
 use argh::FromArgs;
-use log::error;
 use sdl3_main::{AppResult, AppResultWithState, app_impl};
 use sdl3_sys::events::{
     SDL_EVENT_GAMEPAD_ADDED, SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EVENT_GAMEPAD_BUTTON_DOWN,
@@ -28,11 +27,13 @@ use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
 use sdl3_sys::init::{SDL_INIT_GAMEPAD, SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata};
 use sdl3_sys::keycode::{SDL_KMOD_ALT, SDLK_RETURN};
 use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
+use sdl3_sys::version::SDL_GetRevision;
 
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::rc::Rc;
 use std::sync::Mutex;
+use std::ffi::CStr;
 
 use crate::configfile::{GAME_CONFIG, load_user_config};
 use crate::events::CUSTOM_EVENTS;
@@ -95,6 +96,9 @@ impl AppState {
             }
         }
 
+        let sdl_version = unsafe { CStr::from_ptr(SDL_GetRevision()) }.to_string_lossy();
+        log::info!("SDL version: {}", sdl_version);
+
         load_user_config();
         let config = GAME_CONFIG.read().unwrap();
 
@@ -102,7 +106,7 @@ impl AppState {
             match Renderer::create(!args.window && (args.fullscreen || config.video.fullscreen)) {
                 Ok(r) => Rc::new(RefCell::new(r)),
                 Err(err) => {
-                    error!("Couldn't create renderer: {}", err);
+                    log::error!("Couldn't create renderer: {}", err);
                     return AppResultWithState::Failure(None);
                 }
             };
@@ -150,14 +154,14 @@ impl AppState {
             SDL_EVENT_QUIT => return AppResult::Success,
             SDL_EVENT_WINDOW_RESIZED => {
                 if let Err(e) = self.renderer.borrow_mut().reset_viewport() {
-                    error!("Failed to handle window resize: {}", e);
+                    log::error!("Failed to handle window resize: {}", e);
                 } else {
                     self.statestack.resize_screen();
                 }
             }
             SDL_EVENT_KEY_DOWN | SDL_EVENT_KEY_UP => {
                 let key = unsafe { &event.key };
-                if key.key == SDLK_RETURN && (key.r#mod & SDL_KMOD_ALT) > 0 && !key.down {
+                if key.key == SDLK_RETURN && (key.r#mod & SDL_KMOD_ALT) != 0 && !key.down {
                     self.renderer.borrow_mut().toggle_fullscreen();
                 } else {
                     self.controllers.borrow_mut().handle_sdl_key_event(key);

@@ -33,7 +33,7 @@ use crate::{
 
 use super::{Image, Texture};
 
-const KEYMAP_OFFSETS: &[u32] = &[
+const KEYMAP_OFFSETS: &[SDL_Keycode] = &[
     SDLK_UP,
     SDLK_RIGHT,
     SDLK_DOWN,
@@ -84,7 +84,7 @@ const KEYMAP_OFFSETS: &[u32] = &[
     SDLK_LALT,
 ];
 
-fn keymap(key: u32) -> Rect {
+fn keymap(key: SDL_Keycode) -> Rect {
     let key = match key {
         SDLK_RSHIFT => SDLK_LSHIFT,
         SDLK_RCTRL => SDLK_LCTRL,
@@ -116,7 +116,12 @@ fn keymap(key: u32) -> Rect {
     Rect::new(0, 0, 0, 0)
 }
 
-fn make_keymap_icon(k1: u32, k2: u32, k3: u32, renderer: &Renderer) -> Result<Texture> {
+fn make_keymap_icon(
+    k1: SDL_Keycode,
+    k2: SDL_Keycode,
+    k3: SDL_Keycode,
+    renderer: &Renderer,
+) -> Result<Texture> {
     let mut base = Image::from_file(find_datafile_path("images/keys-base.png")?)?;
     let letters = Image::from_file(find_datafile_path("images/keys.png")?)?;
 
@@ -127,7 +132,7 @@ fn make_keymap_icon(k1: u32, k2: u32, k3: u32, renderer: &Renderer) -> Result<Te
     Texture::from_image(renderer, &base)
 }
 
-fn make_single_key_icon(key: u32, renderer: &Renderer) -> Result<Texture> {
+fn make_single_key_icon(key: SDL_Keycode, renderer: &Renderer) -> Result<Texture> {
     let mut base = Image::from_file(find_datafile_path("images/key-base.png")?)?;
     let letters = Image::from_file(find_datafile_path("images/keys.png")?)?;
 
@@ -145,7 +150,12 @@ pub fn make_controller_icon(
 
     if controller <= KEYBOARDS as i32 {
         let keymap = controllers.get_keymap(controller as usize - 1);
-        make_keymap_icon(keymap.thrust, keymap.left, keymap.right, renderer)
+        make_keymap_icon(
+            SDL_Keycode(keymap.thrust),
+            SDL_Keycode(keymap.left),
+            SDL_Keycode(keymap.right),
+            renderer,
+        )
     } else {
         let icon = match controllers.get_gamepad_type(controller) {
             SDL_GAMEPAD_TYPE_UNKNOWN => 1,
@@ -178,7 +188,7 @@ pub fn make_button_icon(
     if controller <= KEYBOARDS as i32 {
         let keymap = controllers.get_keymap(controller as usize - 1);
 
-        let key = match button {
+        let key = SDL_Keycode(match button {
             MappedKey::Up => keymap.thrust,
             MappedKey::Down => keymap.down,
             MappedKey::Right => keymap.right,
@@ -186,7 +196,7 @@ pub fn make_button_icon(
             MappedKey::Fire1 => keymap.fire1,
             MappedKey::Fire2 => keymap.fire2,
             MappedKey::Fire3 => keymap.fire3,
-        };
+        });
 
         make_single_key_icon(key, renderer)
     } else {

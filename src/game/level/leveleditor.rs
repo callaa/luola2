@@ -19,11 +19,15 @@ use std::collections::HashSet;
 use crate::{
     game::{
         level::{
-            Forcefield, LEVEL_SCALE, LevelCoordinate, RegeneratingTerrain, TILE_SIZE, TileContentHint, dynter::{DynamicTerrainCell, DynamicTerrainMap}, rectiter::MutableRectIterator, terrain::{
+            Forcefield, LEVEL_SCALE, LevelCoordinate, RegeneratingTerrain, TILE_SIZE,
+            TileContentHint,
+            dynter::{DynamicTerrainCell, DynamicTerrainMap},
+            rectiter::MutableRectIterator,
+            terrain::{
                 self, TER_BIT_DESTRUCTIBLE, TER_BIT_DYNAMIC, TER_BIT_WATER, TER_MASK_SOLID,
                 TER_TYPE_DAMAGE, TER_TYPE_GREYGOO, TER_TYPE_GROUND, TER_TYPE_HIGH_EXPLOSIVE,
                 TER_TYPE_ICE, Terrain,
-            }
+            },
         },
         objects::TerrainParticle,
         scripting::ScriptEnvironment,
@@ -286,17 +290,17 @@ impl<'a> LevelEditor<'a> {
         if !dter.destroys_ground() || !terrain::is_indestructible_solid(self.level.terrain_at(pos))
         {
             let mut cells = self.level.dynterrain.take();
-            cells.insert(
-                LevelCoordinate::from_world_coordinate(pos),
-                dter,
-            );
+            cells.insert(LevelCoordinate::from_world_coordinate(pos), dter);
 
             self.level.dynterrain.replace(cells);
         }
     }
 
     #[inline]
-    fn neighbors(n: &[LevelCoordinate], pos: LevelCoordinate) -> impl Iterator<Item = LevelCoordinate> {
+    fn neighbors(
+        n: &[LevelCoordinate],
+        pos: LevelCoordinate,
+    ) -> impl Iterator<Item = LevelCoordinate> {
         n.iter().map(move |&p| p + pos)
     }
 
@@ -537,7 +541,13 @@ impl<'a> LevelEditor<'a> {
                         && self.level.terrain_at_lc(pos) & (TER_MASK_SOLID | TER_BIT_DYNAMIC)
                             == terrain
                     {
-                        const FLOW: [LevelCoordinate; 5] = [LevelCoordinate(0, 1), LevelCoordinate(-1, 1), LevelCoordinate(1, 1), LevelCoordinate(-2, 1), LevelCoordinate(2, 1)];
+                        const FLOW: [LevelCoordinate; 5] = [
+                            LevelCoordinate(0, 1),
+                            LevelCoordinate(-1, 1),
+                            LevelCoordinate(1, 1),
+                            LevelCoordinate(-2, 1),
+                            LevelCoordinate(2, 1),
+                        ];
                         for f in FLOW {
                             let p = pos + f;
                             if !terrain::is_solid(self.level.terrain_at_lc(p)) {
@@ -626,7 +636,7 @@ static NEIGHBORS4: [LevelCoordinate; 4] = [
     LevelCoordinate(0, -1),
     LevelCoordinate(1, 0),
     LevelCoordinate(0, 1),
-    LevelCoordinate(-1, 0)
+    LevelCoordinate(-1, 0),
 ];
 
 /// Moore neighborhood

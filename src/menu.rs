@@ -2,6 +2,7 @@ use anyhow::{Result, anyhow};
 use core::ops::Deref;
 use mlua::{FromLua, Function, Lua, LuaSerdeExt, String as LuaString, Table, UserData, Value};
 use sdl3_sys::keyboard::SDL_GetKeyName;
+use sdl3_sys::keycode::SDL_Keycode;
 use std::{cell::RefCell, ffi::CStr, rc::Rc, sync::Arc};
 
 use crate::{
@@ -29,7 +30,7 @@ type CachedText = RefCell<Option<Text>>;
 enum MenuItemValue {
     None,
     Toggle(bool, CachedText),
-    KeyGrab(u32, CachedText),
+    KeyGrab(SDL_Keycode, CachedText),
 }
 
 enum MenuItemContent {
@@ -358,7 +359,7 @@ impl LuaMenu {
         itemvalues.set(
             "KeyGrab",
             lua.create_function(|_lua, key: u32| {
-                Ok(MenuItemValue::KeyGrab(key, RefCell::new(None)))
+                Ok(MenuItemValue::KeyGrab(SDL_Keycode(key), RefCell::new(None)))
             })?,
         )?;
 
@@ -466,7 +467,7 @@ impl LuaMenu {
                         values.push(match item.value {
                             MenuItemValue::None => Value::NULL,
                             MenuItemValue::Toggle(v, _) => Value::Boolean(v),
-                            MenuItemValue::KeyGrab(v, _) => Value::Integer(v as _),
+                            MenuItemValue::KeyGrab(v, _) => Value::Integer(v.0 as _),
                         })?;
                     }
                     on_exit.call::<()>(values)?;

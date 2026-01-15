@@ -17,6 +17,7 @@
 use anyhow::{Result, anyhow};
 use sdl3_sys::filesystem::{
     SDL_Folder, SDL_GetBasePath, SDL_GetPrefPath, SDL_GetUserFolder, SDL_GlobDirectory,
+    SDL_GlobFlags,
 };
 use sdl3_sys::stdinc::SDL_free;
 use std::collections::HashSet;
@@ -102,7 +103,7 @@ fn do_glob(
         SDL_GlobDirectory(
             pathbuf_to_cstring(basepath.clone())?.as_ptr(),
             pattern.as_ptr(),
-            0,
+            SDL_GlobFlags(0),
             &mut count,
         )
     };

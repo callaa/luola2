@@ -94,7 +94,7 @@ pub enum MenuButton {
     Back,
     Debug,
     Screenshot,
-    GrabbedKey(u32),
+    GrabbedKey(SDL_Keycode),
 }
 
 impl MenuButton {
@@ -115,7 +115,7 @@ impl MenuButton {
             Self::Back => (7, null_mut()),
             Self::Debug => (8, null_mut()),
             Self::Screenshot => (9, null_mut()),
-            Self::GrabbedKey(k) => (10, ptr::without_provenance_mut(k as usize)),
+            Self::GrabbedKey(k) => (10, ptr::without_provenance_mut(k.0 as usize)),
         }
     }
 
@@ -130,7 +130,7 @@ impl MenuButton {
             7 => Self::Back,
             8 => Self::Debug,
             9 => Self::Screenshot,
-            10 => Self::GrabbedKey(data1 as u32),
+            10 => Self::GrabbedKey(SDL_Keycode(data1 as u32)),
             _ => Self::None,
         }
     }
@@ -148,7 +148,7 @@ impl GameController {
             eject: false,
             jump: false,
             guid: SDL_GUID { data: [0; 16] },
-            joystick_id: 0,
+            joystick_id: SDL_JoystickID(0),
             gamepad: null_mut(),
         }
     }
@@ -192,7 +192,7 @@ impl GameControllerSet {
         let guid = unsafe { SDL_GetGamepadGUIDForID(id) };
         let gamepad = unsafe { SDL_OpenGamepad(id) };
         if gamepad.is_null() {
-            log::error!("Couldn't open gamepad {id}!");
+            log::error!("Couldn't open gamepad {}!", id.0);
             return;
         }
 
@@ -209,7 +209,8 @@ impl GameControllerSet {
         if let Some((idx, ctrl)) = ctrl {
             // Re-use an unplugged controller slot with the same GUID (if any)
             log::info!(
-                "Gamepad {id} {:?} reconnected as controller #{}.",
+                "Gamepad {} {:?} reconnected as controller #{}.",
+                id.0,
                 typestr,
                 idx + 1
             );
@@ -224,7 +225,8 @@ impl GameControllerSet {
                 ..GameController::new()
             });
             log::info!(
-                "Gamepad {id} {:?} added as controller #{}.",
+                "Gamepad {} {:?} added as controller #{}.",
+                id.0,
                 typestr,
                 self.states.len()
             );
@@ -239,13 +241,13 @@ impl GameControllerSet {
             .skip(KEYBOARDS)
             .find(|c| c.1.joystick_id == id);
         if let Some((idx, ctrl)) = ctrl {
-            log::info!("Gamepad {id} (controller #{}) removed.", idx + 1);
+            log::info!("Gamepad {} (controller #{}) removed.", id.0, idx + 1);
             unsafe {
                 SDL_CloseGamepad(ctrl.gamepad);
             }
             ctrl.gamepad = null_mut();
         } else {
-            log::info!("Unknown gamepad {id} removed.");
+            log::info!("Unknown gamepad {} removed.", id.0);
         }
     }
 
@@ -328,7 +330,7 @@ impl GameControllerSet {
     pub fn handle_sdl_key_event(&mut self, key: &SDL_KeyboardEvent) {
         if self.key_grabbing && !key.down {
             self.key_grabbing = false;
-            log::debug!("Grabbed key 0x{:x}", key.key);
+            log::debug!("Grabbed key 0x{:x}", key.key.0);
             push_menu_button_event(MenuButton::GrabbedKey(key.key));
             return;
         }
@@ -336,7 +338,7 @@ impl GameControllerSet {
         // Player key mappings
         let mut menubtn = MenuButton::None;
 
-        if let Some((mapping, idx)) = self.keymap.get(&key.key) {
+        if let Some((mapping, idx)) = self.keymap.get(&key.key.0) {
             let state = &mut self.states[*idx];
             match mapping {
                 MappedKey::Up => {
@@ -410,7 +412,7 @@ impl GameControllerSet {
         {
             Some(s) => s,
             None => {
-                log::error!("Gamepad axis event for unknown gamepad {id}");
+                log::error!("Gamepad axis event for unknown gamepad {}", id.0);
                 return;
             }
         };
@@ -465,7 +467,7 @@ impl GameControllerSet {
         {
             Some(s) => (s.0 as i32 + 1, s.1),
             None => {
-                log::error!("Gamepad button event for unknown gamepad {id}");
+                log::error!("Gamepad button event for unknown gamepad {}", id.0);
                 return;
             }
         };
@@ -591,40 +593,40 @@ impl GameControllerSet {
 
     pub const DEFAULT_KEYMAP: [PlayerKeymap; 4] = [
         PlayerKeymap {
-            thrust: SDLK_UP,
-            down: SDLK_DOWN,
-            left: SDLK_LEFT,
-            right: SDLK_RIGHT,
-            fire1: SDLK_RSHIFT,
-            fire2: SDLK_RCTRL,
-            fire3: SDLK_MINUS,
+            thrust: SDLK_UP.0,
+            down: SDLK_DOWN.0,
+            left: SDLK_LEFT.0,
+            right: SDLK_RIGHT.0,
+            fire1: SDLK_RSHIFT.0,
+            fire2: SDLK_RCTRL.0,
+            fire3: SDLK_MINUS.0,
         },
         PlayerKeymap {
-            thrust: SDLK_W,
-            down: SDLK_S,
-            left: SDLK_A,
-            right: SDLK_D,
-            fire1: SDLK_LSHIFT,
-            fire2: SDLK_LCTRL,
-            fire3: SDLK_Q,
+            thrust: SDLK_W.0,
+            down: SDLK_S.0,
+            left: SDLK_A.0,
+            right: SDLK_D.0,
+            fire1: SDLK_LSHIFT.0,
+            fire2: SDLK_LCTRL.0,
+            fire3: SDLK_Q.0,
         },
         PlayerKeymap {
-            thrust: SDLK_KP_8,
-            down: SDLK_KP_5,
-            left: SDLK_KP_4,
-            right: SDLK_KP_6,
-            fire1: SDLK_KP_0,
-            fire2: SDLK_KP_ENTER,
-            fire3: SDLK_KP_1, // TODO
+            thrust: SDLK_KP_8.0,
+            down: SDLK_KP_5.0,
+            left: SDLK_KP_4.0,
+            right: SDLK_KP_6.0,
+            fire1: SDLK_KP_0.0,
+            fire2: SDLK_KP_ENTER.0,
+            fire3: SDLK_KP_1.0, // TODO
         },
         PlayerKeymap {
-            thrust: SDLK_I,
-            down: SDLK_K,
-            left: SDLK_J,
-            right: SDLK_L,
-            fire1: SDLK_Y,
-            fire2: SDLK_H,
-            fire3: SDLK_U,
+            thrust: SDLK_I.0,
+            down: SDLK_K.0,
+            left: SDLK_J.0,
+            right: SDLK_L.0,
+            fire1: SDLK_Y.0,
+            fire2: SDLK_H.0,
+            fire3: SDLK_U.0,
         },
     ];
 }

@@ -22,11 +22,11 @@ either = "1.15.0"
 env_logger = { version = "0.11.8", default-features = false }
 fastrand = "2.3.0"
 log = { version = "0.4.28", features = ["std"] }
-mlua = { version = "0.11.4", features = ["serde", "lua54", "anyhow"] }
-sdl3-image-sys = { version = "0.2.0"  }
-sdl3-main = "0.5.4"
-sdl3-sys = { version = "0.5.7"  }
-sdl3-ttf-sys = { version = "0.2.0" }
+mlua = { version = "0.11.5", features = ["serde", "lua54", "anyhow"] }
+sdl3-image-sys = { version = "0.6.0"  }
+sdl3-main = "0.6.0"
+sdl3-sys = { version = "0.6.0"  }
+sdl3-ttf-sys = { version = "0.6.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 smallvec = "1.15.1"
 toml = { version = "0.9.8", default-features=false, features = ["std", "serde", "parse", "display"] }

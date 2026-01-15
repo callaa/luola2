@@ -1,10 +1,12 @@
 # Container for making AppImage and Windows builds
-FROM rust:1.91
+FROM rust:1.92
 
-# Build deps, including dynamically linked SDL which will be copied
-# into the AppImage.
-# The Windows version gets built and statically linked.
-RUN apt-get update && apt-get install -y libsdl3-dev libsdl3-ttf-dev libsdl3-image-dev liblua5.4-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 cmake zip
+# Build deps
+# See https://wiki.libsdl.org/SDL3/README-linux#build-dependencies
+RUN apt-get update && apt-get install -y gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 cmake zip \
+	libpulse-dev libxcursor-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev \
+	libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libudev-dev \
+	libwayland-dev
 
 # Windows cross compiler
 RUN rustup target add x86_64-pc-windows-gnu
@@ -25,3 +27,4 @@ ADD pkg/main.rs /app/src/main.rs
 # but we can at least save some bandwidth.
 ADD Cargo.lock Cargo.toml /app/
 RUN cargo fetch
+
