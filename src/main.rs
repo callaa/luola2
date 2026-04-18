@@ -30,10 +30,10 @@ use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
 use sdl3_sys::version::SDL_GetRevision;
 
 use std::cell::RefCell;
+use std::ffi::CStr;
 use std::ffi::CString;
 use std::rc::Rc;
 use std::sync::Mutex;
-use std::ffi::CStr;
 
 use crate::configfile::{GAME_CONFIG, load_user_config};
 use crate::events::CUSTOM_EVENTS;

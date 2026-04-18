@@ -18,14 +18,18 @@ use anyhow::Result;
 use core::slice;
 use sdl3_image_sys::image::IMG_Load;
 use sdl3_sys::{
-    pixels::{SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX8, SDL_Palette},
+    pixels::{
+        SDL_GetPixelFormatName, SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX4MSB,
+        SDL_PIXELFORMAT_INDEX8, SDL_Palette, SDL_SetPaletteColors,
+    },
     rect::SDL_Rect,
     surface::{
-        SDL_BlitSurface, SDL_ConvertSurface, SDL_DestroySurface, SDL_GetSurfacePalette,
-        SDL_SCALEMODE_LINEAR, SDL_SCALEMODE_NEAREST, SDL_SaveBMP, SDL_ScaleSurface, SDL_Surface,
+        SDL_BlitSurface, SDL_ConvertSurface, SDL_CreateSurface, SDL_CreateSurfacePalette,
+        SDL_DestroySurface, SDL_GetSurfacePalette, SDL_SCALEMODE_LINEAR, SDL_SCALEMODE_NEAREST,
+        SDL_SaveBMP, SDL_ScaleSurface, SDL_Surface,
     },
 };
-use std::path::PathBuf;
+use std::{ffi::CStr, path::PathBuf};
 
 use super::{SdlError, SdlResult};
 use crate::{fs::pathbuf_to_cstring, math::Rect};
@@ -57,6 +61,81 @@ impl Image {
 
     pub fn height(&self) -> i32 {
         unsafe { (*self.0).h }
+    }
+
+    pub fn ensure_index8(self) -> SdlResult<Image> {
+        let desired_format = SDL_PIXELFORMAT_INDEX8;
+
+        let surface = unsafe { &*self.0 };
+        if surface.format == desired_format {
+            return Ok(self);
+        }
+
+        // Note: we can't simply use SDL_ConvertSurface here because it does not preserve the palette indices
+        let new_surface = unsafe { SDL_CreateSurface(surface.w, surface.h, desired_format) };
+        if new_surface.is_null() {
+            return Err(SdlError::get_error(
+                "Couldn't create index8 surface for conversion",
+            ));
+        }
+
+        let old_palette = unsafe { SDL_GetSurfacePalette(self.0) };
+        let new_palette = unsafe { SDL_CreateSurfacePalette(new_surface) };
+        unsafe {
+            SDL_SetPaletteColors(
+                new_palette,
+                (*old_palette).colors,
+                0,
+                (*old_palette).ncolors,
+            );
+        }
+
+        match surface.format {
+            SDL_PIXELFORMAT_INDEX4MSB => {
+                Self::convert_index4msb(unsafe { &mut *new_surface }, surface)
+            }
+            f => {
+                return Err(SdlError {
+                    message: format!(
+                        "Unhandled pixel format {:?} for index8 conversion",
+                        unsafe { CStr::from_ptr(SDL_GetPixelFormatName(f)) }
+                    ),
+                });
+            }
+        };
+
+        Ok(Image(new_surface))
+    }
+
+    fn convert_index4msb(new_surface: &mut SDL_Surface, old_surface: &SDL_Surface) {
+        // pitch should be w/2 exactly, as we use this function only for level collisionmaps
+        // and level size is a multiple of 64, therefore no padding should be needed.
+        assert_eq!(old_surface.pitch, old_surface.w / 2);
+        assert_eq!(old_surface.pitch * 2, new_surface.pitch);
+
+        let mut old_pixels = unsafe {
+            slice::from_raw_parts(
+                old_surface.pixels as *const u8,
+                (old_surface.pitch * old_surface.h) as usize,
+            )
+        };
+
+        let mut new_pixels = unsafe {
+            slice::from_raw_parts_mut(
+                new_surface.pixels as *mut u8,
+                (new_surface.pitch * new_surface.h) as usize,
+            )
+        };
+
+        let half = new_surface.w as usize / 2;
+        for _ in 0..old_surface.h {
+            for x in 0..half {
+                new_pixels[x * 2] = (old_pixels[x] & 0xf0) >> 4;
+                new_pixels[x * 2 + 1] = old_pixels[x] & 0x0f;
+            }
+            old_pixels = &old_pixels[(old_surface.pitch as usize)..];
+            new_pixels = &mut new_pixels[(new_surface.pitch as usize)..];
+        }
     }
 
     pub fn ensure_argb888(self) -> SdlResult<Image> {

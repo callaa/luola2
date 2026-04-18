@@ -180,6 +180,8 @@ impl Level {
             ));
         }
 
+        let terrain = terrain.ensure_index8()?;
+
         let width = terrain.width() as f32 * LEVEL_SCALE;
         let height = terrain.height() as f32 * LEVEL_SCALE;
         let tiles_wide = terrain.width() / TILE_SIZE;
@@ -212,14 +214,9 @@ impl Level {
         let artwork_pixels = artwork
             .argb8888_pixels()
             .expect("Didn't we call ensure_argb8888?");
-        let terrain_pixels = match terrain.indexed_pixels() {
-            Some(p) => p,
-            None => {
-                return Err(anyhow!(
-                    "Level terrain image pixel format must be 8-bit indexed"
-                ));
-            }
-        };
+        let terrain_pixels = terrain
+            .indexed_pixels()
+            .expect("Didn't we call ensure_index8?");
 
         let water_color = info
             .find_water_color(terrain.palette().unwrap(), SDL_PIXELFORMAT_ARGB8888)
