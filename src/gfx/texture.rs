@@ -22,14 +22,12 @@ use std::{
 };
 
 use crate::{
-    fs::pathbuf_to_cstring,
     gfx::{Color, Image, TexAlt},
     math::{RectF, Vec2},
 };
 
 use super::{Renderer, SdlError};
 use anyhow::Result;
-use sdl3_image_sys::image::IMG_LoadTexture;
 use sdl3_sys::{
     blendmode::{SDL_BLENDMODE_ADD, SDL_BLENDMODE_BLEND},
     pixels::SDL_PIXELFORMAT_ARGB8888,
@@ -248,10 +246,7 @@ impl Texture {
     }
 
     pub fn from_file(renderer: &Renderer, path: PathBuf) -> Result<Texture> {
-        let path = pathbuf_to_cstring(path)?;
-        let tex = unsafe { IMG_LoadTexture(renderer.renderer, path.as_ptr()) };
-
-        Self::from_texture(tex)
+        Self::from_image(renderer, &Image::from_file(path)?)
     }
 
     pub fn from_image(renderer: &Renderer, image: &Image) -> Result<Texture> {

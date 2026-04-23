@@ -16,7 +16,6 @@
 
 use anyhow::Result;
 use core::slice;
-use sdl3_image_sys::image::IMG_Load;
 use sdl3_sys::{
     pixels::{
         SDL_GetPixelFormatName, SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX4MSB,
@@ -25,8 +24,8 @@ use sdl3_sys::{
     rect::SDL_Rect,
     surface::{
         SDL_BlitSurface, SDL_ConvertSurface, SDL_CreateSurface, SDL_CreateSurfacePalette,
-        SDL_DestroySurface, SDL_GetSurfacePalette, SDL_SCALEMODE_LINEAR, SDL_SCALEMODE_NEAREST,
-        SDL_SaveBMP, SDL_ScaleSurface, SDL_Surface,
+        SDL_DestroySurface, SDL_GetSurfacePalette, SDL_LoadPNG, SDL_SCALEMODE_LINEAR,
+        SDL_SCALEMODE_NEAREST, SDL_SaveBMP, SDL_ScaleSurface, SDL_Surface,
     },
 };
 use std::{ffi::CStr, path::PathBuf};
@@ -47,9 +46,9 @@ impl Drop for Image {
 impl Image {
     pub fn from_file(path: PathBuf) -> Result<Image> {
         let path = pathbuf_to_cstring(path)?;
-        let surface = unsafe { IMG_Load(path.as_ptr()) };
+        let surface = unsafe { SDL_LoadPNG(path.as_ptr()) };
         if surface.is_null() {
-            return Err(SdlError::get_error("IMG_load").into());
+            return Err(SdlError::get_error("SDL_LoadPNG").into());
         }
 
         Ok(Image(surface))
@@ -237,7 +236,7 @@ impl Image {
         };
 
         if surface.is_null() {
-            return Err(SdlError::get_error("IMG_load").into());
+            return Err(SdlError::get_error("image scaling").into());
         }
 
         Ok(Image(surface))

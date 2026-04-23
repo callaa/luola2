@@ -11,7 +11,6 @@ license = "GPL-3.0-or-later"
 static = [
 	"mlua/vendored",
 	"sdl3-sys/build-from-source-static",
-	"sdl3-image-sys/build-from-source-static",
 	"sdl3-ttf-sys/build-static-vendored",
 ]
 
@@ -23,7 +22,6 @@ env_logger = { version = "0.11.8", default-features = false }
 fastrand = "2.3.0"
 log = { version = "0.4.28", features = ["std"] }
 mlua = { version = "0.11.5", features = ["serde", "lua54", "anyhow"] }
-sdl3-image-sys = { version = "0.6.0"  }
 sdl3-main = "0.6.0"
 sdl3-sys = { version = "0.6.0"  }
 sdl3-ttf-sys = { version = "0.6.0" }
