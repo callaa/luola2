@@ -25,7 +25,7 @@ use sdl3_sys::{
     surface::{
         SDL_BlitSurface, SDL_ConvertSurface, SDL_CreateSurface, SDL_CreateSurfacePalette,
         SDL_DestroySurface, SDL_GetSurfacePalette, SDL_LoadPNG, SDL_SCALEMODE_LINEAR,
-        SDL_SCALEMODE_NEAREST, SDL_SaveBMP, SDL_ScaleSurface, SDL_Surface,
+        SDL_SCALEMODE_NEAREST, SDL_SavePNG, SDL_ScaleSurface, SDL_Surface,
     },
 };
 use std::{ffi::CStr, path::PathBuf};
@@ -242,12 +242,10 @@ impl Image {
         Ok(Image(surface))
     }
 
-    /// Save the image as a BMP
-    /// TODO once we update to SDL 3.4, replace this with save_png
-    pub fn save_bmp(&self, path: PathBuf) -> Result<()> {
+    pub fn save_png(&self, path: PathBuf) -> Result<()> {
         let path = pathbuf_to_cstring(path)?;
-        if unsafe { !SDL_SaveBMP(self.0, path.as_ptr()) } {
-            return Err(SdlError::get_error("IMG_load").into());
+        if unsafe { !SDL_SavePNG(self.0, path.as_ptr()) } {
+            return Err(SdlError::get_error("SDL_SavePNG").into());
         }
 
         Ok(())

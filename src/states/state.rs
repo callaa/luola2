@@ -142,10 +142,10 @@ impl StateStack {
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .expect("valid time expected");
-        path.push(format!("luola2-{}.bmp", ts.as_secs()));
+        path.push(format!("luola2-{}.png", ts.as_secs()));
 
         log::info!("Saving screenshot to: {:?}", path);
-        image.save_bmp(path)?;
+        image.save_png(path)?;
 
         // Flash the screen to indicate a screenshot was taken
         let r = self.renderer.borrow_mut();
