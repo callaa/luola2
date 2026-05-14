@@ -12,10 +12,10 @@ terrain = "demo-level.png"
 artwork = "demo-level.png"
 
 # Parallax background (optional)
-background = "grid.jpeg"
+background = "grid.png"
 
 # A starfield background can be drawn behind the parallax background
-starfield = false
+starfield = true
 
 [colors]
 # There is typically no need to specify the water color explicitly.
