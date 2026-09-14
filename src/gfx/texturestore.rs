@@ -25,6 +25,7 @@ use std::{collections::HashMap, fs, path::Path};
 /**
  * Storage for shared textures that are kept loaded for the duration of the application run.
  */
+#[derive(Clone)]
 pub struct TextureStore {
     textures: Vec<TextureWithAlts>,
 
@@ -33,6 +34,7 @@ pub struct TextureStore {
     name_map: HashMap<Vec<u8>, TextureId>,
 }
 
+#[derive(Clone)]
 struct TextureWithAlts {
     main: Texture,
     // alt textures have all the same settings as the main texture,
@@ -130,26 +132,32 @@ impl TextureStore {
     pub fn load_from_toml(renderer: &Renderer, path: &Path) -> Result<Self> {
         let content = fs::read_to_string(path)?;
         let config: HashMap<String, TextureConfigWithAlts> = toml::from_str(&content)?;
-
-        let mut store = Self::new();
-
         let root = path
             .parent()
             .expect("textures.toml should have a parent directory");
 
+        let mut store = Self::new();
+        store.update_from_config(renderer, root, config)?;
+        Ok(store)
+    }
+
+    pub fn update_from_config(
+        &mut self,
+        renderer: &Renderer,
+        root: &Path,
+        config: HashMap<String, TextureConfigWithAlts>,
+    ) -> Result<()> {
         let mut shared_textures: HashMap<String, *mut SDL_Texture> = HashMap::new();
 
         for (name, config) in config {
-            let main = store
-                .add_texture(
-                    name.into_bytes(),
-                    Texture::from_config(renderer, root, &config.main, None, &mut shared_textures)?,
-                )
-                .expect("duplicates shouldn't be possible here");
+            let main = self.add_texture(
+                name.into_bytes(),
+                Texture::from_config(renderer, root, &config.main, None, &mut shared_textures)?,
+            );
 
             if let Some(alts) = config.alts {
                 for (alt, altconfig) in alts {
-                    store.add_texture_alt(
+                    self.add_texture_alt(
                         main,
                         alt,
                         Texture::from_config(
@@ -163,15 +171,15 @@ impl TextureStore {
                 }
             }
         }
-        Ok(store)
+        Ok(())
     }
 
-    pub fn add_texture(&mut self, name: Vec<u8>, texture: Texture) -> Result<TextureId> {
+    pub fn add_texture(&mut self, name: Vec<u8>, texture: Texture) -> TextureId {
         if self.name_map.contains_key(&name) {
-            return Err(anyhow!(
-                "Texture {} already added",
-                str::from_utf8(&name).unwrap()
-            ));
+            log::debug!(
+                "Replacing texture {}",
+                str::from_utf8(&name).expect("texture name should be valid utf-8")
+            );
         }
 
         self.textures.push(TextureWithAlts {
@@ -182,7 +190,7 @@ impl TextureStore {
         });
         let id = TextureId::from(self.textures.len() - 1, &self.textures.last().unwrap().main);
         self.name_map.insert(name, id);
-        Ok(id)
+        id
     }
 
     pub fn add_texture_alt(

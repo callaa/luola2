@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::gfx::{RenderOptions, TexAlt};
+use crate::gfx::{RenderOptions, TexAlt, TextureStore};
 
 use super::{Renderer, TextureId};
 
@@ -61,8 +61,8 @@ impl AnimatedTexture {
         false
     }
 
-    pub fn render(&self, renderer: &Renderer, options: &RenderOptions) {
-        let tex = renderer.texture_store().get_texture(self.tex);
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, options: &RenderOptions) {
+        let tex = ts.get_texture(self.tex);
 
         tex.render(
             renderer,
@@ -73,8 +73,14 @@ impl AnimatedTexture {
         );
     }
 
-    pub fn render_alt(&self, renderer: &Renderer, alt: TexAlt, options: &RenderOptions) {
-        if let Some(tex) = renderer.texture_store().get_texture_alt(self.tex, alt) {
+    pub fn render_alt(
+        &self,
+        renderer: &Renderer,
+        ts: &TextureStore,
+        alt: TexAlt,
+        options: &RenderOptions,
+    ) {
+        if let Some(tex) = ts.get_texture_alt(self.tex, alt) {
             tex.render(
                 renderer,
                 &RenderOptions {

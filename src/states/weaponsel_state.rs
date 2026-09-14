@@ -295,7 +295,7 @@ impl WeaponSelection {
         }
 
         let shiptexid = self.assets.ships[player.ship_selection].texture;
-        let shiptex = renderer.texture_store().get_texture(shiptexid);
+        let shiptex = renderer.default_texture_store().get_texture(shiptexid);
         let mut ship_render = RenderOptions {
             dest: RenderDest::Centered(Vec2(x + shiptex.width() / 2.0, rect.y() + text_h / 2.0)),
             mode: RenderMode::Rotated(if player.decided { 0.0 } else { 90.0 }, false),
@@ -307,7 +307,7 @@ impl WeaponSelection {
         shiptex.render(renderer, &ship_render);
         ship_render.color = Color::player_color(player_id).with_alpha(self.fadein);
         renderer
-            .texture_store()
+            .default_texture_store()
             .get_texture_alt(shiptexid, crate::gfx::TexAlt::Decal)
             .expect("Ships should have a Decal alt-texture")
             .render(renderer, &ship_render);

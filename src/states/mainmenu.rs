@@ -65,7 +65,7 @@ impl MainMenu {
         )?;
 
         let r = renderer.borrow();
-        let background = r.texture_store().find_texture(b"menubackground")?;
+        let background = r.default_texture_store().find_texture(b"menubackground")?;
         let starfield = Rc::new(RefCell::new(Self::new_starfield(r.size())));
 
         drop(r);
@@ -90,7 +90,9 @@ impl MainMenu {
         let renderer = self.renderer.borrow();
         renderer.clear();
 
-        let bg = renderer.texture_store().get_texture(self.background);
+        let bg = renderer
+            .default_texture_store()
+            .get_texture(self.background);
 
         // Background: starfield
         self.starfield.borrow().render(&renderer);

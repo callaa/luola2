@@ -4,7 +4,10 @@ use crate::{
     call_state_method,
     game::objects::PhysicalObject,
     gameobject_timer, get_state_method,
-    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
+    gfx::{
+        AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId,
+        TextureStore,
+    },
     math::Vec2,
 };
 
@@ -166,7 +169,7 @@ impl FixedObject {
         changed
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         let tex = if self.action {
             &self.action_texture
         } else {
@@ -183,7 +186,7 @@ impl FixedObject {
                 color: self.color,
                 ..Default::default()
             };
-            tex.render(renderer, &options);
+            tex.render(renderer, ts, &options);
         }
     }
 

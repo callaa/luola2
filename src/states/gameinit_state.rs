@@ -85,7 +85,10 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
     // Load scripts and extract weapon list
     // The full API isn't initialized and shouldn't be needed
     // just to load the scripts without executing the entrypoint function
-    let lua = ScriptEnvironment::create_lua(renderer.clone())?;
+    let lua = ScriptEnvironment::create_lua(
+        renderer.clone(),
+        Rc::new(renderer.borrow().default_texture_store().clone()),
+    )?;
 
     lua.load(r#"require "luola_main""#).exec()?;
 

@@ -98,9 +98,9 @@ impl Fireworks {
     }
 
     pub fn render(&self, renderer: &Renderer) {
-        let texture = renderer.texture_store().get_texture(
+        let texture = renderer.default_texture_store().get_texture(
             renderer
-                .texture_store()
+                .default_texture_store()
                 .find_texture(b"sparkle")
                 .expect("sparkle texture needed"),
         );

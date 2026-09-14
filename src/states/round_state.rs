@@ -95,7 +95,7 @@ impl GameRoundState {
 
         let filler_logo = renderer
             .borrow()
-            .texture_store()
+            .default_texture_store()
             .find_texture(b"gamelogo")?;
 
         let mut game = Self {
@@ -181,7 +181,9 @@ impl StackableState for GameRoundState {
         self.filler_viewport = filler;
 
         if let Some(f) = filler {
-            let fillertex = renderer.texture_store().get_texture(self.filler_logo);
+            let fillertex = renderer
+                .default_texture_store()
+                .get_texture(self.filler_logo);
             let (w, h) = if fillertex.width() > f.w() || fillertex.height() > f.h() {
                 let scale = (f.w() / fillertex.width()).min(f.h() / fillertex.height());
                 (fillertex.width() * scale, fillertex.height() * scale)
@@ -249,7 +251,7 @@ impl StackableState for GameRoundState {
 
             renderer.draw_filled_rectangle(viewport, &Color::new(0.1, 0.1, 0.15));
             renderer
-                .texture_store()
+                .default_texture_store()
                 .get_texture(self.filler_logo)
                 .render(
                     &renderer,

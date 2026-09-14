@@ -18,6 +18,7 @@ use log::error;
 use sdl3_sys::pixels::{SDL_GetPixelFormatDetails, SDL_MapRGBA, SDL_Palette, SDL_PixelFormat};
 use serde;
 use std::{
+    collections::HashMap,
     fs,
     ops::RangeInclusive,
     path::{Path, PathBuf},
@@ -31,7 +32,7 @@ use super::terrain::*;
 use crate::{
     fs::glob_datafiles,
     game::level::LEVEL_SCALE,
-    gfx::{Renderer, Texture},
+    gfx::{Renderer, Texture, TextureConfigWithAlts},
     math::RectF,
 };
 
@@ -52,6 +53,7 @@ pub struct LevelInfo {
     script_settings: toml::Table,
     starfield: bool,
     nospawnzones: Vec<RectF>,
+    textures: Option<HashMap<String, TextureConfigWithAlts>>,
 }
 
 type TerrainPalette = [u8; 256];
@@ -79,6 +81,8 @@ struct LevelInfoToml {
 
     #[serde(rename = "script-settings")]
     script_settings: Option<toml::Table>,
+
+    textures: Option<HashMap<String, TextureConfigWithAlts>>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -154,6 +158,7 @@ impl LevelInfo {
             starfield: info.starfield,
             colors: info.colors,
             nospawnzones,
+            textures: info.textures,
         })
     }
 
@@ -188,6 +193,10 @@ impl LevelInfo {
         &self.script_settings
     }
 
+    pub fn root_path(&self) -> &Path {
+        &self.root
+    }
+
     pub fn terrain_path(&self) -> PathBuf {
         self.root.join(&self.terrain_file)
     }
@@ -218,6 +227,10 @@ impl LevelInfo {
 
     pub fn nospawnzones(&self) -> &Vec<RectF> {
         &self.nospawnzones
+    }
+
+    pub fn textures(&self) -> Option<&HashMap<String, TextureConfigWithAlts>> {
+        self.textures.as_ref()
     }
 
     // Convert the given pixel values into the internal format using the terrain palette map

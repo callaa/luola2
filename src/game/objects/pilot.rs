@@ -8,7 +8,10 @@ use crate::{
         objects::{GameObject, PhysicalObject, Rope, Ship, TerrainCollisionMode},
     },
     gameobject_timer, get_state_method,
-    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt},
+    gfx::{
+        AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt,
+        TextureStore,
+    },
     math::{LineF, Vec2},
 };
 
@@ -465,7 +468,7 @@ impl Pilot {
         });
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         let tex = match self.mode {
             MotionMode::Standing => &self.stand_texture,
             MotionMode::Jetpacking | MotionMode::Ninjaroping => &self.jetpack_texture,
@@ -501,9 +504,9 @@ impl Pilot {
             },
             ..Default::default()
         };
-        tex.render(renderer, &opts);
+        tex.render(renderer, ts, &opts);
         opts.color = Color::player_color(self.player_id);
-        tex.render_alt(renderer, TexAlt::Decal, &opts);
+        tex.render_alt(renderer, ts, TexAlt::Decal, &opts);
     }
 }
 

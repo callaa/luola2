@@ -23,7 +23,7 @@ use crate::{
         },
         objects::{GameObject, TerrainCollisionMode},
     },
-    gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId},
+    gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId, TextureStore},
     math::{RectF, Vec2},
 };
 
@@ -148,9 +148,9 @@ impl TerrainParticle {
         None
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         if let Some(tex) = self.texture {
-            renderer.texture_store().get_texture(tex).render(
+            ts.get_texture(tex).render(
                 renderer,
                 &RenderOptions {
                     dest: RenderDest::Centered(self.phys.pos - camera_pos),

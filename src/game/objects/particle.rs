@@ -18,7 +18,7 @@ use crate::{
     game::objects::GameObject,
     gfx::{
         AnimatedTexture, Color, ColorDiff, RenderDest, RenderMode, RenderOptions, Renderer,
-        TextureId,
+        TextureId, TextureStore,
     },
     math::{RectF, Vec2},
 };
@@ -62,11 +62,12 @@ impl Particle {
         self.color = self.color + self.dcolor * timestep;
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         if self.reveal_in <= 0.0 {
             if let Some(tex) = &self.texture {
                 tex.render(
                     renderer,
+                    ts,
                     &RenderOptions {
                         dest: RenderDest::Centered(self.pos - camera_pos),
                         mode: if tex.id().needs_rotation() {

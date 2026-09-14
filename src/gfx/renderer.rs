@@ -151,7 +151,7 @@ impl Renderer {
     }
 
     pub fn load_textures(&mut self, texture_config: &Path) -> Result<()> {
-        if self.texture_store().count() > 0 {
+        if self.texturestore.count() > 0 {
             return Err(anyhow!("Textures already loaded"));
         }
 
@@ -168,7 +168,7 @@ impl Renderer {
         Ok(())
     }
 
-    pub fn texture_store(&self) -> &TextureStore {
+    pub fn default_texture_store(&self) -> &TextureStore {
         &self.texturestore
     }
 

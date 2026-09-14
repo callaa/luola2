@@ -28,7 +28,7 @@ use crate::{
     game::{GameControllerSet, MenuButton},
     gfx::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
-        TextOutline, TextureId,
+        TextOutline, TextureId, TextureStore,
     },
     math::{RectF, Vec2},
 };
@@ -289,12 +289,9 @@ fn make_selectable(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> 
     })
 }
 
-fn make_image(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
+fn make_image(table: Table, texture_store: &TextureStore) -> mlua::Result<MenuItem> {
     let texture_name = table.get::<LuaString>("texture")?;
-    let texid = match renderer
-        .texture_store()
-        .find_texture(&texture_name.as_bytes())
-    {
+    let texid = match texture_store.find_texture(&texture_name.as_bytes()) {
         Ok(id) => id,
         Err(e) => {
             return mlua::Result::Err(mlua::Error::WithContext {
@@ -304,7 +301,7 @@ fn make_image(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
         }
     };
 
-    let tex = renderer.texture_store().get_texture(texid);
+    let tex = texture_store.get_texture(texid);
 
     Ok(MenuItem {
         content: MenuItemContent::Image(texid),
@@ -374,7 +371,7 @@ impl LuaMenu {
             lua.globals().set(
                 "Image",
                 lua.create_function(move |_lua, props: Table| {
-                    make_image(props, &renderer.borrow())
+                    make_image(props, renderer.borrow().default_texture_store())
                 })?,
             )?;
         }
@@ -851,14 +848,17 @@ impl MenuScreen {
                     };
                 }
                 MenuItemContent::Image(texture) => {
-                    renderer.texture_store().get_texture(*texture).render(
-                        renderer,
-                        &RenderOptions {
-                            dest: RenderDest::Rect(item.rect + self.animated_offset),
-                            color: Color::WHITE.with_alpha(alpha),
-                            ..Default::default()
-                        },
-                    );
+                    renderer
+                        .default_texture_store()
+                        .get_texture(*texture)
+                        .render(
+                            renderer,
+                            &RenderOptions {
+                                dest: RenderDest::Rect(item.rect + self.animated_offset),
+                                color: Color::WHITE.with_alpha(alpha),
+                                ..Default::default()
+                            },
+                        );
                 }
                 MenuItemContent::Blank => {}
             }

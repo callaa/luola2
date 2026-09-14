@@ -17,7 +17,7 @@
 use crate::{
     gfx::{
         Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
-        Text, TextOutline, Texture, TextureId,
+        Text, TextOutline, Texture, TextureId, TextureStore,
     },
     math::{RectF, Vec2},
 };
@@ -127,7 +127,7 @@ impl mlua::FromLua for HudOverlay {
 }
 
 impl HudOverlay {
-    fn draw(&self, renderer: &Renderer) {
+    fn draw(&self, renderer: &Renderer, ts: &TextureStore) {
         let a = if self.fadein > 0.0 && self.age < self.fadein {
             self.age / self.fadein
         } else if self.fadeout > 0.0 && (self.lifetime - self.age) < self.fadeout {
@@ -144,7 +144,7 @@ impl HudOverlay {
         let scale_factor = if let Some(s) = self.scale
             && let HudOverlayContent::Texture(id) = self.content
         {
-            let w = renderer.texture_store().get_texture(id).width();
+            let w = ts.get_texture(id).width();
 
             renderer.width() as f32 / w * s
         } else {
@@ -168,7 +168,7 @@ impl HudOverlay {
                 });
             }
             HudOverlayContent::Texture(id) => {
-                let tex = renderer.texture_store().get_texture(*id);
+                let tex = ts.get_texture(*id);
                 let w = tex.width() * scale_factor;
                 let h = tex.height() * scale_factor;
                 let dest = match self.align {
@@ -206,22 +206,28 @@ impl HudOverlay {
     }
 }
 
-pub fn draw_hud(renderer: &Renderer, hud: PlayerHud, overlays: &[HudOverlay], camera_pos: Vec2) {
+pub fn draw_hud(
+    renderer: &Renderer,
+    ts: &TextureStore,
+    hud: PlayerHud,
+    overlays: &[HudOverlay],
+    camera_pos: Vec2,
+) {
     match hud {
         PlayerHud::Ship {
             health,
             ammo,
             cooling_down,
             ..
-        } => draw_ship_hud(renderer, health, ammo, cooling_down),
+        } => draw_ship_hud(renderer, ts, health, ammo, cooling_down),
         PlayerHud::Pilot { jetpack, target } => {
-            draw_pilot_hud(renderer, jetpack, target.map(|t| t - camera_pos))
+            draw_pilot_hud(renderer, ts, jetpack, target.map(|t| t - camera_pos))
         }
         PlayerHud::None => {}
     }
 
     for overlay in overlays {
-        overlay.draw(renderer);
+        overlay.draw(renderer, ts);
     }
 }
 
@@ -239,9 +245,9 @@ pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, 
         },
     );
 
-    let tex = renderer.texture_store().get_texture(
+    let tex = renderer.default_texture_store().get_texture(
         renderer
-            .texture_store()
+            .default_texture_store()
             .find_texture(b"minimap_pointer")
             .expect("minimap_pointer texture should exist"),
     );
@@ -260,17 +266,19 @@ pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, 
     }
 }
 
-fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32, cooling_down: bool) {
-    let barfill = renderer.texture_store().get_texture(
-        renderer
-            .texture_store()
-            .find_texture(b"bar_fill")
+fn draw_ship_hud(
+    renderer: &Renderer,
+    ts: &TextureStore,
+    health: f32,
+    ammo: f32,
+    cooling_down: bool,
+) {
+    let barfill = ts.get_texture(
+        ts.find_texture(b"bar_fill")
             .expect("bar_fill texture should exist"),
     );
-    let barbg = renderer.texture_store().get_texture(
-        renderer
-            .texture_store()
-            .find_texture(b"bar_bg")
+    let barbg = ts.get_texture(
+        ts.find_texture(b"bar_bg")
             .expect("bar_bg texture should exist"),
     );
 
@@ -317,17 +325,13 @@ fn draw_ship_hud(renderer: &Renderer, health: f32, ammo: f32, cooling_down: bool
     }
 }
 
-fn draw_pilot_hud(renderer: &Renderer, jetpack: f32, target: Option<Vec2>) {
-    let barfill = renderer.texture_store().get_texture(
-        renderer
-            .texture_store()
-            .find_texture(b"bar_fill")
+fn draw_pilot_hud(renderer: &Renderer, ts: &TextureStore, jetpack: f32, target: Option<Vec2>) {
+    let barfill = ts.get_texture(
+        ts.find_texture(b"bar_fill")
             .expect("bar_fill texture should exist"),
     );
-    let barbg = renderer.texture_store().get_texture(
-        renderer
-            .texture_store()
-            .find_texture(b"bar_bg")
+    let barbg = ts.get_texture(
+        ts.find_texture(b"bar_bg")
             .expect("bar_bg texture should exist"),
     );
 
@@ -352,10 +356,8 @@ fn draw_pilot_hud(renderer: &Renderer, jetpack: f32, target: Option<Vec2>) {
 
     // Target reticle
     if let Some(t) = target {
-        let tex = renderer.texture_store().get_texture(
-            renderer
-                .texture_store()
-                .find_texture(b"hud_reticle")
+        let tex = ts.get_texture(
+            ts.find_texture(b"hud_reticle")
                 .expect("hud_reticle texture should exist"),
         );
         tex.render(

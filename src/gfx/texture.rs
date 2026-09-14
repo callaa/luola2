@@ -65,14 +65,14 @@ pub struct TextureConfig {
     flippable: bool, // Hint to the renderer that this sprite should be flipped when moving to the left
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct TextureAltConfig {
     #[serde(rename = "file")]
     filename: Option<String>,
     subrect: Option<(i32, i32, i32, i32)>,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct TextureConfigWithAlts {
     #[serde(flatten)]
     pub main: TextureConfig,

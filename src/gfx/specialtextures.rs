@@ -168,9 +168,11 @@ pub fn make_controller_icon(
             _ => 2, // generic gamepad
         };
 
-        let tex = renderer
-            .texture_store()
-            .get_texture(renderer.texture_store().find_texture(b"input_devices")?);
+        let tex = renderer.default_texture_store().get_texture(
+            renderer
+                .default_texture_store()
+                .find_texture(b"input_devices")?,
+        );
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))
@@ -211,9 +213,11 @@ pub fn make_button_icon(
             MappedKey::Fire3 => 8,
         };
 
-        let tex = renderer
-            .texture_store()
-            .get_texture(renderer.texture_store().find_texture(b"gamepad_buttons")?);
+        let tex = renderer.default_texture_store().get_texture(
+            renderer
+                .default_texture_store()
+                .find_texture(b"gamepad_buttons")?,
+        );
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))

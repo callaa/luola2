@@ -10,6 +10,7 @@ use crate::{
     gameobject_timer, get_state_method,
     gfx::{
         AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId,
+        TextureStore,
     },
     math::Vec2,
 };
@@ -307,7 +308,7 @@ impl Critter {
         }
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         if let Some(rope) = &self.rope {
             rope.render(self.phys.pos, renderer, camera_pos);
         }
@@ -328,11 +329,11 @@ impl Critter {
         } else {
             &self.texture
         };
-        t.render(renderer, &options);
+        t.render(renderer, ts, &options);
 
         if self.owner != 0 {
             options.color = Color::player_color(self.owner);
-            t.render_alt(renderer, TexAlt::Decal, &options);
+            t.render_alt(renderer, ts, TexAlt::Decal, &options);
         }
     }
 

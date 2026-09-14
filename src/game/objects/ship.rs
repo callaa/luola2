@@ -21,7 +21,9 @@ use super::{GameObject, PhysicalObject, SCALE_FACTOR, TerrainCollisionMode};
 use crate::game::PlayerId;
 use crate::game::controller::GameController;
 use crate::game::level::{Level, terrain};
-use crate::gfx::{Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId};
+use crate::gfx::{
+    Color, RenderDest, RenderMode, RenderOptions, Renderer, TexAlt, TextureId, TextureStore,
+};
 use crate::math::Vec2;
 use crate::{call_state_method, gameobject_timer};
 
@@ -451,9 +453,7 @@ impl Ship {
         ship
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
-        let ts = renderer.texture_store();
-
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         let tex = ts.get_texture(self.texture);
 
         let mut renderopts = RenderOptions {

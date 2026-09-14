@@ -241,9 +241,9 @@ impl GameResultsState {
                     });
 
                     if *plr == self.winning_player
-                        && let Ok(tex) = r.texture_store().find_texture(b"trophy")
+                        && let Ok(tex) = r.default_texture_store().find_texture(b"trophy")
                     {
-                        let tex = r.texture_store().get_texture(tex);
+                        let tex = r.default_texture_store().get_texture(tex);
                         tex.render_simple(
                             &r,
                             None,

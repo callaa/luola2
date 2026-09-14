@@ -26,7 +26,10 @@ use crate::{
         objects::{GameObject, TerrainCollisionMode},
     },
     gameobject_timer, get_state_method,
-    gfx::{AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId},
+    gfx::{
+        AnimatedTexture, Color, RenderDest, RenderMode, RenderOptions, Renderer, TextureId,
+        TextureStore,
+    },
     math::Vec2,
 };
 
@@ -222,9 +225,10 @@ impl Projectile {
         p
     }
 
-    pub fn render(&self, renderer: &Renderer, camera_pos: Vec2) {
+    pub fn render(&self, renderer: &Renderer, ts: &TextureStore, camera_pos: Vec2) {
         self.texture.render(
             renderer,
+            ts,
             &RenderOptions {
                 dest: RenderDest::Centered(self.phys.pos - camera_pos),
                 color: self.color,

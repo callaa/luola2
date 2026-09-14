@@ -32,7 +32,7 @@ use crate::{
             Critter, FixedObject, GameObjectArray, HitscanProjectile, Pilot, TerrainParticle,
         },
     },
-    gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer},
+    gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer, TextureStore},
     math::{Rect, Vec2},
 };
 
@@ -89,6 +89,10 @@ impl mlua::FromLua for WorldEffect {
 pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
+
+    // Level specific texture store
+    // (level config can add or replace stock textures)
+    texture_store: Rc<TextureStore>,
 
     players: Rc<RefCell<Vec<PlayerState>>>,
 
@@ -155,7 +159,19 @@ impl World {
             &renderer.borrow(),
             levelinfo,
         )?));
-        let mut scripting = ScriptEnvironment::new(renderer.clone())?;
+
+        let mut texture_store = renderer.borrow().default_texture_store().clone();
+        if let Some(textures) = levelinfo.textures() {
+            texture_store.update_from_config(
+                &renderer.borrow(),
+                levelinfo.root_path(),
+                textures.clone(),
+            )?;
+        }
+
+        let texture_store = Rc::new(texture_store);
+
+        let mut scripting = ScriptEnvironment::new(renderer.clone(), texture_store.clone())?;
 
         let players = Rc::new(RefCell::new(
             players.iter().map(|_| PlayerState::new()).collect(),
@@ -181,10 +197,13 @@ impl World {
             scripting.load_level_specific_script(&levelscript)?;
         }
 
+        let noise_texture = AnimatedTexture::new(texture_store.find_texture(b"noise")?);
+
         Ok(World {
             players,
             scripting,
             level,
+            texture_store,
             ships,
             pilots,
             ships_work: RefCell::new(GameObjectArray::new()),
@@ -196,9 +215,7 @@ impl World {
             terrainparticles: GameObjectArray::new(),
             particles: GameObjectArray::new(),
             fixedobjects,
-            noise_texture: AnimatedTexture::new(
-                renderer.borrow().texture_store().find_texture(b"noise")?,
-            ),
+            noise_texture,
             starfield: if levelinfo.use_starfield() {
                 Some(Starfield::new())
             } else {
@@ -788,41 +805,42 @@ impl World {
             // World objects
             let left = camera_rect.x();
             let right = camera_rect.right();
+            let ts = &self.texture_store;
 
             for o in self.fixedobjects.borrow().range_slice(left, right) {
-                o.render(renderer, camera_pos);
+                o.render(renderer, ts, camera_pos);
             }
 
             for particle in self.particles.range_slice(left, right) {
-                particle.render(renderer, camera_pos);
+                particle.render(renderer, ts, camera_pos);
             }
 
             for tp in self.terrainparticles.range_slice(left, right) {
-                tp.render(renderer, camera_pos);
+                tp.render(renderer, ts, camera_pos);
             }
 
             for mine in self.mines.borrow().range_slice(left, right) {
-                mine.render(renderer, camera_pos);
+                mine.render(renderer, ts, camera_pos);
             }
 
             for bullet in self.bullets.range_slice(left, right) {
-                bullet.render(renderer, camera_pos);
+                bullet.render(renderer, ts, camera_pos);
             }
 
             for ship in self.ships.borrow().range_slice(left, right) {
-                ship.render(renderer, camera_pos);
+                ship.render(renderer, ts, camera_pos);
             }
 
             for pilot in self.pilots.borrow().iter() {
-                pilot.render(renderer, camera_pos);
+                pilot.render(renderer, ts, camera_pos);
             }
 
             for critter in self.critters.borrow().range_slice(left, right) {
-                critter.render(renderer, camera_pos);
+                critter.render(renderer, ts, camera_pos);
             }
 
             // Player HUD
-            draw_hud(renderer, player.hud, &player.overlays, camera_pos);
+            draw_hud(renderer, ts, player.hud, &player.overlays, camera_pos);
 
             if let Some(minimap) = self.level.borrow().minimap() {
                 let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
@@ -850,6 +868,7 @@ impl World {
         if player.fadeout > 0.0 {
             self.noise_texture.render(
                 renderer,
+                &self.texture_store,
                 &RenderOptions {
                     mode: RenderMode::Tiled(6.0),
                     color: Color::new_rgba(1.0, 1.0, 1.0, player.fadeout.min(1.0)),

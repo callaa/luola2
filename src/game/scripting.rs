@@ -32,7 +32,7 @@ use crate::game::objects::{
 };
 use crate::game::world::WorldEffect;
 use crate::game::{GameControllerSet, PlayerId, PlayerState};
-use crate::gfx::{Color, Renderer};
+use crate::gfx::{Color, Renderer, TextureStore};
 use crate::math::{LineF, RectF, Vec2};
 
 pub struct ScriptEnvironment {
@@ -43,7 +43,10 @@ pub struct ScriptEnvironment {
 }
 
 impl ScriptEnvironment {
-    pub fn create_lua(renderer: Rc<RefCell<Renderer>>) -> Result<Lua> {
+    pub fn create_lua(
+        renderer: Rc<RefCell<Renderer>>,
+        texture_store: Rc<TextureStore>,
+    ) -> Result<Lua> {
         let lua = Lua::new();
 
         let script_path = find_datafile_path("script")?;
@@ -54,11 +57,10 @@ impl ScriptEnvironment {
             .set("path", format!("{}/?.lua", script_path.to_str().unwrap()))?;
 
         let texapi = lua.create_table()?;
-        let r1 = renderer.clone();
         texapi.set(
             "get",
             lua.create_function(move |_, name: LuaString| {
-                Ok(r1.borrow().texture_store().find_texture(&name.as_bytes())?)
+                Ok(texture_store.find_texture(&name.as_bytes())?)
             })?,
         )?;
 
@@ -85,8 +87,8 @@ impl ScriptEnvironment {
         Ok(lua)
     }
 
-    pub fn new(renderer: Rc<RefCell<Renderer>>) -> Result<Self> {
-        let lua = Self::create_lua(renderer)?;
+    pub fn new(renderer: Rc<RefCell<Renderer>>, texture_store: Rc<TextureStore>) -> Result<Self> {
+        let lua = Self::create_lua(renderer, texture_store)?;
 
         let effect_accumulator = Rc::new(RefCell::new(Vec::new()));
 
@@ -182,8 +184,6 @@ impl ScriptEnvironment {
                     })?,
             )?;
         }
-
-        // Wrap TextureStore::find_texture
 
         // Iterate through a read-only list of ships
         // function ships_iter(callback)
