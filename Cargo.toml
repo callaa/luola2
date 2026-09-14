@@ -27,7 +27,7 @@ sdl3-sys = { version = "0.7.1"  }
 sdl3-ttf-sys = { version = "0.7.1" }
 serde = { version = "1.0.228", features = ["derive"] }
 smallvec = "1.15.1"
-toml = { version = "0.9.8", default-features=false, features = ["std", "serde", "parse", "display"] }
+toml = { version = "1.1.6", default-features=false, features = ["std", "serde", "parse", "display"] }
 
 [dev-dependencies]
 itertools = "0.14.0"
