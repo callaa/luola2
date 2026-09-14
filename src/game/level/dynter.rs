@@ -91,7 +91,7 @@ impl DynamicTerrainCell {
     }
 
     pub fn from_lua_table(table: &mlua::Table) -> mlua::Result<Self> {
-        let typ = table.get::<mlua::String>("type")?;
+        let typ = table.get::<mlua::LuaString>("type")?;
         match typ.as_bytes().deref() {
             b"Foam" => Ok(DynamicTerrainCell::Foam {
                 limit: table.get::<Option<i32>>("limit")?.unwrap_or(20),

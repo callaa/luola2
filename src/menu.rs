@@ -16,7 +16,7 @@
 
 use anyhow::{Result, anyhow};
 use core::ops::Deref;
-use mlua::{FromLua, Function, Lua, LuaSerdeExt, String as LuaString, Table, UserData, Value};
+use mlua::{FromLua, Function, Lua, LuaSerdeExt, LuaString, Table, UserData, Value};
 use sdl3_sys::keyboard::SDL_GetKeyName;
 use sdl3_sys::keycode::SDL_Keycode;
 use std::{cell::RefCell, ffi::CStr, rc::Rc, sync::Arc};
@@ -443,7 +443,7 @@ impl LuaMenu {
                 let config = GAME_CONFIG.read().unwrap();
                 lua.to_value_with(
                     &config.deref(),
-                    mlua::SerializeOptions::new().serialize_none_to_null(false),
+                    mlua::serde::ser::Options::new().serialize_none_to_null(false),
                 )
             })?,
         )?;

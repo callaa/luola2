@@ -70,7 +70,7 @@ impl mlua::FromLua for HudOverlay {
             let texture = table.get::<Option<TextureId>>("texture")?;
             let pos: Vec2 = table.get("pos")?;
 
-            let align = if let Some(align) = table.get::<Option<mlua::String>>("align")? {
+            let align = if let Some(align) = table.get::<Option<mlua::LuaString>>("align")? {
                 match align.as_bytes().deref() {
                     b"topleft" => HudOverlayAlignment::TopLeft,
                     b"center" => HudOverlayAlignment::Centered,

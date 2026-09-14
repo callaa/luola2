@@ -20,7 +20,7 @@ use std::{cell::RefCell, path::Path, rc::Rc};
 
 use anyhow::{Result, anyhow};
 use log::error;
-use mlua::{FromLua, Function, Lua, Result as LuaResult, String as LuaString, Table, Value};
+use mlua::{FromLua, Function, Lua, LuaString, Result as LuaResult, Table, Value};
 
 use crate::configfile::GAME_CONFIG;
 use crate::fs::find_datafile_path;

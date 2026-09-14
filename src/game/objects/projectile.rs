@@ -63,7 +63,7 @@ impl mlua::FromLua for Projectile {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
             let terrain_collision_mode = {
-                let mode = table.get::<Option<mlua::String>>("terrain_collision")?;
+                let mode = table.get::<Option<mlua::LuaString>>("terrain_collision")?;
                 if let Some(mode) = mode {
                     match mode.as_bytes().deref() {
                         b"exact" => TerrainCollisionMode::Exact,
