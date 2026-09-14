@@ -67,6 +67,7 @@ pub fn push_menu_button_event(button: MenuButton) {
             code,
             data1,
             data2: null_mut(),
+            ..Default::default()
         },
     };
     unsafe {
