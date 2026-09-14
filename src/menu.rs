@@ -1,3 +1,19 @@
+// This file is part of Luola2
+// Copyright (C) 2025, 2026 Calle Laakkonen
+//
+// Luola2 is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Luola2 is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
+
 use anyhow::{Result, anyhow};
 use core::ops::Deref;
 use mlua::{FromLua, Function, Lua, LuaSerdeExt, String as LuaString, Table, UserData, Value};
@@ -31,6 +47,7 @@ enum MenuItemValue {
     None,
     Toggle(bool, CachedText),
     KeyGrab(SDL_Keycode, CachedText),
+    Integer(i32, CachedText),
 }
 
 enum MenuItemContent {
@@ -45,6 +62,8 @@ struct MenuItem {
     rect: RectF,
     value: MenuItemValue,
     action: Option<Function>,
+    left_action: Option<Function>,
+    right_action: Option<Function>,
 }
 
 #[derive(Copy, Clone)]
@@ -94,6 +113,16 @@ impl UserData for MenuItem {
                 Ok(toggled)
             } else {
                 Err(anyhow!("toggle called on non-toggleable menu item!").into())
+            }
+        });
+
+        methods.add_method_mut("add", |_, this, (amount, min, max): (i32, i32, i32)| {
+            if let MenuItemValue::Integer(value, _) = &this.value {
+                let sum = (value + amount).clamp(min, max);
+                this.value = MenuItemValue::Integer(sum, RefCell::new(None));
+                Ok(sum)
+            } else {
+                Err(anyhow!("add called on non-Integer menu item!").into())
             }
         });
     }
@@ -214,6 +243,8 @@ fn make_heading(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
         rect,
         value: MenuItemValue::None,
         action: None,
+        left_action: None,
+        right_action: None,
     })
 }
 
@@ -232,6 +263,29 @@ fn make_link(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
         value,
         rect,
         action,
+        left_action: None,
+        right_action: None,
+    })
+}
+
+fn make_selectable(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
+    let label = table.get::<LuaString>("label")?;
+    let left_action = Some(table.get::<Function>("left_action")?);
+    let right_action = Some(table.get::<Function>("right_action")?);
+    let text = make_text(renderer, &label, None)?;
+    let rect = RectF::new(0.0, 0.0, text.width(), text.height());
+    let value = table
+        .get::<Option<MenuItemValue>>("value")?
+        .unwrap_or(MenuItemValue::None);
+
+    Ok(MenuItem {
+        content: MenuItemContent::Text(text),
+        center: false,
+        value,
+        rect,
+        action: None,
+        left_action,
+        right_action,
     })
 }
 
@@ -258,6 +312,8 @@ fn make_image(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> {
         rect: RectF::new(0.0, 0.0, tex.width(), tex.height()),
         value: MenuItemValue::None,
         action: None,
+        left_action: None,
+        right_action: None,
     })
 }
 
@@ -268,6 +324,8 @@ fn make_spacer(height: f32) -> MenuItem {
         rect: RectF::new(0.0, 0.0, 1.0, height),
         value: MenuItemValue::None,
         action: None,
+        left_action: None,
+        right_action: None,
     }
 }
 
@@ -297,6 +355,16 @@ impl LuaMenu {
                 "Link",
                 lua.create_function(move |_lua, props: Table| {
                     make_link(props, &renderer.borrow())
+                })?,
+            )?;
+        }
+
+        {
+            let renderer = renderer.clone();
+            lua.globals().set(
+                "Selectable",
+                lua.create_function(move |_lua, props: Table| {
+                    make_selectable(props, &renderer.borrow())
                 })?,
             )?;
         }
@@ -361,6 +429,10 @@ impl LuaMenu {
             lua.create_function(|_lua, key: u32| {
                 Ok(MenuItemValue::KeyGrab(SDL_Keycode(key), RefCell::new(None)))
             })?,
+        )?;
+        itemvalues.set(
+            "Integer",
+            lua.create_function(|_lua, i: i32| Ok(MenuItemValue::Integer(i, RefCell::new(None))))?,
         )?;
 
         lua.globals().set("Value", itemvalues)?;
@@ -468,6 +540,7 @@ impl LuaMenu {
                             MenuItemValue::None => Value::NULL,
                             MenuItemValue::Toggle(v, _) => Value::Boolean(v),
                             MenuItemValue::KeyGrab(v, _) => Value::Integer(v.0 as _),
+                            MenuItemValue::Integer(v, _) => Value::Integer(v as _),
                         })?;
                     }
                     on_exit.call::<()>(values)?;
@@ -599,7 +672,7 @@ impl LuaMenu {
 
 impl MenuItem {
     fn is_selectable(&self) -> bool {
-        self.action.is_some()
+        self.action.is_some() || self.left_action.is_some()
     }
 }
 
@@ -751,6 +824,30 @@ impl MenuScreen {
                                 ..Default::default()
                             });
                         }
+                        MenuItemValue::Integer(value, text) => {
+                            if text.borrow().is_none() {
+                                text.replace(Some(
+                                    renderer
+                                        .fontset()
+                                        .menu
+                                        .create_text(renderer, &value.to_string())
+                                        .unwrap()
+                                        .with_color(if *value > 0 {
+                                            Color::new(0.0, 0.4, 0.8)
+                                        } else {
+                                            Color::new(0.8, 0.0, 0.0)
+                                        }),
+                                ));
+                            }
+
+                            text.borrow().as_ref().unwrap().render(&RenderTextOptions {
+                                dest: RenderTextDest::TopLeft(
+                                    item.rect.topright() + Vec2(10.0, 0.0) + self.animated_offset,
+                                ),
+                                alpha,
+                                ..Default::default()
+                            });
+                        }
                     };
                 }
                 MenuItemContent::Image(texture) => {
@@ -790,6 +887,18 @@ impl MenuScreen {
                     break;
                 }
             },
+            MenuButton::Left(_) => {
+                let item = &mut self.items[self.current];
+                if let Some(action) = item.left_action.clone() {
+                    lua.scope(|scope| action.call::<Value>(scope.create_userdata_ref_mut(item)))?;
+                }
+            }
+            MenuButton::Right(_) => {
+                let item = &mut self.items[self.current];
+                if let Some(action) = item.right_action.clone() {
+                    lua.scope(|scope| action.call::<Value>(scope.create_userdata_ref_mut(item)))?;
+                }
+            }
             MenuButton::Start | MenuButton::Select(_) => {
                 let item = &mut self.items[self.current];
                 if let Some(action) = item.action.clone() {

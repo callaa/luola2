@@ -1,5 +1,5 @@
 // This file is part of Luola2
-// Copyright (C) 2025 Calle Laakkonen
+// Copyright (C) 2025, 2026 Calle Laakkonen
 //
 // Luola2 is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use super::{StackableState, StackableStateResult};
 use crate::{
+    configfile::GAME_CONFIG,
     demos::AnimatedStarfield,
     game::{GameControllerSet, MenuButton, Player},
     gfx::{
@@ -39,10 +40,14 @@ pub struct PlayerSelection {
 
     start_text: Text,
     prompt_text: Text,
-    rounds_text: Text,
+    rounds_label: Text,
+    respawns_label: Text,
 
     rounds_to_win: i32,
     rounds_to_win_text: Text,
+
+    respawns: i32,
+    respawns_text: Text,
     players: Vec<JoiningPlayer>,
 
     /// Fade out timer after which the game will start
@@ -68,15 +73,22 @@ impl PlayerSelection {
         let r = renderer.borrow();
         let font = &r.fontset().menu;
         let red = Color::new(0.9, 0.2, 0.2);
+        let config = GAME_CONFIG.read().unwrap();
 
         let prompt_text = font
             .create_text(&r, "Press Fire to join!")
             .unwrap()
             .with_outline_color(Color::new(0.2, 0.2, 0.4));
-        let rounds_text = r
+        let rounds_label = r
             .fontset()
             .menu
             .create_text(&r, "ROUNDS")
+            .unwrap()
+            .with_color(red);
+        let respawns_label = r
+            .fontset()
+            .menu
+            .create_text(&r, "RESPAWNS")
             .unwrap()
             .with_color(red);
         let start_text = font
@@ -85,11 +97,19 @@ impl PlayerSelection {
             //.with_color(red);
             .with_outline_color(Color::new(0.2, 0.2, 0.4));
 
-        let rounds_to_win = 5;
+        let rounds_to_win = config.game.rounds;
         let rounds_to_win_text = r
             .fontset()
             .menu_big
             .create_text(&r, &format!("{:02}", rounds_to_win))
+            .unwrap()
+            .with_color(Color::new(0.9, 0.2, 0.2));
+
+        let respawns = config.game.respawns;
+        let respawns_text = r
+            .fontset()
+            .menu_big
+            .create_text(&r, &format!("{:02}", respawns))
             .unwrap()
             .with_color(Color::new(0.9, 0.2, 0.2));
         drop(r);
@@ -100,10 +120,13 @@ impl PlayerSelection {
             renderer,
             controllers,
             prompt_text,
-            rounds_text,
+            rounds_label,
+            respawns_label,
             start_text,
             rounds_to_win,
             rounds_to_win_text,
+            respawns,
+            respawns_text,
             players: Vec::new(),
             start_timer: None,
         }
@@ -149,22 +172,42 @@ impl PlayerSelection {
             }
         }
 
+        // Rounds and respawns
+        let top_shelf_width = self.rounds_label.width() + self.respawns_label.width() + 10.0;
+
         // Round selector
         let offset_x = fadeout.powf(2.0) * w / 2.0;
         let offset_y = 10.0;
 
         self.rounds_to_win_text.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(Vec2(
-                w / 2.0 - offset_x,
+                w / 2.0 - offset_x - (top_shelf_width / 2.0),
                 //h - self.rounds_text.height() - offset_y,
                 offset_y,
             )),
             ..Default::default()
         });
 
-        self.rounds_text.render(&RenderTextOptions {
+        self.rounds_label.render(&RenderTextOptions {
             dest: RenderTextDest::TopCenter(Vec2(
-                w / 2.0 - offset_x,
+                w / 2.0 - offset_x - (top_shelf_width / 2.0),
+                offset_y + self.rounds_to_win_text.height(),
+            )),
+            ..Default::default()
+        });
+
+        // Respawn count
+        self.respawns_text.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(Vec2(
+                w / 2.0 - offset_x + (top_shelf_width / 2.0),
+                offset_y,
+            )),
+            ..Default::default()
+        });
+
+        self.respawns_label.render(&RenderTextOptions {
+            dest: RenderTextDest::TopCenter(Vec2(
+                w / 2.0 - offset_x + (top_shelf_width / 2.0),
                 offset_y + self.rounds_to_win_text.height(),
             )),
             ..Default::default()
@@ -229,6 +272,20 @@ impl StackableState for PlayerSelection {
         match button {
             MenuButton::Back => {
                 return StackableStateResult::Pop;
+            }
+            MenuButton::Up(_) => {
+                if self.respawns < 99 {
+                    self.respawns += 1;
+                    self.respawns_text
+                        .set_text(&format!("{:02}", self.respawns));
+                }
+            }
+            MenuButton::Down(_) => {
+                if self.respawns > 0 {
+                    self.respawns -= 1;
+                    self.respawns_text
+                        .set_text(&format!("{:02}", self.respawns));
+                }
             }
             MenuButton::Left(_) => {
                 if self.rounds_to_win > 1 {
@@ -339,6 +396,7 @@ impl StackableState for PlayerSelection {
                     self.assets.clone(),
                     players,
                     self.rounds_to_win,
+                    self.respawns,
                     self.starfield.clone(),
                     self.controllers.clone(),
                     self.renderer.clone(),

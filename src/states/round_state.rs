@@ -1,5 +1,5 @@
 // This file is part of Luola2
-// Copyright (C) 2025 Calle Laakkonen
+// Copyright (C) 2025,2026 Calle Laakkonen
 //
 // Luola2 is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@ impl GameRoundState {
         level: &LevelInfo,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        respawns: i32,
     ) -> Result<Self> {
         let world = World::new(&players, level, renderer.clone(), controllers.clone())?;
         let lua = world.scripting().lua();
@@ -79,6 +80,7 @@ impl GameRoundState {
                 "pilot_spawn",
                 p.pilot_spawn.map(|p| p.as_world_coordinate()),
             )?;
+            player.set("respawns", respawns)?;
             player_settings.push(player)?;
         }
 

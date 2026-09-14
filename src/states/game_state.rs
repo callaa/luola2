@@ -39,6 +39,7 @@ pub struct GameState {
     players: Vec<Player>,
     level: Option<LevelInfo>,
     rounds: i32,
+    respawns: i32,
     round_winners: Vec<PlayerId>,
     substate: GameSubState,
     controllers: Rc<RefCell<GameControllerSet>>,
@@ -60,6 +61,7 @@ impl GameState {
         assets: Rc<GameAssets>,
         players: Vec<Player>,
         rounds: i32,
+        respawns: i32,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
@@ -69,6 +71,7 @@ impl GameState {
             starfield,
             players,
             rounds,
+            respawns,
             round_winners: Vec::new(),
             level: None,
             substate: GameSubState::SelectNextLevel,
@@ -119,6 +122,7 @@ impl GameState {
         }
 
         let rounds = config.rounds.unwrap_or(1);
+        let respawns = config.respawns.unwrap_or(0);
 
         Ok(Self {
             assets,
@@ -126,6 +130,7 @@ impl GameState {
             players,
             level,
             rounds,
+            respawns,
             round_winners,
             substate,
             controllers,
@@ -271,6 +276,7 @@ impl StackableState for GameState {
                             .expect("Level should have been loaded at this point"),
                         self.controllers.clone(),
                         self.renderer.clone(),
+                        self.respawns,
                     ) {
                         Ok(g) => g,
                         Err(err) => return StackableStateResult::Error(err),

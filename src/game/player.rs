@@ -24,6 +24,7 @@ use crate::math::{Rect, Vec2};
 pub struct GameInitConfig {
     pub level: String,
     pub rounds: Option<i32>,
+    pub respawns: Option<i32>,
     pub gameover: Option<bool>,
 
     #[serde(rename = "player")]

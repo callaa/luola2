@@ -48,12 +48,24 @@ fn default_true() -> bool {
     true
 }
 
+fn default_rounds() -> i32 {
+    5
+}
+
+fn default_respawns() -> i32 {
+    2
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GameOptions {
     #[serde(default = "default_true")]
     pub minimap: bool,
     #[serde(default = "default_true")]
     pub baseregen: bool,
+    #[serde(default = "default_rounds")]
+    pub rounds: i32,
+    #[serde(default = "default_respawns")]
+    pub respawns: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -94,7 +94,7 @@ function game_menu()
 		}),
 		Spacer(32),
 		Link({
-			label = "Show minimap: ",
+			label = "Show minimap:",
 			value = Value.Toggle(SETTINGS.game.minimap),
 			action = function(item)
 				SETTINGS.game.minimap = item:toggle()
@@ -102,10 +102,34 @@ function game_menu()
 			end,
 		}),
 		Link({
-			label = "Rebuild bases: ",
+			label = "Rebuild bases:",
 			value = Value.Toggle(SETTINGS.game.baseregen),
 			action = function(item)
 				SETTINGS.game.baseregen = item:toggle()
+				SETTINGS_CHANGED = true
+			end,
+		}),
+		Selectable({
+			label = "Rounds:",
+			value = Value.Integer(SETTINGS.game.rounds),
+			left_action = function(item)
+				SETTINGS.game.rounds = item:add(-1, 0, 99)
+				SETTINGS_CHANGED = true
+			end,
+			right_action = function(item)
+				SETTINGS.game.rounds = item:add(1, 0, 99)
+				SETTINGS_CHANGED = true
+			end,
+		}),
+		Selectable({
+			label = "Respawns:",
+			value = Value.Integer(SETTINGS.game.respawns),
+			left_action = function(item)
+				SETTINGS.game.respawns = item:add(-1, 0, 99)
+				SETTINGS_CHANGED = true
+			end,
+			right_action = function(item)
+				SETTINGS.game.respawns = item:add(1, 0, 99)
 				SETTINGS_CHANGED = true
 			end,
 		}),

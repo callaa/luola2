@@ -16,6 +16,7 @@ local Spider = require("critters.spider")
 local Forcefields = require("forcefields")
 local Level = require("level")
 local Turrets = require("turrets")
+local Portals = require("portals")
 
 local player_settings = {}
 
@@ -155,8 +156,10 @@ function luola_splash(pos, vel, imass)
 end
 
 -- Check if the round has a winner
--- Returns the player ID if there is, 0 if the round is tied or nil
--- if the round is still ongoing
+-- Returns:
+--    if all players are dead: 0
+--    if only one player remains: player ID
+--    if more than one player is alive: nil
 function luola_get_round_winner()
 	local last_player_standing = 0
 	local count = 0
@@ -179,11 +182,43 @@ function luola_get_round_winner()
 	return nil
 end
 
+function respawn_dead_players()
+	local respawns = {}
+	for id, plr in pairs(player_settings) do
+		respawns[id] = plr.respawns
+	end
+
+	game.ships_iter(function(ship)
+		if ship.controller ~= 0 then
+			respawns[ship.player] = nil
+		end
+	end)
+
+	game.pilots_iter(function(pilot)
+		respawns[pilot.player] = nil
+	end)
+
+	local respawned = false
+	for id, respawn in pairs(respawns) do
+		if respawn > 0 then
+			player_settings[id].respawns = respawn - 1
+			local pos = game.find_spawnpoint()
+			Portals.create_exit_portal(pos)
+			create_ship_for_player(id, pos)
+			respawned = true
+		end
+	end
+
+	return respawned
+end
+
 -- End the round if end condition holds
 function check_round_end_condition()
-	local winner = luola_get_round_winner()
-	if winner ~= nil then
-		game.effect("EndRound", winner)
+	if not respawn_dead_players() then
+		local winner = luola_get_round_winner()
+		if winner ~= nil then
+			game.effect("EndRound", winner)
+		end
 	end
 end
 

@@ -62,6 +62,7 @@ The following keys can be used in menus:
 **Winning:**
 
  * Number of rounds needed to win the game can be set with Left/Right keys in the player selection screen
+ * Number of respawns per level can be set with Up/Down keys in player selection screen
  * Last player left wins the round
  * If all players are destroyed, the round ends in a draw
 
@@ -71,7 +72,6 @@ Dependencies:
 
  * Rust compiler
  * SDL 3
- * SDL 3 Image
  * SDL 3 TTF
 
 Install the Rust compiler and dev packages for SDL libraries.
