@@ -24,12 +24,14 @@ use crate::{
     gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId},
     math::RectF,
     menu::LuaMenu,
+    sfx::Mixer,
     states::{PlayerSelection, StackableState, StackableStateResult, game_assets::GameAssets},
 };
 
 pub struct MainMenu {
     controllers: Rc<RefCell<GameControllerSet>>,
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
     assets: Rc<GameAssets>,
 
     luamenu: LuaMenu,
@@ -52,10 +54,12 @@ impl MainMenu {
         assets: Rc<GameAssets>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
     ) -> Result<Self> {
         let luamenu = LuaMenu::new(
             "menus.menu",
             renderer.clone(),
+            mixer.clone(),
             RectF::new(
                 0.0,
                 0.0,
@@ -73,6 +77,7 @@ impl MainMenu {
         Ok(MainMenu {
             assets,
             renderer,
+            mixer,
             controllers,
             luamenu,
             background,
@@ -193,6 +198,7 @@ impl StackableState for MainMenu {
                         self.starfield.clone(),
                         self.controllers.clone(),
                         self.renderer.clone(),
+                        self.mixer.clone(),
                     ))))
             }
             "quit" => {

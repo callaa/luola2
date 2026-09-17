@@ -17,6 +17,7 @@ local Forcefields = require("forcefields")
 local Level = require("level")
 local Turrets = require("turrets")
 local Portals = require("portals")
+local sounds = require("sounds")
 
 local player_settings = {}
 
@@ -137,6 +138,7 @@ function luola_explosive_terrain(pos, color)
 	end
 
 	Impacts.make_firestarters(3, pos)
+	sfx.explosion(sounds.small_explosion(), pos, 0.8)
 end
 
 -- Splash handler is called when an object enters/exits water

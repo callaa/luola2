@@ -3,6 +3,7 @@ local Level = require("level")
 local Rockets = require("weapons.rockets")
 local maths = require("utils.maths")
 local UniqID = require("utils.uniqid")
+local sounds = require("sounds")
 
 local Tank = {}
 
@@ -57,6 +58,7 @@ end
 function Tank._fire(critter, target_pos)
 	local firing_angle = (target_pos - critter.pos):angle()
 	Rockets.mini_homing_missile(critter.pos + Vec2(0, -8), Vec2(0, -10), -firing_angle, critter.owner)
+	sfx.explosion(sounds.big_launcher(), critter.pos, 0.3)
 	local ammo = critter.state.ammo - 1
 	if ammo < 0 then
 		critter:destroy()
@@ -79,6 +81,7 @@ function Tank.on_destroy(critter)
 		pos = critter.pos,
 		texture = textures.get("bigboom"),
 	})
+	sfx.explosion(sounds.small_explosion(), critter.pos, 0.3)
 end
 
 function Tank:new(pos)

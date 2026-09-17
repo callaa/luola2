@@ -241,6 +241,7 @@ dependencies = [
  "log",
  "mlua",
  "sdl3-main",
+ "sdl3-mixer-sys",
  "sdl3-sys",
  "sdl3-ttf-sys",
  "serde",
@@ -414,6 +415,26 @@ name = "sdl3-main-macros"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf074641b7c496da67374dda3e41317904a58851f51617d5f713560e897c082"
+
+[[package]]
+name = "sdl3-mixer-src"
+version = "3.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cd815ae87084588c7dbd027c1667b0a5e21a6b5ae7b22ecb230bc21c7063eca"
+
+[[package]]
+name = "sdl3-mixer-sys"
+version = "0.7.0+SDL-mixer-3.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6150136321198ec95cccfb6168d838f114273a7615d21b513e5277c86f7d3aa1"
+dependencies = [
+ "cmake",
+ "pkg-config",
+ "rpkg-config",
+ "sdl3-mixer-src",
+ "sdl3-sys",
+ "vcpkg",
+]
 
 [[package]]
 name = "sdl3-src"

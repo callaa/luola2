@@ -7,6 +7,7 @@ local Rockets = require("weapons.rockets")
 local Grav = require("weapons.grav")
 local Hitscan = require("weapons.hitscan")
 local Portals = require("portals")
+local sounds = require("sounds")
 
 local weapons = {}
 
@@ -28,6 +29,7 @@ function weapons.grenade(ship)
 			high = 0.25,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.1)
 	end
 end
 
@@ -49,6 +51,7 @@ function weapons.megabomb(ship)
 			high = 0.6,
 			duration = 0.2,
 		})
+		sfx.weapon(sounds.big_launcher(), 0.05)
 	end
 end
 
@@ -59,6 +62,7 @@ function weapons.rocket(ship)
 			high = 0.5,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.3)
 	end
 end
 
@@ -69,6 +73,7 @@ function weapons.missile(ship)
 			high = 0.5,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.3)
 	end
 end
 
@@ -79,6 +84,7 @@ function weapons.mine(ship)
 			high = 0.1,
 			duration = 0.05,
 		})
+		sfx.weapon(sounds.launcher(), 0.1)
 	end
 end
 
@@ -89,6 +95,7 @@ function weapons.magmine(ship)
 			high = 0.1,
 			duration = 0.05,
 		})
+		sfx.weapon(sounds.launcher(), 0.1)
 	end
 end
 
@@ -111,6 +118,7 @@ function weapons.landmine(ship, trigger)
 			high = 0.1,
 			duration = 0.05,
 		})
+		sfx.weapon(sounds.click())
 	end
 end
 
@@ -125,6 +133,7 @@ function weapons.drone(ship)
 				high = 0.1,
 				duration = 0.05,
 			})
+			sfx.weapon(sounds.launcher(), 0.1)
 		else
 			game.player_effect("hud_overlay", ship.player, {
 				text = textures.font("menu", "Cannot deploy more drones here!"),
@@ -148,6 +157,7 @@ function weapons.tank(ship)
 				high = 0.1,
 				duration = 0.05,
 			})
+			sfx.weapon(sounds.launcher(), 0.1)
 		else
 			game.player_effect("hud_overlay", ship.player, {
 				text = textures.font("menu", "Cannot deploy more tanks here!"),
@@ -216,6 +226,12 @@ function weapons.ghostship(ship, trigger)
 				return 0.1
 			end
 		end)
+		Scheduler.add_to_object(ship, 0.0, function(ship)
+			if ship.ghostmode then
+				sfx.weapon(sounds.low_warble())
+				return 0.4
+			end
+		end)
 	end
 end
 
@@ -268,6 +284,7 @@ function weapons.foam_grenade(ship)
 			high = 0.25,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.1)
 	end
 end
 
@@ -290,6 +307,7 @@ function weapons.greygoo(ship)
 			high = 0.25,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.1)
 	end
 end
 
@@ -321,6 +339,7 @@ function weapons.freezer(ship)
 			high = 0.25,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.1)
 	end
 end
 
@@ -344,6 +363,7 @@ function weapons.nitroglycerin(ship)
 			high = 0.25,
 			duration = 0.1,
 		})
+		sfx.weapon(sounds.grenade_launcher(), 0.1)
 	end
 end
 
@@ -351,6 +371,7 @@ function weapons.laser(ship)
 	if ship:consume_ammo(0.8, 0.2) then
 		-- note: hitscan is performed on the next frame
 		Hitscan.laser(ship.pos + Vec2_for_angle(-ship.angle, 16) + ship.vel / 60, ship.angle, ship.player)
+		sfx.weapon(sounds.laser(), 0.2)
 	end
 end
 
@@ -372,6 +393,7 @@ function weapons.diggerbeam(ship)
 				timer=0.1
 			})
 		end
+		sfx.weapon(sounds.high_warble(), 0.1)
 	end
 end
 
@@ -404,6 +426,7 @@ function weapons.chemtrail(ship)
 				timer = 0.5,
 			})
 		end
+		sfx.weapon(sounds.sand(), 0.1)
 	end
 end
 
@@ -420,7 +443,7 @@ function weapons.autorepair(ship, trigger)
 
 	if ship.state.autorepair then
 		ship.state.autorepair = false
-	elseif ship.ammo >= 1 then
+	elseif ship.ammo >= 1 and ship.health < ship.max_health then
 		ship.state.autorepair = true
 		Scheduler.add_to_object(ship, 0.1, function(ship)
 			if ship.state.autorepair and ship.health < ship.max_health then
@@ -444,6 +467,12 @@ function weapons.autorepair(ship, trigger)
 			end
 
 			ship.state.autorepair = false
+		end)
+		Scheduler.add_to_object(ship, 0, function(ship)
+			if ship.state.autorepair then
+				sfx.weapon(SFXSET_REPAIR(), 0.1)
+				return 0.8
+			end
 		end)
 	end
 end

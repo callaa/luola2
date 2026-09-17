@@ -72,6 +72,7 @@ Dependencies:
 
  * Rust compiler
  * SDL 3
+ * SDL 3 Mixer
  * SDL 3 TTF
 
 Install the Rust compiler and dev packages for SDL libraries.

@@ -1,4 +1,5 @@
 local Scheduler = require("utils.scheduler")
+local sounds = require("sounds")
 
 local Portals = {}
 
@@ -7,6 +8,7 @@ local PORTAL_LIFETIME = 4
 function Portals.create_portal_pair(source, destination)
 	function teleport_object(portal, obj)
 		obj.pos = (obj.pos - portal.pos) + destination
+		sfx.explosion(sounds.warp(), destination, 0.1)
 		return true -- ignore projectile's own hit handler
 	end
 

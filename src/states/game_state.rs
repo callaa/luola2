@@ -21,6 +21,7 @@ use crate::{
     demos::AnimatedStarfield,
     game::{GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId, level::LevelInfo},
     gfx::{Renderer, Texture},
+    sfx::Mixer,
     states::{
         StackableState, StackableStateResult,
         game_assets::GameAssets,
@@ -44,6 +45,7 @@ pub struct GameState {
     substate: GameSubState,
     controllers: Rc<RefCell<GameControllerSet>>,
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
 }
 
 #[derive(PartialEq)]
@@ -65,6 +67,7 @@ impl GameState {
         starfield: Rc<RefCell<AnimatedStarfield>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
     ) -> Self {
         Self {
             assets,
@@ -77,6 +80,7 @@ impl GameState {
             substate: GameSubState::SelectNextLevel,
             controllers,
             renderer,
+            mixer,
         }
     }
 
@@ -86,6 +90,7 @@ impl GameState {
         starfield: Rc<RefCell<AnimatedStarfield>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
     ) -> Result<Self> {
         let mut substate = GameSubState::SelectNextLevel;
 
@@ -135,6 +140,7 @@ impl GameState {
             substate,
             controllers,
             renderer,
+            mixer,
         })
     }
 }
@@ -224,6 +230,7 @@ impl StackableState for GameState {
                         fadein_round_text,
                         self.starfield.clone(),
                         self.renderer.clone(),
+                        self.mixer.clone(),
                         selection,
                     ) {
                         Ok(s) => s,
@@ -256,6 +263,7 @@ impl StackableState for GameState {
                         level_art,
                         self.starfield.clone(),
                         self.renderer.clone(),
+                        self.mixer.clone(),
                         &self.controllers.borrow(),
                     ) {
                         Ok(s) => s,
@@ -276,6 +284,7 @@ impl StackableState for GameState {
                             .expect("Level should have been loaded at this point"),
                         self.controllers.clone(),
                         self.renderer.clone(),
+                        self.mixer.clone(),
                         self.respawns,
                     ) {
                         Ok(g) => g,

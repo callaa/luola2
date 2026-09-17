@@ -1,10 +1,11 @@
 local Impacts = require("weapons.impacts")
-
+local sounds = require("sounds")
 local weapons = {}
 
 function weapons.cannon(ship)
 	ship.primary_weapon_cooldown = 0.15
 
+	sfx.weapon(sounds.gunshot(), 1.0)
 	game.effect("AddBullet", {
 		pos = ship.pos,
 		vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
@@ -43,6 +44,7 @@ function weapons.delta_cannon(ship)
 		ship.state.barrel_switch = 1
 	end
 	game.effect("AddBullet", bullet)
+	sfx.weapon(sounds.gunshot(), 1.0)
 end
 
 return weapons

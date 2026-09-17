@@ -1,5 +1,6 @@
 local Impacts = require("weapons.impacts")
 local Scheduler = require("utils.scheduler")
+local sounds = require("sounds")
 
 local mines = {}
 
@@ -48,6 +49,7 @@ local function magmine_attract_timer(this)
 	if nearest_enemy_pos ~= nil then
 		local a = (nearest_enemy_pos - this.pos):normalized() * (50000 / math.sqrt(nearest_enemy_dist2))
 		this.vel = this.vel + a
+		sfx.explosion(sounds.ping(), this.pos)
 		return 0.1
 	end
 
@@ -104,6 +106,7 @@ local function detonate_landmine(mine)
 			}
 		})
 	end
+	sfx.explosion(sounds.small_explosion(), mine.pos, 0.1)
 end
 
 local function _landmine_reminder(mine)

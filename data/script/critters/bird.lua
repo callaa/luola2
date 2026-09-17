@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local Impacts = require("weapons.impacts")
 local UniqID = require("utils.uniqid")
+local sounds = require("sounds")
 
 local Bird = {}
 
@@ -87,6 +88,8 @@ function Bird.on_bullet_hit(critter, bullet)
 			color = 0x99ffffff,
 		})
 	end
+
+	sfx.explosion(sounds.bird(), critter.pos, 0.3)
 end
 
 function Bird:new(pos)

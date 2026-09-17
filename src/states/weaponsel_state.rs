@@ -26,6 +26,7 @@ use crate::{
         Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
         Text, TextOutline, Texture, make_button_icon,
     },
+    sfx::Mixer,
     math::{RectF, Vec2},
     states::game_assets::GameAssets,
 };
@@ -44,6 +45,7 @@ pub struct WeaponSelection {
     background_scroll: Vec2,
     round_text: Text,
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
     players: Vec<PlayerWeaponChoice>,
     texts: Vec<Texts>,
     longest_weapon_text_width: f32,
@@ -145,6 +147,7 @@ impl WeaponSelection {
         background: Option<Texture>,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
         controllers: &GameControllerSet,
     ) -> Result<Self> {
         let round_text = renderer
@@ -228,6 +231,7 @@ impl WeaponSelection {
             round_text,
             starfield,
             renderer,
+            mixer,
             longest_weapon_text_width,
             flavortext_selection,
             start_timer: None,
@@ -456,6 +460,7 @@ impl StackableState for WeaponSelection {
 
         match button {
             MenuButton::Back => {
+                self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
                 return StackableStateResult::Pop;
             }
             MenuButton::Up(plr) if plr > 0 => {
@@ -468,6 +473,7 @@ impl StackableState for WeaponSelection {
                         p.ship_selection = ship_count - 1;
                     }
                     self.flavortext_selection = weapon_count + p.ship_selection;
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip0"));
                 }
             }
             MenuButton::Down(plr) if plr > 0 => {
@@ -476,6 +482,7 @@ impl StackableState for WeaponSelection {
                 {
                     p.ship_selection = (p.ship_selection + 1) % ship_count;
                     self.flavortext_selection = weapon_count + p.ship_selection;
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip0"));
                 }
             }
             MenuButton::Left(plr) if plr > 0 => {
@@ -488,6 +495,7 @@ impl StackableState for WeaponSelection {
                         p.selection = weapon_count - 1;
                     }
                     self.flavortext_selection = p.selection;
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
                 }
             }
             MenuButton::Right(plr) if plr > 0 => {
@@ -496,6 +504,7 @@ impl StackableState for WeaponSelection {
                 {
                     p.selection = (p.selection + 1) % weapon_count;
                     self.flavortext_selection = p.selection;
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
                 }
             }
             MenuButton::Select(plr) if plr > 0 => {
@@ -505,6 +514,9 @@ impl StackableState for WeaponSelection {
 
                 if self.players.iter().all(|p| p.decided) {
                     self.start_timer = Some(1.0);
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
+                } else {
+                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
                 }
             }
             _ => {}

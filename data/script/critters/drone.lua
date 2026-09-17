@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local Impacts = require("weapons.impacts")
 local UniqID = require("utils.uniqid")
+local sounds = require("sounds")
 
 local Drone = {}
 
@@ -27,6 +28,7 @@ function Drone._timer_targeting(critter)
 			Scheduler.add_to_object(critter, 0, Drone._timer_shoot)
 		end
 
+		sfx.explosion(sounds.drone_pursuing(), critter.pos, 0.05)
 		return 1
 	else
 		-- No enemy in sight, just move randomly
@@ -38,6 +40,7 @@ function Drone._timer_targeting(critter)
 				break
 			end
 		end
+		sfx.explosion(sounds.drone_roaming(), critter.pos, 0.05)
 		return 2
 	end
 end
@@ -58,6 +61,7 @@ function Drone._timer_shoot(critter)
 				on_impact = Impacts.bullet,
 			},
 		})
+		sfx.explosion(sounds.gunshot(), critter.pos, 0.05)
 	else
 		return nil
 	end
@@ -96,6 +100,7 @@ function Drone.on_destroy(critter)
 		pos = critter.pos,
 		texture = textures.get("bigboom"),
 	})
+	sfx.explosion(sounds.small_explosion(), critter.pos, 0.05)
 end
 
 function Drone:new(pos)

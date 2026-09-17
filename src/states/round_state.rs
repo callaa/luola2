@@ -23,6 +23,7 @@ use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
     gfx::{Color, RenderOptions, Renderer, TextureId},
     math::{Rect, RectF, Vec2},
+    sfx::Mixer,
     states::{
         StackableState, StackableStateResult,
         pause_state::{PauseReturn, PauseState},
@@ -31,6 +32,7 @@ use crate::{
 
 pub struct GameRoundState {
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
     controllers: Rc<RefCell<GameControllerSet>>,
 
     /// List of players in this game
@@ -62,9 +64,16 @@ impl GameRoundState {
         level: &LevelInfo,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
         respawns: i32,
     ) -> Result<Self> {
-        let world = World::new(&players, level, renderer.clone(), controllers.clone())?;
+        let world = World::new(
+            &players,
+            level,
+            renderer.clone(),
+            controllers.clone(),
+            mixer.clone(),
+        )?;
         let lua = world.scripting().lua();
 
         // Call game init script
@@ -100,6 +109,7 @@ impl GameRoundState {
 
         let mut game = Self {
             renderer,
+            mixer,
             controllers,
             players,
             world,
@@ -121,10 +131,12 @@ impl StackableState for GameRoundState {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
             MenuButton::Back => {
-                let pause_state = Box::new(match PauseState::new(self.renderer.clone()) {
-                    Ok(s) => s,
-                    Err(err) => return StackableStateResult::Error(err),
-                });
+                let pause_state = Box::new(
+                    match PauseState::new(self.renderer.clone(), self.mixer.clone()) {
+                        Ok(s) => s,
+                        Err(err) => return StackableStateResult::Error(err),
+                    },
+                );
                 return StackableStateResult::Push(pause_state);
             }
             MenuButton::Debug => self.world.toggle_debugmode(),

@@ -2,6 +2,7 @@
 local tableutils = require("utils.table")
 local Scheduler = require("utils.scheduler")
 local Level = require("level")
+local sounds = require("sounds")
 local impacts = {}
 
 -- generic function for explosions
@@ -70,6 +71,13 @@ function impacts.bullet(this, terrain, obj)
 			pos = this.pos,
 			texture = textures.get("boom"),
 		})
+		if Level.is_solid(terrain) then
+			if Level.is_indestructible(terrain) then
+				sfx.explosion(sounds.click(), this.pos, 1.0)
+			else
+				sfx.explosion(sounds.thump(), this.pos, 1.0)
+			end
+		end
 	end
 end
 
@@ -85,6 +93,7 @@ function impacts.diggerbeam(this, terrain, obj)
 		r = 2,
 		dust = 0.5
 	})
+	sfx.explosion(sounds.sand(), this.pos, 0.3)
 end
 
 -- Special weapon grenade
@@ -107,6 +116,7 @@ function impacts.grenade(this, terrain, obj)
 		},
 	})
 	impacts.make_firestarters(8, this.pos)
+	sfx.explosion(sounds.small_explosion(), this.pos, 0.3)
 end
 
 -- Special weapon Megabomb
@@ -130,6 +140,7 @@ function impacts.megabomb(this, terrain, obj)
 	})
 
 	impacts.make_firestarters(8, this.pos)
+	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
 -- Special weapon Rocket (should be slightly less powerful than a megabomb)
@@ -152,6 +163,7 @@ function impacts.rocket(this, terrain, obj)
 		}
 	})
 	impacts.make_firestarters(8, this.pos)
+	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
 -- Special weapon Homing Missile (should be less powerful than a rocket)
@@ -175,6 +187,7 @@ function impacts.missile(this, terrain, obj)
 		}
 	})
 	impacts.make_firestarters(8, this.pos)
+	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
 -- Mini missiles are small (possibly homing) missiles that are typically
@@ -192,6 +205,7 @@ function impacts.minimissile(this, terrain, obj)
 	})
 
 	impacts.make_firestarters(3, this.pos)
+	sfx.explosion(sounds.small_explosion(), this.pos, 0.3)
 end
 
 function impacts.foam_grenade(this, terrain, obj)
@@ -204,6 +218,7 @@ function impacts.foam_grenade(this, terrain, obj)
 		pos = this.pos,
 		type = "Foam",
 	})
+	sfx.explosion(sounds.foam(), this.pos, 0.3)
 end
 
 function impacts.greygoo(this, terrain, obj)
@@ -221,6 +236,7 @@ function impacts.greygoo(this, terrain, obj)
 			type = "GreyGoo",
 		})
 	end
+	sfx.explosion(sounds.small_explosion(), this.pos, 0.3)
 end
 
 function impacts.freezer(this, terrain, obj)
@@ -241,6 +257,7 @@ function impacts.freezer(this, terrain, obj)
 			type = "Freezer",
 		})
 	end
+	sfx.explosion(SFXSET_FREEZING(), this.pos, 0.1)
 end
 
 function impacts.nitroglycerin(this, terrain, obj)
@@ -254,6 +271,7 @@ function impacts.nitroglycerin(this, terrain, obj)
 		pos = this.pos,
 		type = "Nitro",
 	})
+	sfx.explosion(sounds.glass_break(), this.pos, 0.1)
 end
 
 function impacts.toxin(this, terrain, obj)

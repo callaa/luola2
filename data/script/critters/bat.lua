@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local Impacts = require("weapons.impacts")
 local Level = require("level")
+local sounds = require("sounds")
 
 local Bat = {}
 
@@ -83,6 +84,8 @@ function Bat:new(pos)
 end
 
 function Bat.on_bullet_hit(critter, bullet)
+	sfx.explosion(sounds.bat_chirp(), critter.pos, 0.5)
+
 	if bullet.state ~= nil and bullet.state.is_nitro then
 		bullet:destroy()
 		critter.state.explosive = true
@@ -128,6 +131,7 @@ function Bat.on_object_hit(critter, obj)
 				lifetime = 1,
 				fadeout = 0.4,
 			})
+			sfx.weapon(sounds.bats(), 0.5)
 		end
 
 		if critter.state.explosive then

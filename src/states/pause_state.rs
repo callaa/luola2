@@ -6,6 +6,7 @@ use crate::{
     gfx::{Color, RenderDest, RenderOptions, Renderer, Texture},
     math::RectF,
     menu::LuaMenu,
+    sfx::Mixer,
     states::{StackableState, StackableStateResult},
 };
 
@@ -23,11 +24,12 @@ pub enum PauseReturn {
 }
 
 impl PauseState {
-    pub fn new(renderer: Rc<RefCell<Renderer>>) -> Result<Self> {
+    pub fn new(renderer: Rc<RefCell<Renderer>>, mixer: Rc<RefCell<Mixer>>) -> Result<Self> {
         let size = renderer.borrow().size();
         let menu = LuaMenu::new(
             "menus.pause",
             renderer.clone(),
+            mixer,
             RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32),
         )?;
 

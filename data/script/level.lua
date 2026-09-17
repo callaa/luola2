@@ -13,11 +13,15 @@ local Level = {
 	TER_TER_TYPE_WALKWAY = 10,
 	TER_TYPE_GREYGOO = 11,
 	TER_TYPE_DAMAGE = 12,
-	TER_LEVELBOUND = 0x3f,
+	TER_LEVELBOUND = 0x1f,
 }
 
 function Level.mask_solid(ter)
 	return ter & 0x1f
+end
+
+function Level.is_solid(ter)
+	return (ter & 0x1f) ~= 0
 end
 
 function Level.is_water(ter)

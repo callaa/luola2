@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local UniqID = require("utils.uniqid")
 local Forcefields = require("forcefields")
+local sounds = require("sounds")
 
 local Grav = {}
 
@@ -10,7 +11,7 @@ function Grav.create_gravmine(pos)
 		texture = textures.get("dot8x8"), -- TODO nicer texture
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(15, Scheduler.destroy_this),
+			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(15, Scheduler.destroy_this):add(0, Grav._play_mine_warble),
 			on_destroy = Grav.on_destroy,
 		},
 		timer = 1,
@@ -23,7 +24,7 @@ function Grav.create_moving_gravmine(pos, angle)
 		texture = textures.get("dot8x8"), -- TODO nicer texture
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new():add(0.3, Grav._move_mine):add(20, Scheduler.destroy_this),
+			scheduler = Scheduler:new():add(0.3, Grav._move_mine):add(20, Scheduler.destroy_this):add(0, Grav._play_mine_warble),
 			on_destroy = Grav.on_destroy,
 			angle = angle,
 			ff_id = UniqID.new(),
@@ -51,6 +52,10 @@ function Grav._move_mine(obj)
 	return 1/60
 end
 
+function Grav._play_mine_warble(obj)
+	sfx.explosion(sounds.high_warble(), obj.pos, 0.05)
+	return 0.4
+end
 
 function Grav.on_destroy(obj)
 	if obj.state.forcefield ~= nil then
@@ -62,6 +67,7 @@ function Grav.activate_shield(ship)
 	ship.state.forcefield = UniqID.new()
 	Scheduler.add_to_object(ship, 0, Grav._update_shield)
 	Scheduler.add_to_object(ship, 0.1, Grav._consume_shield_energy)
+	Scheduler.add_to_object(ship, 0, Grav._play_shield_warble)
 end
 
 function Grav.deactivate_shield(ship)
@@ -81,6 +87,13 @@ function Grav._consume_shield_energy(ship)
 		else
 			Grav.deactivate_shield(ship)
 		end
+	end
+end
+
+function Grav._play_shield_warble(ship)
+	if ship.state.forcefield ~= nil then
+		sfx.weapon(sounds.high_warble())
+		return 0.4
 	end
 end
 

@@ -25,6 +25,7 @@ use crate::{
         scripting::ScriptEnvironment,
     },
     gfx::Renderer,
+    sfx::Mixer,
     states::{
         MainMenu,
         game_assets::{GameAssets, SelectableShip, SelectableWeapon},
@@ -40,6 +41,7 @@ pub struct GameInitState {
     launch_file: Option<String>,
     controllers: Rc<RefCell<GameControllerSet>>,
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
 }
 
 impl GameInitState {
@@ -47,6 +49,7 @@ impl GameInitState {
         launch_file: Option<String>,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
     ) -> Self {
         Self {
             is_init: false,
@@ -54,11 +57,16 @@ impl GameInitState {
             launch_file,
             controllers,
             renderer,
+            mixer,
         }
     }
 }
 
-fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
+fn load_resources(
+    renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
+) -> Result<Rc<GameAssets>> {
+    // Load graphics
     renderer
         .borrow_mut()
         .load_fontset(&find_datafile_path("fonts/fonts.toml")?)?;
@@ -66,6 +74,9 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
     renderer
         .borrow_mut()
         .load_textures(&find_datafile_path("textures/textures.toml")?)?;
+
+    // Load sounds
+    mixer.borrow_mut().load_sound_effects();
 
     // Load list of levels
     let mut levels = LevelInfo::load_level_packs(&renderer.borrow())?;
@@ -82,13 +93,17 @@ fn load_resources(renderer: Rc<RefCell<Renderer>>) -> Result<Rc<GameAssets>> {
         }
     });
 
-    // Load scripts and extract weapon list
+    // Load scripts and extract weapon and ship list
     // The full API isn't initialized and shouldn't be needed
     // just to load the scripts without executing the entrypoint function
     let lua = ScriptEnvironment::create_lua(
         renderer.clone(),
         Rc::new(renderer.borrow().default_texture_store().clone()),
     )?;
+
+    // Sound effects are looked up outside functions, so we need sfx in scope also
+    lua.globals()
+        .set("sfx", Mixer::make_lua_api(&lua, mixer.clone())?)?;
 
     lua.load(r#"require "luola_main""#).exec()?;
 
@@ -171,7 +186,7 @@ impl StackableState for GameInitState {
         }
 
         self.is_init = true;
-        self.assets = match load_resources(self.renderer.clone()) {
+        self.assets = match load_resources(self.renderer.clone(), self.mixer.clone()) {
             Ok(a) => a,
             Err(err) => return StackableStateResult::Error(err),
         };
@@ -204,6 +219,7 @@ impl StackableState for GameInitState {
                 ))),
                 self.controllers.clone(),
                 self.renderer.clone(),
+                self.mixer.clone(),
             ) {
                 Ok(g) => StackableStateResult::Replace(Box::new(g)),
                 Err(err) => StackableStateResult::Error(err),
@@ -214,6 +230,7 @@ impl StackableState for GameInitState {
                 self.assets.clone(),
                 self.controllers.clone(),
                 self.renderer.clone(),
+                self.mixer.clone(),
             ) {
                 Ok(mm) => mm,
                 Err(e) => {

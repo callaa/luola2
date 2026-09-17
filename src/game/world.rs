@@ -34,6 +34,7 @@ use crate::{
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer, TextureStore},
     math::{Rect, Vec2},
+    sfx::Mixer,
 };
 
 use super::{
@@ -89,6 +90,7 @@ impl mlua::FromLua for WorldEffect {
 pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
+    mixer: Rc<RefCell<Mixer>>,
 
     // Level specific texture store
     // (level config can add or replace stock textures)
@@ -154,6 +156,7 @@ impl World {
         levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
+        mixer: Rc<RefCell<Mixer>>,
     ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
             &renderer.borrow(),
@@ -182,16 +185,20 @@ impl World {
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
 
-        scripting.init_game(
-            players.clone(),
-            level.clone(),
-            ships.clone(),
-            pilots.clone(),
-            mines.clone(),
-            critters.clone(),
-            fixedobjects.clone(),
-            controllers,
-        )?;
+        {
+            let mixer = mixer.clone();
+            scripting.init_game(
+                players.clone(),
+                level.clone(),
+                ships.clone(),
+                pilots.clone(),
+                mines.clone(),
+                critters.clone(),
+                fixedobjects.clone(),
+                controllers,
+                mixer,
+            )?;
+        }
 
         if let Some(levelscript) = levelinfo.script_path() {
             scripting.load_level_specific_script(&levelscript)?;
@@ -202,6 +209,7 @@ impl World {
         Ok(World {
             players,
             scripting,
+            mixer,
             level,
             texture_store,
             ships,
@@ -761,6 +769,20 @@ impl World {
 
         // Apply accumulated effects
         self.apply_accumulated_effects();
+
+        // Sound effects
+        {
+            let mut mixer = self.mixer.borrow_mut();
+            mixer.set_listener_positions(
+                self.players
+                    .borrow()
+                    .iter()
+                    .filter(|p| p.fadeout < 1.0)
+                    .map(|p| p.camera_pos),
+            );
+
+            mixer.play_queued_soundeffects();
+        }
 
         // Continuous garbage collection to avoid big pauses
         if let Err(err) = self.scripting.lua().gc_step() {

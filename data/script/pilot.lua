@@ -76,6 +76,7 @@ local function on_bullet_hit(pilot, bullet, damage)
 			stain = true,
 		})
 	end
+	sfx.weapon(sfx.get("wilhelm"))
 end
 
 local function on_ship_recall(pilot, terrain)

@@ -31,6 +31,7 @@ use crate::{
         TextOutline, TextureId, TextureStore,
     },
     math::{RectF, Vec2},
+    sfx::{Mixer, SoundEffectId},
 };
 
 enum MenuAction {
@@ -88,11 +89,15 @@ struct MenuScreen {
     cursorpos: Vec2,
 
     on_exit: Option<Function>,
+
+    selection_sound: Option<SoundEffectId>,
+    pop_sound: Option<SoundEffectId>,
 }
 
 pub struct LuaMenu {
     lua: Lua,
     renderer: Rc<RefCell<Renderer>>,
+    mixer: Rc<RefCell<Mixer>>,
     window: Rc<RefCell<RectF>>, // where to draw the menu
     menu_stack: Vec<MenuScreen>,
     cursor: Text,
@@ -229,6 +234,8 @@ fn make_menu(table: Table, window: RectF) -> mlua::Result<MenuScreen> {
         animated_offset: Vec2::ZERO,
         cursorpos,
         on_exit: table.get("on_exit")?,
+        selection_sound: table.get("selection_sound")?,
+        pop_sound: table.get("pop_sound")?,
     })
 }
 
@@ -327,7 +334,12 @@ fn make_spacer(height: f32) -> MenuItem {
 }
 
 impl LuaMenu {
-    pub fn new(script_file: &str, renderer: Rc<RefCell<Renderer>>, window: RectF) -> Result<Self> {
+    pub fn new(
+        script_file: &str,
+        renderer: Rc<RefCell<Renderer>>,
+        mixer: Rc<RefCell<Mixer>>,
+        window: RectF,
+    ) -> Result<Self> {
         let script_path = find_datafile_path("script")?;
         let window = Rc::new(RefCell::new(window));
 
@@ -465,6 +477,9 @@ impl LuaMenu {
             })?,
         )?;
 
+        lua.globals()
+            .set("sfx", Mixer::make_lua_api(&lua, mixer.clone())?)?;
+
         // Load menu script file and get main menu by running entrypoint function
         lua.load(format!(r#"require "{}""#, script_file)).exec()?;
 
@@ -487,6 +502,7 @@ impl LuaMenu {
         Ok(Self {
             lua,
             renderer,
+            mixer,
             cursor,
             menu_stack: vec![main_menu],
             cursor_bounce: 0.0,
@@ -622,6 +638,9 @@ impl LuaMenu {
             let stacksize = self.menu_stack.len();
             if stacksize > 1 {
                 self.menu_stack[stacksize - 1].hide();
+                if let Some(s) = self.menu_stack[stacksize - 1].pop_sound {
+                    self.mixer.borrow().play_blip(s);
+                }
                 self.menu_stack[stacksize - 2].appear();
             }
             return Ok(String::new());
@@ -635,7 +654,7 @@ impl LuaMenu {
         });
 
         if let Some(active_menu) = active_menu {
-            match active_menu.handle_button(&self.lua, button)? {
+            match active_menu.handle_button(&self.lua, button, &self.mixer.borrow())? {
                 MenuAction::None => {}
                 MenuAction::Push(m) => {
                     if let Some(top) = self.menu_stack.last_mut() {
@@ -647,6 +666,9 @@ impl LuaMenu {
                 MenuAction::Pop => {
                     if let Some(top) = self.menu_stack.last_mut() {
                         top.hide();
+                        if let Some(s) = top.pop_sound {
+                            self.mixer.borrow().play_blip(s)
+                        }
                     }
                     let stacklen = self.menu_stack.len();
                     if stacklen > 1 {
@@ -865,28 +887,43 @@ impl MenuScreen {
         }
     }
 
-    fn handle_button(&mut self, lua: &Lua, button: MenuButton) -> mlua::Result<MenuAction> {
+    fn handle_button(
+        &mut self,
+        lua: &Lua,
+        button: MenuButton,
+        mixer: &Mixer,
+    ) -> mlua::Result<MenuAction> {
         match button {
-            MenuButton::Up(_) => loop {
-                if self.current == 0 {
-                    self.current = self.items.len() - 1;
-                } else {
-                    self.current -= 1;
+            MenuButton::Up(_) => {
+                loop {
+                    if self.current == 0 {
+                        self.current = self.items.len() - 1;
+                    } else {
+                        self.current -= 1;
+                    }
+                    if self.items[self.current].is_selectable() {
+                        break;
+                    }
                 }
-                if self.items[self.current].is_selectable() {
-                    break;
+                if let Some(s) = self.selection_sound {
+                    mixer.play_blip(s);
                 }
-            },
-            MenuButton::Down(_) => loop {
-                if self.current == self.items.len() - 1 {
-                    self.current = 0;
-                } else {
-                    self.current += 1;
+            }
+            MenuButton::Down(_) => {
+                loop {
+                    if self.current == self.items.len() - 1 {
+                        self.current = 0;
+                    } else {
+                        self.current += 1;
+                    }
+                    if self.items[self.current].is_selectable() {
+                        break;
+                    }
                 }
-                if self.items[self.current].is_selectable() {
-                    break;
+                if let Some(s) = self.selection_sound {
+                    mixer.play_blip(s);
                 }
-            },
+            }
             MenuButton::Left(_) => {
                 let item = &mut self.items[self.current];
                 if let Some(action) = item.left_action.clone() {

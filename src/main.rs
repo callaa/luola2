@@ -18,13 +18,16 @@
 
 use argh::FromArgs;
 use sdl3_main::{AppResult, AppResultWithState, app_impl};
+use sdl3_mixer_sys::mixer::MIX_Init;
 use sdl3_sys::events::{
     SDL_EVENT_GAMEPAD_ADDED, SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EVENT_GAMEPAD_BUTTON_DOWN,
     SDL_EVENT_GAMEPAD_BUTTON_UP, SDL_EVENT_GAMEPAD_REMOVED, SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_UP,
     SDL_EVENT_QUIT, SDL_EVENT_USER, SDL_EVENT_WINDOW_RESIZED, SDL_Event, SDL_EventType,
 };
 use sdl3_sys::gamepad::{SDL_GamepadAxis, SDL_GamepadButton};
-use sdl3_sys::init::{SDL_INIT_GAMEPAD, SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata};
+use sdl3_sys::init::{
+    SDL_INIT_AUDIO, SDL_INIT_GAMEPAD, SDL_INIT_VIDEO, SDL_Init, SDL_SetAppMetadata,
+};
 use sdl3_sys::keycode::{SDL_KMOD_ALT, SDLK_RETURN};
 use sdl3_sys::timer::{SDL_DelayNS, SDL_GetTicksNS};
 use sdl3_sys::version::SDL_GetRevision;
@@ -39,6 +42,7 @@ use crate::configfile::{GAME_CONFIG, load_user_config};
 use crate::events::CUSTOM_EVENTS;
 use crate::game::{GameControllerSet, MenuButton};
 use crate::gfx::{Renderer, SdlError};
+use crate::sfx::Mixer;
 use crate::states::{GameInitState, StateStack};
 
 mod configfile;
@@ -49,6 +53,7 @@ mod game;
 mod gfx;
 mod math;
 mod menu;
+mod sfx;
 mod states;
 
 struct AppState {
@@ -90,9 +95,13 @@ impl AppState {
                 return AppResultWithState::Failure(None);
             }
 
-            if !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) {
+            if !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD) {
                 SdlError::log("Couldn't init SDL");
                 return AppResultWithState::Failure(None);
+            }
+
+            if !MIX_Init() {
+                SdlError::log("Couldn't init SDL Mixer");
             }
         }
 
@@ -116,11 +125,14 @@ impl AppState {
 
         let controllers = Rc::new(RefCell::new(controllers));
 
+        let mixer = Rc::new(RefCell::new(Mixer::new(true)));
+
         let mut statestack = StateStack::new(renderer.clone());
         statestack.push(Box::new(GameInitState::new(
             args.launch,
             controllers.clone(),
             renderer.clone(),
+            mixer,
         )));
 
         AppResultWithState::Continue(Box::new(Mutex::new(AppState {

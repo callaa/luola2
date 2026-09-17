@@ -25,6 +25,7 @@ mlua = { version = "0.12.1", features = ["serde", "lua55", "anyhow"] }
 sdl3-main = "0.7.0"
 sdl3-sys = { version = "0.7.1"  }
 sdl3-ttf-sys = { version = "0.7.1" }
+sdl3-mixer-sys = { version = "0.7.0", features = ["no-default-formats", "sdlmixer-wave", "sdlmixer-vorbis-vorbisfile", "build-from-source", "sdlmixer-vendored"] }
 serde = { version = "1.0.228", features = ["derive"] }
 smallvec = "1.15.1"
 toml = { version = "1.1.6", default-features=false, features = ["std", "serde", "parse", "display"] }

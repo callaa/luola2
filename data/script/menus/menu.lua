@@ -1,3 +1,8 @@
+BLIP0 = sfx.get("blip0")
+BLIP1 = sfx.get("blip1")
+BLIP2 = sfx.get("blip2")
+BLIP3 = sfx.get("blip3")
+
 function main_menu()
 	return Menu({
 		Image({
@@ -7,7 +12,10 @@ function main_menu()
 		Spacer(32),
 		Link({
 			label = "Start!",
-			action = function() return Action.Return("start") end,
+			action = function()
+				sfx.blip(BLIP3)
+				return Action.Return("start")
+			end,
 		}),
 		Link({
 			label = "Settings",
@@ -17,12 +25,16 @@ function main_menu()
 			label = "Quit",
 			action = function() return Action.Return("quit") end,
 		}),
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	})
 end
 
 function settings_menu()
 	SETTINGS = load_settings()
 	SETTINGS_CHANGED = false
+
+	sfx.blip(BLIP2)
 
 	return Action.Push(Menu({
 		Heading({
@@ -58,10 +70,14 @@ function settings_menu()
 				SETTINGS_CHANGED = false
 			end
 		end,
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end
 
 function video_menu()
+	sfx.blip(BLIP2)
+
 	return Action.Push(Menu({
 		Heading({
 			label = "Video settings",
@@ -73,6 +89,7 @@ function video_menu()
 			label = "Start in fullscreen mode:",
 			value = Value.Toggle(SETTINGS.video.fullscreen),
 			action = function(item)
+				sfx.blip(BLIP2)
 				SETTINGS.video.fullscreen = item:toggle()
 				SETTINGS_CHANGED = true
 			end,
@@ -82,10 +99,14 @@ function video_menu()
 			label = "Back",
 			action = Action.Pop,
 		}),
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end
 
 function game_menu()
+	sfx.blip(BLIP2)
+
 	return Action.Push(Menu({
 		Heading({
 			label = "Game options",
@@ -138,10 +159,14 @@ function game_menu()
 			label = "Back",
 			action = Action.Pop,
 		}),
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end
 
 function gamepad_menu()
+	sfx.blip(BLIP2)
+
 	return Action.Push(Menu({
 		Heading({
 			label = "Gamepad options",
@@ -162,10 +187,14 @@ function gamepad_menu()
 			label = "Back",
 			action = Action.Pop,
 		}),
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end
 
 function keyboard_menu()
+	sfx.blip(BLIP2)
+
 	return Action.Push(Menu({
 		Heading({
 			label = "Keyboard controls",
@@ -196,10 +225,14 @@ function keyboard_menu()
 			label = "Back",
 			action = Action.Pop,
 		}),
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end
 
 function keymap_menu(id)
+	sfx.blip(BLIP2)
+
 	local keymap = SETTINGS["keymap" .. id]
 	if not keymap then
 		keymap = get_default_keymap(id)
@@ -265,5 +298,7 @@ function keymap_menu(id)
 			SETTINGS["keymap" .. id] = keymap
 			SETTINGS_CHANGED = true
 		end,
+		selection_sound = BLIP1,
+		pop_sound = BLIP0,
 	}))
 end

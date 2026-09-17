@@ -2,7 +2,9 @@ local Scheduler = require("utils.scheduler")
 local weapons = require("primary_weapons")
 local Impacts = require("weapons.impacts")
 local Pilot = require("pilot")
+local Level = require("level")
 local tableutils = require("utils.table")
+local sounds = require("sounds")
 
 local function vwing_thrust_effect(ship, uw, thrust)
 	if uw then
@@ -116,6 +118,8 @@ local function on_ship_destroyed(ship)
 			on_impact = Impacts.bullet,
 		}
 	})
+
+	sfx.explosion(sounds.big_explosion(), ship.pos, 0.5)
 end
 
 local function on_ship_eject(ship)
@@ -170,6 +174,7 @@ local function ship_bullet_hit(ship, bullet, damage)
 		low = 0.25,
 		duration = 0.1,
 	})
+	sfx.explosion(sounds.hull_impact(), ship.pos, 0.3)
 end
 
 -- Take damage from terrain (either because terrain is damaging or due to high impact speed)
@@ -179,6 +184,11 @@ local function ship_terrain_damage(ship, damage, terrain)
 		low = 0.3,
 		duration = 0.2,
 	})
+	if Level.is_indestructible(terrain) then
+		sfx.explosion(sounds.click(), ship.pos, 1.0)
+	else
+		sfx.explosion(sounds.thump(), ship.pos, 1.0)
+	end
 end
 
 local ships = {
