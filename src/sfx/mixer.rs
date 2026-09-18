@@ -23,13 +23,18 @@ use crate::{
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct SoundEffectId(u32);
-struct SoundEffect(*mut MIX_Audio);
+
+// Note: MIX_Audio is internally reference counted, but this refcount is not exposed in the public API
+// If this changes in some future version, we can use it directly.
+pub(super) type Audio = Rc<AudioWrapper>;
+
+pub(super) struct AudioWrapper(*mut MIX_Audio);
 
 pub struct Mixer {
     // mixer instance may be null if sounds couldn't be initialized
     mixer: *mut MIX_Mixer,
 
-    samples: Vec<SoundEffect>,
+    samples: Vec<Audio>,
     sample_map: HashMap<Vec<u8>, SoundEffectId>,
 
     listeners: Vec<Vec2>,
@@ -201,7 +206,7 @@ impl Mixer {
                 log::debug!("Loaded sound effect: {:?} (#{})", name, self.samples.len());
                 self.sample_map
                     .insert(name.into_vec(), SoundEffectId(self.samples.len() as u32));
-                self.samples.push(SoundEffect(audio));
+                self.samples.push(Rc::new(AudioWrapper(audio)));
             }
         }
 
@@ -394,7 +399,7 @@ impl Drop for Mixer {
     }
 }
 
-impl Drop for SoundEffect {
+impl Drop for AudioWrapper {
     fn drop(&mut self) {
         unsafe {
             MIX_DestroyAudio(self.0);
