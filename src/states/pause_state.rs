@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     game::MenuButton,
-    gfx::{Color, RenderDest, RenderOptions, Renderer, Texture},
+    gfx::{Color, RenderDest, RenderOptions, Renderer, Texture, TextureStore},
     math::RectF,
     menu::LuaMenu,
     sfx::SfxStore,
@@ -24,11 +24,16 @@ pub enum PauseReturn {
 }
 
 impl PauseState {
-    pub fn new(renderer: Rc<RefCell<Renderer>>, sfx: Rc<RefCell<SfxStore>>) -> Result<Self> {
+    pub fn new(
+        renderer: Rc<RefCell<Renderer>>,
+        textures: Rc<TextureStore>,
+        sfx: Rc<RefCell<SfxStore>>,
+    ) -> Result<Self> {
         let size = renderer.borrow().size();
         let menu = LuaMenu::new(
             "menus.pause",
             renderer.clone(),
+            textures,
             sfx,
             RectF::new(0.0, 0.0, size.0 as f32, size.1 as f32),
         )?;

@@ -91,10 +91,7 @@ pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
     sfx: Rc<RefCell<SfxStore>>,
-
-    // Level specific texture store
-    // (level config can add or replace stock textures)
-    texture_store: Rc<TextureStore>,
+    textures: Rc<TextureStore>,
 
     players: Rc<RefCell<Vec<PlayerState>>>,
 
@@ -156,25 +153,15 @@ impl World {
         levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
-        sfx: SfxStore,
+        sfx: Rc<RefCell<SfxStore>>,
+        textures: Rc<TextureStore>,
     ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
             &renderer.borrow(),
             levelinfo,
         )?));
 
-        let mut texture_store = renderer.borrow().default_texture_store().clone();
-        if let Some(textures) = levelinfo.textures() {
-            texture_store.update_from_config(
-                &renderer.borrow(),
-                levelinfo.root_path(),
-                textures.clone(),
-            )?;
-        }
-
-        let texture_store = Rc::new(texture_store);
-
-        let mut scripting = ScriptEnvironment::new(renderer.clone(), texture_store.clone())?;
+        let mut scripting = ScriptEnvironment::new(renderer.clone(), textures.clone())?;
 
         let players = Rc::new(RefCell::new(
             players.iter().map(|_| PlayerState::new()).collect(),
@@ -185,7 +172,6 @@ impl World {
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
 
-        let sfx = Rc::new(RefCell::new(sfx)); // Sound effect store is stateful here and needs to be shared with the scripting environment
         {
             let sfx = sfx.clone();
             scripting.init_game(
@@ -205,14 +191,14 @@ impl World {
             scripting.load_level_specific_script(&levelscript)?;
         }
 
-        let noise_texture = AnimatedTexture::new(texture_store.find_texture(b"noise")?);
+        let noise_texture = AnimatedTexture::new(textures.find_texture(b"noise")?);
 
         Ok(World {
             players,
             scripting,
             sfx,
             level,
-            texture_store,
+            textures,
             ships,
             pilots,
             ships_work: RefCell::new(GameObjectArray::new()),
@@ -828,7 +814,7 @@ impl World {
             // World objects
             let left = camera_rect.x();
             let right = camera_rect.right();
-            let ts = &self.texture_store;
+            let ts = &self.textures;
 
             for o in self.fixedobjects.borrow().range_slice(left, right) {
                 o.render(renderer, ts, camera_pos);
@@ -884,14 +870,14 @@ impl World {
                     ));
                 }
 
-                draw_minimap(renderer, minimap, &markers);
+                draw_minimap(renderer, &self.textures, minimap, &markers);
             }
         }
 
         if player.fadeout > 0.0 {
             self.noise_texture.render(
                 renderer,
-                &self.texture_store,
+                &self.textures,
                 &RenderOptions {
                     mode: RenderMode::Tiled(6.0),
                     color: Color::new_rgba(1.0, 1.0, 1.0, player.fadeout.min(1.0)),

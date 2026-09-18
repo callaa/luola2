@@ -24,7 +24,7 @@ use crate::{
         GameControllerSet, GameInitConfig, MenuButton, level::LevelInfo,
         scripting::ScriptEnvironment,
     },
-    gfx::Renderer,
+    gfx::{Renderer, TextureStore},
     sfx::{Mixer, MusicStore, SfxStore, make_lua_sfx_api},
     states::{
         MainMenu,
@@ -37,7 +37,6 @@ use super::{StackableState, StackableStateResult};
 
 pub struct GameInitState {
     is_init: bool,
-    assets: Rc<GameAssets>,
     launch_file: Option<String>,
     controllers: Rc<RefCell<GameControllerSet>>,
     renderer: Rc<RefCell<Renderer>>,
@@ -53,7 +52,6 @@ impl GameInitState {
     ) -> Self {
         Self {
             is_init: false,
-            assets: Rc::new(GameAssets::new()),
             launch_file,
             controllers,
             renderer,
@@ -71,9 +69,10 @@ fn load_resources(
         .borrow_mut()
         .load_fontset(&find_datafile_path("fonts/fonts.toml")?)?;
 
-    renderer
-        .borrow_mut()
-        .load_textures(&find_datafile_path("textures/textures.toml")?)?;
+    let textures = Rc::new(TextureStore::load_from_toml(
+        &renderer.borrow(),
+        &find_datafile_path("textures/textures.toml")?,
+    )?);
 
     // Load sounds
     let sfx = SfxStore::new(mixer.clone()).load_sound_effects();
@@ -97,10 +96,7 @@ fn load_resources(
     // Load scripts and extract weapon and ship list
     // The full API isn't initialized and shouldn't be needed
     // just to load the scripts without executing the entrypoint function
-    let lua = ScriptEnvironment::create_lua(
-        renderer.clone(),
-        Rc::new(renderer.borrow().default_texture_store().clone()),
-    )?;
+    let lua = ScriptEnvironment::create_lua(renderer.clone(), textures.clone())?;
 
     // Sound effects are looked up outside functions, so we need sfx in scope also
     lua.globals().set(
@@ -173,6 +169,7 @@ fn load_resources(
         ships,
         default_ship,
         default_weapon,
+        textures,
         music,
         sfx,
     }))
@@ -191,7 +188,8 @@ impl StackableState for GameInitState {
         }
 
         self.is_init = true;
-        self.assets = match load_resources(self.renderer.clone(), self.mixer.clone()) {
+
+        let assets = match load_resources(self.renderer.clone(), self.mixer.clone()) {
             Ok(a) => a,
             Err(err) => return StackableStateResult::Error(err),
         };
@@ -216,7 +214,7 @@ impl StackableState for GameInitState {
 
             match GameState::new_from_config(
                 config,
-                self.assets.clone(),
+                assets.clone(),
                 Rc::new(RefCell::new(AnimatedStarfield::new(
                     200,
                     screen_size.0 as f32,
@@ -231,7 +229,7 @@ impl StackableState for GameInitState {
         } else {
             // Open main menu
             let mainmenu = match MainMenu::new(
-                self.assets.clone(),
+                assets.clone(),
                 self.controllers.clone(),
                 self.renderer.clone(),
             ) {

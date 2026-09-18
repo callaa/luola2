@@ -231,7 +231,12 @@ pub fn draw_hud(
     }
 }
 
-pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, Vec2)]) {
+pub fn draw_minimap(
+    renderer: &Renderer,
+    textures: &TextureStore,
+    minimap: &Texture,
+    pointers: &[(Color, Vec2)],
+) {
     let w = minimap.width();
     let h = minimap.height();
     let x = renderer.width() as f32 - 10.0 - w;
@@ -245,9 +250,8 @@ pub fn draw_minimap(renderer: &Renderer, minimap: &Texture, pointers: &[(Color, 
         },
     );
 
-    let tex = renderer.default_texture_store().get_texture(
-        renderer
-            .default_texture_store()
+    let tex = textures.get_texture(
+        textures
             .find_texture(b"minimap_pointer")
             .expect("minimap_pointer texture should exist"),
     );

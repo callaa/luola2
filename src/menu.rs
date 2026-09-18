@@ -97,6 +97,7 @@ struct MenuScreen {
 pub struct LuaMenu {
     lua: Lua,
     renderer: Rc<RefCell<Renderer>>,
+    textures: Rc<TextureStore>,
     mixer: Rc<RefCell<Mixer>>,
     window: Rc<RefCell<RectF>>, // where to draw the menu
     menu_stack: Vec<MenuScreen>,
@@ -337,6 +338,7 @@ impl LuaMenu {
     pub fn new(
         script_file: &str,
         renderer: Rc<RefCell<Renderer>>,
+        textures: Rc<TextureStore>,
         sfx: Rc<RefCell<SfxStore>>,
         window: RectF,
     ) -> Result<Self> {
@@ -379,12 +381,10 @@ impl LuaMenu {
         }
 
         {
-            let renderer = renderer.clone();
+            let textures = textures.clone();
             lua.globals().set(
                 "Image",
-                lua.create_function(move |_lua, props: Table| {
-                    make_image(props, renderer.borrow().default_texture_store())
-                })?,
+                lua.create_function(move |_lua, props: Table| make_image(props, &textures))?,
             )?;
         }
 
@@ -503,6 +503,7 @@ impl LuaMenu {
         Ok(Self {
             lua,
             renderer,
+            textures,
             mixer,
             cursor,
             menu_stack: vec![main_menu],
@@ -583,7 +584,7 @@ impl LuaMenu {
         let cursor_animation_offset =
             Vec2(-self.cursor_bounce.sin() * self.cursor.width() / 2.0, 0.0);
         for menu in self.menu_stack.iter().filter(|m| m.state.is_visible()) {
-            menu.render(&renderer);
+            menu.render(&renderer, &self.textures);
 
             if matches!(
                 menu.state,
@@ -785,7 +786,7 @@ impl MenuScreen {
         }
     }
 
-    fn render(&self, renderer: &Renderer) {
+    fn render(&self, renderer: &Renderer, textures: &TextureStore) {
         let alpha = match self.state {
             MenuScreenState::Normal => 1.0,
             MenuScreenState::Appearing(a) | MenuScreenState::Hiding(a) => a,
@@ -875,17 +876,14 @@ impl MenuScreen {
                     };
                 }
                 MenuItemContent::Image(texture) => {
-                    renderer
-                        .default_texture_store()
-                        .get_texture(*texture)
-                        .render(
-                            renderer,
-                            &RenderOptions {
-                                dest: RenderDest::Rect(item.rect + self.animated_offset),
-                                color: Color::WHITE.with_alpha(alpha),
-                                ..Default::default()
-                            },
-                        );
+                    textures.get_texture(*texture).render(
+                        renderer,
+                        &RenderOptions {
+                            dest: RenderDest::Rect(item.rect + self.animated_offset),
+                            color: Color::WHITE.with_alpha(alpha),
+                            ..Default::default()
+                        },
+                    );
                 }
                 MenuItemContent::Blank => {}
             }

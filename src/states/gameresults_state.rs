@@ -23,7 +23,7 @@ use crate::{
     game::{MenuButton, Player, PlayerId},
     gfx::{Color, RenderTextDest, RenderTextOptions, Renderer, Text, TextOutline},
     math::{RectF, Vec2, interpolation},
-    states::{StackableState, StackableStateResult},
+    states::{StackableState, StackableStateResult, game_assets::GameAssets},
 };
 
 enum AnimationState {
@@ -47,6 +47,7 @@ pub struct GameResultsState {
     players: Vec<Player>,
     round_winners: Vec<PlayerId>,
     renderer: Rc<RefCell<Renderer>>,
+    assets: Rc<GameAssets>,
 
     starfield: AnimatedStarfield,
     gameover_text: Text,
@@ -65,6 +66,7 @@ impl GameResultsState {
         players: Vec<Player>,
         round_winners: Vec<PlayerId>,
         renderer: Rc<RefCell<Renderer>>,
+        assets: Rc<GameAssets>,
     ) -> Result<Self> {
         let r = renderer.borrow();
 
@@ -136,6 +138,7 @@ impl GameResultsState {
             players,
             round_winners,
             renderer,
+            assets,
             starfield,
             gameover_text,
             player_numbers,
@@ -172,7 +175,7 @@ impl GameResultsState {
         );
 
         // Fireworks in the background but over the stars
-        self.fireworks.render(&r);
+        self.fireworks.render(&r, &self.assets.textures);
 
         const SPACING: f32 = 5.0;
 
@@ -241,9 +244,9 @@ impl GameResultsState {
                     });
 
                     if *plr == self.winning_player
-                        && let Ok(tex) = r.default_texture_store().find_texture(b"trophy")
+                        && let Ok(tex) = self.assets.textures.find_texture(b"trophy")
                     {
-                        let tex = r.default_texture_store().get_texture(tex);
+                        let tex = self.assets.textures.get_texture(tex);
                         tex.render_simple(
                             &r,
                             None,

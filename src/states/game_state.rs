@@ -295,6 +295,7 @@ impl StackableState for GameState {
                         take(&mut self.players),
                         take(&mut self.round_winners),
                         self.renderer.clone(),
+                        self.assets.clone(),
                     ) {
                         Ok(r) => r,
                         Err(err) => return StackableStateResult::Error(err),

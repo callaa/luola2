@@ -1,5 +1,5 @@
 use crate::{
-    gfx::{Color, ColorDiff, RenderDest, RenderOptions, Renderer},
+    gfx::{Color, ColorDiff, RenderDest, RenderOptions, Renderer, TextureStore},
     math::Vec2,
 };
 
@@ -97,13 +97,10 @@ impl Fireworks {
         self.streamers.retain(|p| p.lifetime > 0.0);
     }
 
-    pub fn render(&self, renderer: &Renderer) {
-        let texture = renderer.default_texture_store().get_texture(
-            renderer
-                .default_texture_store()
-                .find_texture(b"sparkle")
-                .expect("sparkle texture needed"),
-        );
+    pub fn render(&self, renderer: &Renderer, textures: &TextureStore) {
+        let texture = textures
+            .get_texture_by_name(b"sparkle")
+            .expect("sparkle texture needed");
 
         let mut opts = RenderOptions::default();
         for particle in self.streamers.iter() {

@@ -106,30 +106,35 @@ impl PlayerWeaponChoice {
                 player.controller,
                 MappedKey::Up,
                 renderer,
+                &assets.textures,
                 controllers,
             )?,
             down_button_icon: make_button_icon(
                 player.controller,
                 MappedKey::Down,
                 renderer,
+                &assets.textures,
                 controllers,
             )?,
             left_button_icon: make_button_icon(
                 player.controller,
                 MappedKey::Left,
                 renderer,
+                &assets.textures,
                 controllers,
             )?,
             right_button_icon: make_button_icon(
                 player.controller,
                 MappedKey::Right,
                 renderer,
+                &assets.textures,
                 controllers,
             )?,
             select_button_icon: make_button_icon(
                 player.controller,
                 MappedKey::Fire1,
                 renderer,
+                &assets.textures,
                 controllers,
             )?,
             decided: false,
@@ -295,7 +300,7 @@ impl WeaponSelection {
         }
 
         let shiptexid = self.assets.ships[player.ship_selection].texture;
-        let shiptex = renderer.default_texture_store().get_texture(shiptexid);
+        let shiptex = self.assets.textures.get_texture(shiptexid);
         let mut ship_render = RenderOptions {
             dest: RenderDest::Centered(Vec2(x + shiptex.width() / 2.0, rect.y() + text_h / 2.0)),
             mode: RenderMode::Rotated(if player.decided { 0.0 } else { 90.0 }, false),
@@ -306,8 +311,8 @@ impl WeaponSelection {
 
         shiptex.render(renderer, &ship_render);
         ship_render.color = Color::player_color(player_id).with_alpha(self.fadein);
-        renderer
-            .default_texture_store()
+        self.assets
+            .textures
             .get_texture_alt(shiptexid, crate::gfx::TexAlt::Decal)
             .expect("Ships should have a Decal alt-texture")
             .render(renderer, &ship_render);

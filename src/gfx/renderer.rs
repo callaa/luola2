@@ -34,7 +34,6 @@ use std::ptr::{null, null_mut};
 use crate::gfx::{FontSet, Image};
 use crate::math::{LineF, Rect, RectF, Vec2};
 
-use super::texturestore::*;
 use super::{Color, SdlError, SdlResult};
 use sdl3_sys::{
     pixels::SDL_ALPHA_OPAQUE,
@@ -50,7 +49,6 @@ use sdl3_sys::{
 pub struct Renderer {
     window: *mut SDL_Window,
     pub(super) renderer: *mut SDL_Renderer,
-    texturestore: TextureStore,
     fontset: Option<FontSet>,
     pub(super) textengine: *mut TTF_TextEngine,
     width: i32,
@@ -117,7 +115,6 @@ impl Renderer {
         Ok(Self {
             window,
             renderer,
-            texturestore: TextureStore::new(),
             fontset: None,
             textengine,
             width: 1280,
@@ -150,15 +147,6 @@ impl Renderer {
         self.height
     }
 
-    pub fn load_textures(&mut self, texture_config: &Path) -> Result<()> {
-        if self.texturestore.count() > 0 {
-            return Err(anyhow!("Textures already loaded"));
-        }
-
-        self.texturestore = TextureStore::load_from_toml(self, texture_config)?;
-        Ok(())
-    }
-
     pub fn load_fontset(&mut self, fontset_config: &Path) -> Result<()> {
         if self.fontset.is_some() {
             return Err(anyhow!("Fontset already loaded"));
@@ -166,10 +154,6 @@ impl Renderer {
 
         self.fontset = Some(FontSet::load_from_toml(fontset_config)?);
         Ok(())
-    }
-
-    pub fn default_texture_store(&self) -> &TextureStore {
-        &self.texturestore
     }
 
     pub fn try_fontset(&self) -> Result<&FontSet> {

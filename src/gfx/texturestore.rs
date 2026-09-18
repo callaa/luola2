@@ -226,6 +226,10 @@ impl TextureStore {
         &self.textures[id.offset as usize].main
     }
 
+    pub fn get_texture_by_name(&self, name: &[u8]) -> Result<&Texture> {
+        Ok(self.get_texture(self.find_texture(name)?))
+    }
+
     pub fn get_texture_alt(&self, id: TextureId, alt: TexAlt) -> Option<&Texture> {
         let tex = &self.textures[id.offset as usize];
         match alt {

@@ -27,7 +27,7 @@ use sdl3_sys::{
 use crate::{
     fs::find_datafile_path,
     game::{GameControllerSet, KEYBOARDS, MappedKey},
-    gfx::Renderer,
+    gfx::{Renderer, TextureStore},
     math::{Rect, RectF},
 };
 
@@ -145,6 +145,7 @@ pub fn make_controller_icon(
     controller: i32,
     renderer: &Renderer,
     controllers: &GameControllerSet,
+    textures: &TextureStore,
 ) -> Result<Texture> {
     assert!(controller > 0);
 
@@ -168,11 +169,7 @@ pub fn make_controller_icon(
             _ => 2, // generic gamepad
         };
 
-        let tex = renderer.default_texture_store().get_texture(
-            renderer
-                .default_texture_store()
-                .find_texture(b"input_devices")?,
-        );
+        let tex = textures.get_texture(textures.find_texture(b"input_devices")?);
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))
@@ -183,6 +180,7 @@ pub fn make_button_icon(
     controller: i32,
     button: MappedKey,
     renderer: &Renderer,
+    textures: &TextureStore,
     controllers: &GameControllerSet,
 ) -> Result<Texture> {
     assert!(controller > 0);
@@ -213,11 +211,7 @@ pub fn make_button_icon(
             MappedKey::Fire3 => 8,
         };
 
-        let tex = renderer.default_texture_store().get_texture(
-            renderer
-                .default_texture_store()
-                .find_texture(b"gamepad_buttons")?,
-        );
+        let tex = textures.get_texture(textures.find_texture(b"gamepad_buttons")?);
 
         let subrect = RectF::new(icon as f32 * tex.height(), 0.0, tex.height(), tex.height());
         Ok(tex.clone_subrect(subrect))

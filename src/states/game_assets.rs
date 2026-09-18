@@ -16,10 +16,10 @@
 
 use crate::{
     game::level::LevelInfo,
-    gfx::TextureId,
-    sfx::{Mixer, MusicStore, SfxStore},
+    gfx::{TextureId, TextureStore},
+    sfx::{MusicStore, SfxStore},
 };
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 /// Game assets (levels, weapons, etc.) loaded in the beginning
 pub struct GameAssets {
@@ -28,6 +28,7 @@ pub struct GameAssets {
     pub ships: Vec<SelectableShip>,
     pub default_weapon: String,
     pub default_ship: String,
+    pub textures: Rc<TextureStore>,
     pub music: MusicStore,
     pub sfx: SfxStore,
 }
@@ -43,19 +44,4 @@ pub struct SelectableShip {
     pub title: String,
     pub flavortext: String,
     pub texture: TextureId,
-}
-
-impl GameAssets {
-    pub fn new() -> Self {
-        let dummy_mixer = Rc::new(RefCell::new(Mixer::new(false)));
-        Self {
-            levels: Vec::new(),
-            weapons: Vec::new(),
-            ships: Vec::new(),
-            default_weapon: String::new(),
-            default_ship: String::new(),
-            music: MusicStore::new(dummy_mixer.clone()),
-            sfx: SfxStore::new(dummy_mixer),
-        }
-    }
 }

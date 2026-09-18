@@ -21,7 +21,7 @@ use anyhow::{Result, anyhow};
 
 use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
-    gfx::{Color, RenderOptions, Renderer, TextureId},
+    gfx::{Color, RenderOptions, Renderer, TextureId, TextureStore},
     math::{Rect, RectF, Vec2},
     sfx::SfxStore,
     states::{
@@ -33,7 +33,8 @@ use crate::{
 
 pub struct GameRoundState {
     renderer: Rc<RefCell<Renderer>>,
-    sfx: Rc<RefCell<SfxStore>>,
+    sfx: Rc<RefCell<SfxStore>>, // copy that may include level specific sounds
+    textures: Rc<TextureStore>, // copy that may include level specific textures
     controllers: Rc<RefCell<GameControllerSet>>,
 
     /// List of players in this game
@@ -72,12 +73,22 @@ impl GameRoundState {
         // TODO: load level specific sounds
         // TODO: load level specific music
 
+        let mut textures = assets.textures.clone();
+        if let Some(lt) = level.textures() {
+            Rc::make_mut(&mut textures).update_from_config(
+                &renderer.borrow(),
+                level.root_path(),
+                lt.clone(),
+            )?;
+        }
+
         let world = World::new(
             &players,
             level,
             renderer.clone(),
             controllers.clone(),
-            assets.sfx.clone(),
+            sfx.clone(),
+            textures.clone(),
         )?;
         let lua = world.scripting().lua();
 
@@ -107,14 +118,12 @@ impl GameRoundState {
             .get_function("luola_init_game")?
             .call::<()>(settings)?;
 
-        let filler_logo = renderer
-            .borrow()
-            .default_texture_store()
-            .find_texture(b"gamelogo")?;
+        let filler_logo = assets.textures.find_texture(b"gamelogo")?;
 
         let mut game = Self {
             renderer,
             sfx,
+            textures,
             controllers,
             players,
             world,
@@ -137,7 +146,11 @@ impl StackableState for GameRoundState {
         match button {
             MenuButton::Back => {
                 let pause_state = Box::new(
-                    match PauseState::new(self.renderer.clone(), self.sfx.clone()) {
+                    match PauseState::new(
+                        self.renderer.clone(),
+                        self.textures.clone(),
+                        self.sfx.clone(),
+                    ) {
                         Ok(s) => s,
                         Err(err) => return StackableStateResult::Error(err),
                     },
@@ -199,9 +212,7 @@ impl StackableState for GameRoundState {
         self.filler_viewport = filler;
 
         if let Some(f) = filler {
-            let fillertex = renderer
-                .default_texture_store()
-                .get_texture(self.filler_logo);
+            let fillertex = self.textures.get_texture(self.filler_logo);
             let (w, h) = if fillertex.width() > f.w() || fillertex.height() > f.h() {
                 let scale = (f.w() / fillertex.width()).min(f.h() / fillertex.height());
                 (fillertex.width() * scale, fillertex.height() * scale)
@@ -268,16 +279,13 @@ impl StackableState for GameRoundState {
             );
 
             renderer.draw_filled_rectangle(viewport, &Color::new(0.1, 0.1, 0.15));
-            renderer
-                .default_texture_store()
-                .get_texture(self.filler_logo)
-                .render(
-                    &renderer,
-                    &RenderOptions {
-                        dest: crate::gfx::RenderDest::Rect(self.filler_logo_rect),
-                        ..Default::default()
-                    },
-                );
+            self.textures.get_texture(self.filler_logo).render(
+                &renderer,
+                &RenderOptions {
+                    dest: crate::gfx::RenderDest::Rect(self.filler_logo_rect),
+                    ..Default::default()
+                },
+            );
         }
 
         if let Some(winner) = &self.winner {

@@ -355,6 +355,7 @@ impl StackableState for PlayerSelection {
                             controller,
                             &self.renderer.borrow(),
                             &self.controllers.borrow(),
+                            &self.assets.textures,
                         ) {
                             Ok(icon) => icon,
                             Err(err) => return StackableStateResult::Error(err),
