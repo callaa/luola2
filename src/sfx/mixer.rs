@@ -1,56 +1,61 @@
 use std::{
-    cell::RefCell,
-    collections::HashMap,
-    os::unix::ffi::OsStringExt,
     pin::Pin,
     ptr::{null, null_mut},
     rc::Rc,
 };
 
 use core::ffi::c_void;
-use mlua::{Lua, LuaString};
+
 use sdl3_mixer_sys::mixer::{
     MIX_Audio, MIX_AudioMSToFrames, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio,
-    MIX_DestroyMixer, MIX_GetTrackAudio, MIX_LoadAudio, MIX_Mixer,
-    MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, MIX_PlayTrack, MIX_SetTrackAudio,
-    MIX_SetTrackFrequencyRatio, MIX_SetTrackStereo, MIX_SetTrackStoppedCallback, MIX_StereoGains,
-    MIX_StopTrack, MIX_Track, MIX_TrackPlaying,
+    MIX_DestroyMixer, MIX_GetTrackAudio, MIX_Mixer, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
+    MIX_PlayTrack, MIX_SetTrackAudio, MIX_SetTrackFrequencyRatio, MIX_SetTrackStereo,
+    MIX_SetTrackStoppedCallback, MIX_StereoGains, MIX_StopTrack, MIX_Track, MIX_TrackPlaying,
 };
 use sdl3_sys::{
     audio::SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
     properties::{SDL_CreateProperties, SDL_PropertiesID, SDL_SetNumberProperty},
 };
 
-use crate::{
-    fs::{glob_datafiles, pathbuf_to_cstring},
-    gfx::SdlError,
-    math::Vec2,
-};
+use crate::{gfx::SdlError, math::Vec2};
 
-#[derive(Copy, Clone, PartialEq)]
-pub struct SoundEffectId(u32);
-
-// Note: MIX_Audio is internally reference counted, but this refcount is not exposed in the public API
-// If this changes in some future version, we can use it directly.
-pub type Audio = Rc<AudioWrapper>;
-
-pub struct AudioWrapper(pub(super) *mut MIX_Audio);
-
+/// Abstraction for SDL mixer
 pub struct Mixer {
-    // mixer instance may be null if sounds couldn't be initialized
+    // mixer instance may be null if sounds are not initialized
     pub(super) mixer: *mut MIX_Mixer,
 
-    samples: Vec<Audio>,
-    sample_map: HashMap<Vec<u8>, SoundEffectId>,
-
     listeners: Vec<Vec2>,
-    soundeffect_queue: Vec<PlayableSoundEffect>,
 
     blips: TrackPool<4>,
     explosions: TrackPool<12>,
     weapons: TrackPool<4>,
 
     music: Pin<Box<Playlist>>,
+}
+
+struct AudioWrapper(pub(super) *mut MIX_Audio);
+
+// Note: MIX_Audio is internally reference counted, but this refcount is not exposed in the public API
+// If this changes in some future version, we can use it directly.
+#[derive(Clone)]
+pub struct Audio(Rc<AudioWrapper>);
+
+#[derive(Clone)]
+pub enum PlayableSoundEffect {
+    /**
+     * UI blips etc. Not positional.
+     */
+    Blip(Audio),
+
+    /**
+     * Explosions, non-player weapons fire, and other environmental sounds
+     */
+    Explosion(Audio, Vec2, FrequencyRatio),
+
+    /**
+     * Player weapon fire. (Not positional, always centered on player)
+     */
+    Weapon(Audio, FrequencyRatio),
 }
 
 struct Playlist {
@@ -69,44 +74,7 @@ struct Playlist {
 
 pub type FrequencyRatio = f32;
 
-#[derive(Clone, Copy)]
-pub enum PlayableSoundEffect {
-    /**
-     * UI blips etc. Not positional.
-     */
-    Blip(SoundEffectId), // not queued
-
-    /**
-     * Explosions, non-player weapons fire, and other environmental sounds
-     */
-    Explosion(SoundEffectId, Vec2, FrequencyRatio),
-
-    /**
-     * Player weapon fire. (Not positional, always centered on player)
-     */
-    Weapon(SoundEffectId, FrequencyRatio),
-}
-
-impl PlayableSoundEffect {
-    pub fn id(&self) -> SoundEffectId {
-        match self {
-            Self::Blip(id) => *id,
-            Self::Explosion(id, _, _) => *id,
-            Self::Weapon(id, _) => *id,
-        }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.id().is_valid()
-    }
-}
-
 struct TrackPool<const N: usize>([*mut MIX_Track; N]);
-
-fn randomize_frequency_ratio(randomization: f32) -> f32 {
-    let r = (fastrand::f32() - 0.5) * randomization;
-    if r <= 0.0 { 1.0 / (-r + 1.0) } else { 1.0 + r }
-}
 
 impl Mixer {
     pub fn new(enabled: bool) -> Self {
@@ -129,134 +97,12 @@ impl Mixer {
 
         Self {
             mixer,
-            samples: Vec::new(),
-            sample_map: HashMap::new(),
             listeners: Vec::new(),
-            soundeffect_queue: Vec::new(),
             blips,
             explosions,
             weapons,
             music,
         }
-    }
-
-    pub fn make_lua_api(lua: &Lua, mixer: Rc<RefCell<Mixer>>) -> mlua::Result<mlua::Table> {
-        let api = lua.create_table()?;
-
-        // Function for finding a audio sample handle
-        {
-            let mixer = mixer.clone();
-            api.set(
-                "get",
-                lua.create_function(move |_, name: LuaString| {
-                    let m = mixer.borrow();
-                    Ok(m.find_soundeffect(&name.as_bytes()))
-                })?,
-            )?;
-        }
-
-        // Playback functions for all track types
-        {
-            let mixer = mixer.clone();
-            api.set(
-                "blip",
-                lua.create_function(move |_, id: SoundEffectId| {
-                    mixer
-                        .borrow()
-                        .play_soundeffect(PlayableSoundEffect::Blip(id));
-                    Ok(())
-                })?,
-            )?;
-        }
-
-        {
-            let mixer = mixer.clone();
-            api.set(
-                "explosion",
-                lua.create_function(
-                    move |_, (id, pos, fr): (SoundEffectId, Vec2, Option<f32>)| {
-                        mixer
-                            .borrow_mut()
-                            .enqueue_soundeffect(PlayableSoundEffect::Explosion(
-                                id,
-                                pos,
-                                fr.map_or(1.0, randomize_frequency_ratio),
-                            ));
-                        Ok(())
-                    },
-                )?,
-            )?;
-        }
-        api.set(
-            "weapon",
-            lua.create_function(move |_, (id, fr): (SoundEffectId, Option<f32>)| {
-                mixer
-                    .borrow_mut()
-                    .enqueue_soundeffect(PlayableSoundEffect::Weapon(
-                        id,
-                        fr.map_or(1.0, randomize_frequency_ratio),
-                    ));
-                Ok(())
-            })?,
-        )?;
-        Ok(api)
-    }
-
-    pub fn load_sound_effects(&mut self) {
-        if self.mixer.is_null() {
-            log::info!("SDL Mixer not initialized: not loading sound effects.");
-            return;
-        }
-
-        let files = match glob_datafiles("sounds", "*.ogg") {
-            Ok(f) => f,
-            Err(e) => {
-                log::error!("Couldn't get sound files: {}", e);
-                return;
-            }
-        };
-
-        for file in files {
-            let name = file
-                .as_path()
-                .file_stem()
-                .expect("valid filename")
-                .to_owned();
-            let pathstr = pathbuf_to_cstring(file).expect("valid path");
-            let audio = unsafe { MIX_LoadAudio(self.mixer, pathstr.as_ptr(), true) };
-
-            if audio.is_null() {
-                SdlError::log("Couldn't load file");
-            } else {
-                log::debug!("Loaded sound effect: {:?} (#{})", name, self.samples.len());
-                self.sample_map
-                    .insert(name.into_vec(), SoundEffectId(self.samples.len() as u32));
-                self.samples.push(Rc::new(AudioWrapper(audio)));
-            }
-        }
-
-        if self.samples.is_empty() {
-            log::warn!("No sound effects found!");
-        }
-    }
-
-    /**
-     * Find a handle for the given sound effect.
-     *
-     * Name is given as a byte slice for efficient use via Lua API.
-     * Returns an invalid SoundEffectId if sample wasn't found.
-     */
-    pub fn find_soundeffect(&self, name: &[u8]) -> SoundEffectId {
-        self.sample_map.get(name).copied().unwrap_or_else(|| {
-            if !self.samples.is_empty() {
-                // don't bother spamming warnings if sounds are disabled
-                log::warn!(
-                    "Sound effect \"{}\" not found!",
-                    str::from_utf8(name).unwrap()
-                );
-            }
-            SoundEffectId::invalid()
-        })
     }
 
     // Stop all music playback
@@ -274,50 +120,26 @@ impl Mixer {
         self.music.as_mut().play_loop(playlist);
     }
 
-    /// Shorthand function for playing UI blips
-    pub fn play_blip(&self, id: SoundEffectId) {
-        self.play_soundeffect(PlayableSoundEffect::Blip(id));
-    }
-
     // Immediately play a sound effect
     pub fn play_soundeffect(&self, sound: PlayableSoundEffect) -> bool {
-        if self.mixer.is_null() || !sound.is_valid() {
+        if self.mixer.is_null() {
             return true;
         }
 
-        let audio = self.samples[sound.id().0 as usize].0;
-
         match sound {
-            PlayableSoundEffect::Blip(_) => self.blips.play_soundeffect(audio, None, 1.0),
-            PlayableSoundEffect::Explosion(_, pos, frequency_ratio) => {
+            PlayableSoundEffect::Blip(audio) => self.blips.play_soundeffect(audio.ptr(), None, 1.0),
+            PlayableSoundEffect::Explosion(audio, pos, frequency_ratio) => {
                 self.map_stereo_gains(pos).is_none_or(|gains| {
                     self.explosions
-                        .play_soundeffect(audio, Some(gains), frequency_ratio)
+                        .play_soundeffect(audio.ptr(), Some(gains), frequency_ratio)
                 })
             }
 
-            PlayableSoundEffect::Weapon(_, frequency_ratio) => {
-                self.weapons.play_soundeffect(audio, None, frequency_ratio)
+            PlayableSoundEffect::Weapon(audio, frequency_ratio) => {
+                self.weapons
+                    .play_soundeffect(audio.ptr(), None, frequency_ratio)
             }
         }
-    }
-
-    // Add a sound effect to the playback queue
-    pub fn enqueue_soundeffect(&mut self, sound: PlayableSoundEffect) {
-        if self.mixer.is_null() || !sound.is_valid() {
-            return;
-        }
-
-        self.soundeffect_queue.push(sound);
-    }
-
-    /// Play as many queued sound effects as we have space for in the mixer.
-    /// Note: you should call set_listener_positions before calling this
-    pub fn play_queued_soundeffects(&mut self) {
-        for s in &self.soundeffect_queue {
-            self.play_soundeffect(*s);
-        }
-        self.soundeffect_queue.clear();
     }
 
     fn map_stereo_gains(&self, pos: Vec2) -> Option<MIX_StereoGains> {
@@ -432,7 +254,7 @@ impl Playlist {
         }
 
         unsafe {
-            MIX_SetTrackAudio(play_track, audio.0);
+            MIX_SetTrackAudio(play_track, audio.ptr());
             SDL_SetNumberProperty(
                 self.fadein_props,
                 MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
@@ -494,16 +316,6 @@ extern "C" fn playlist_track_finished_callback(userdata: *mut c_void, _track: *m
     }
 }
 
-impl SoundEffectId {
-    fn invalid() -> Self {
-        Self(u32::MAX)
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.0 != u32::MAX
-    }
-}
-
 impl<const N: usize> TrackPool<N> {
     fn new(mixer: *mut MIX_Mixer) -> Self {
         let mut tracks = [null_mut(); N];
@@ -553,9 +365,25 @@ impl Drop for Mixer {
     }
 }
 
-impl AudioWrapper {
+impl Audio {
+    pub(super) fn new(audio: *mut MIX_Audio) -> Self {
+        Self(Rc::new(AudioWrapper(audio)))
+    }
+
+    pub fn invalid() -> Self {
+        Self(Rc::new(AudioWrapper(null_mut())))
+    }
+
+    pub fn is_valid(&self) -> bool {
+        !self.0.0.is_null()
+    }
+
     fn same_as(&self, audio: *mut MIX_Audio) -> bool {
-        self.0 == audio
+        self.ptr() == audio
+    }
+
+    fn ptr(&self) -> *mut MIX_Audio {
+        self.0.0
     }
 }
 
@@ -567,20 +395,20 @@ impl Drop for AudioWrapper {
     }
 }
 
-impl mlua::UserData for SoundEffectId {
+impl mlua::UserData for Audio {
     fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
         fields.add_field_method_get("is_valid", |_, this| Ok(this.is_valid()));
     }
 }
 
-impl mlua::FromLua for SoundEffectId {
+impl mlua::FromLua for Audio {
     fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
         match value {
-            mlua::Value::UserData(ud) => Ok(*ud.borrow::<Self>()?),
+            mlua::Value::UserData(ud) => Ok(ud.borrow::<Self>()?.clone()),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
-                to: "SoundEffectId".to_owned(),
-                message: Some("expected SoundEffectId".to_string()),
+                to: "Audio".to_owned(),
+                message: Some("expected Audio".to_string()),
             }),
         }
     }

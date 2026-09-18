@@ -17,7 +17,7 @@
 use crate::{
     game::level::LevelInfo,
     gfx::TextureId,
-    sfx::{Mixer, MusicStore},
+    sfx::{Mixer, MusicStore, SfxStore},
 };
 use std::{cell::RefCell, rc::Rc};
 
@@ -29,6 +29,7 @@ pub struct GameAssets {
     pub default_weapon: String,
     pub default_ship: String,
     pub music: MusicStore,
+    pub sfx: SfxStore,
 }
 
 pub struct SelectableWeapon {
@@ -46,13 +47,15 @@ pub struct SelectableShip {
 
 impl GameAssets {
     pub fn new() -> Self {
+        let dummy_mixer = Rc::new(RefCell::new(Mixer::new(false)));
         Self {
             levels: Vec::new(),
             weapons: Vec::new(),
             ships: Vec::new(),
             default_weapon: String::new(),
             default_ship: String::new(),
-            music: MusicStore::new(Rc::new(RefCell::new(Mixer::new(false)))),
+            music: MusicStore::new(dummy_mixer.clone()),
+            sfx: SfxStore::new(dummy_mixer),
         }
     }
 }

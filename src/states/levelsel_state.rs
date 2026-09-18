@@ -27,7 +27,6 @@ use crate::{
         TextOutline, Texture,
     },
     math::{RectF, Vec2},
-    sfx::Mixer,
     states::game_assets::GameAssets,
 };
 
@@ -42,7 +41,6 @@ pub struct LevelSelection {
     selector_offset: f32,
     selector_offset_target: f32,
     renderer: Rc<RefCell<Renderer>>,
-    mixer: Rc<RefCell<Mixer>>,
     fadein: f32,
     fadeout: f32,
     start: bool,
@@ -69,7 +67,6 @@ impl LevelSelection {
         fadein_round_text: bool,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
-        mixer: Rc<RefCell<Mixer>>,
         selection: usize,
     ) -> Result<Self> {
         debug_assert!(selection < assets.levels.len());
@@ -136,7 +133,6 @@ impl LevelSelection {
             selector_offset,
             selector_offset_target: selector_offset,
             renderer,
-            mixer,
             fadein: 0.0,
             fadeout: 1.0,
             start: false,
@@ -241,36 +237,27 @@ impl LevelSelection {
 
 impl StackableState for LevelSelection {
     fn enter(&mut self) {
-        let playlist = self.assets.music.get_playlist(&[b"game-start"]);
-        self.mixer.borrow_mut().play_music_loop(playlist);
+        self.assets.music.play_playlist(&[b"game-start"]);
     }
 
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
             MenuButton::Right(_) if !self.start => {
                 self.selection = (self.selection + 1) % self.levelboxes.len();
-                self.mixer
-                    .borrow()
-                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
+                self.assets.sfx.play_blip(b"blip2");
             }
             MenuButton::Left(_) if !self.start => {
                 self.selection =
                     (self.selection as i32 - 1).rem_euclid(self.levelboxes.len() as i32) as usize;
-                self.mixer
-                    .borrow()
-                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
+                self.assets.sfx.play_blip(b"blip2");
             }
             MenuButton::Back => {
-                self.mixer
-                    .borrow()
-                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
+                self.assets.sfx.play_blip(b"blip1");
                 return StackableStateResult::Pop;
             }
             MenuButton::Start | MenuButton::Select(_) => {
                 self.start = true;
-                self.mixer
-                    .borrow()
-                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
+                self.assets.sfx.play_blip(b"blip3");
             }
             _ => {}
         }

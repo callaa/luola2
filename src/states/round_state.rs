@@ -23,16 +23,17 @@ use crate::{
     game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
     gfx::{Color, RenderOptions, Renderer, TextureId},
     math::{Rect, RectF, Vec2},
-    sfx::Mixer,
+    sfx::SfxStore,
     states::{
         StackableState, StackableStateResult,
+        game_assets::GameAssets,
         pause_state::{PauseReturn, PauseState},
     },
 };
 
 pub struct GameRoundState {
     renderer: Rc<RefCell<Renderer>>,
-    mixer: Rc<RefCell<Mixer>>,
+    sfx: Rc<RefCell<SfxStore>>,
     controllers: Rc<RefCell<GameControllerSet>>,
 
     /// List of players in this game
@@ -64,15 +65,19 @@ impl GameRoundState {
         level: &LevelInfo,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
-        mixer: Rc<RefCell<Mixer>>,
+        assets: Rc<GameAssets>,
         respawns: i32,
     ) -> Result<Self> {
+        let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
+        // TODO: load level specific sounds
+        // TODO: load level specific music
+
         let world = World::new(
             &players,
             level,
             renderer.clone(),
             controllers.clone(),
-            mixer.clone(),
+            assets.sfx.clone(),
         )?;
         let lua = world.scripting().lua();
 
@@ -109,7 +114,7 @@ impl GameRoundState {
 
         let mut game = Self {
             renderer,
-            mixer,
+            sfx,
             controllers,
             players,
             world,
@@ -132,11 +137,12 @@ impl StackableState for GameRoundState {
         match button {
             MenuButton::Back => {
                 let pause_state = Box::new(
-                    match PauseState::new(self.renderer.clone(), self.mixer.clone()) {
+                    match PauseState::new(self.renderer.clone(), self.sfx.clone()) {
                         Ok(s) => s,
                         Err(err) => return StackableStateResult::Error(err),
                     },
                 );
+                // TODO pause music
                 return StackableStateResult::Push(pause_state);
             }
             MenuButton::Debug => self.world.toggle_debugmode(),
@@ -148,7 +154,7 @@ impl StackableState for GameRoundState {
     fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         if let Some(pauseret) = retval.downcast_ref::<PauseReturn>() {
             match pauseret {
-                PauseReturn::Resume => {}
+                PauseReturn::Resume => { /* todo resume music */ }
                 PauseReturn::EndRound | PauseReturn::EndGame => {
                     // check winner via script for consistency. It's possible
                     // for a level script to customize the round end condition.

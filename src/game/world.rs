@@ -34,7 +34,7 @@ use crate::{
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer, TextureStore},
     math::{Rect, Vec2},
-    sfx::Mixer,
+    sfx::SfxStore,
 };
 
 use super::{
@@ -90,7 +90,7 @@ impl mlua::FromLua for WorldEffect {
 pub struct World {
     scripting: ScriptEnvironment,
     level: Rc<RefCell<Level>>,
-    mixer: Rc<RefCell<Mixer>>,
+    sfx: Rc<RefCell<SfxStore>>,
 
     // Level specific texture store
     // (level config can add or replace stock textures)
@@ -156,7 +156,7 @@ impl World {
         levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
-        mixer: Rc<RefCell<Mixer>>,
+        sfx: SfxStore,
     ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
             &renderer.borrow(),
@@ -185,8 +185,9 @@ impl World {
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
 
+        let sfx = Rc::new(RefCell::new(sfx)); // Sound effect store is stateful here and needs to be shared with the scripting environment
         {
-            let mixer = mixer.clone();
+            let sfx = sfx.clone();
             scripting.init_game(
                 players.clone(),
                 level.clone(),
@@ -196,7 +197,7 @@ impl World {
                 critters.clone(),
                 fixedobjects.clone(),
                 controllers,
-                mixer,
+                sfx,
             )?;
         }
 
@@ -209,7 +210,7 @@ impl World {
         Ok(World {
             players,
             scripting,
-            mixer,
+            sfx,
             level,
             texture_store,
             ships,
@@ -772,8 +773,8 @@ impl World {
 
         // Sound effects
         {
-            let mut mixer = self.mixer.borrow_mut();
-            mixer.set_listener_positions(
+            let mut sfx = self.sfx.borrow_mut();
+            sfx.set_listener_positions(
                 self.players
                     .borrow()
                     .iter()
@@ -781,7 +782,7 @@ impl World {
                     .map(|p| p.camera_pos),
             );
 
-            mixer.play_queued_soundeffects();
+            sfx.play_queued_soundeffects();
         }
 
         // Continuous garbage collection to avoid big pauses

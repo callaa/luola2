@@ -1,4 +1,4 @@
-use super::mixer::{Audio, AudioWrapper, Mixer};
+use super::mixer::{Audio, Mixer};
 use crate::fs::{glob_datafiles, pathbuf_to_cstring};
 use crate::gfx::SdlError;
 use std::collections::HashMap;
@@ -48,8 +48,7 @@ impl MusicStore {
             if audio.is_null() {
                 SdlError::log("Couldn't load file");
             } else {
-                self.music
-                    .insert(name.into_vec(), Rc::new(AudioWrapper(audio)));
+                self.music.insert(name.into_vec(), Audio::new(audio));
             }
         }
 
@@ -75,5 +74,11 @@ impl MusicStore {
             }
         }
         playlist
+    }
+
+    pub fn play_playlist(&self, names: &[&[u8]]) {
+        self.mixer
+            .borrow_mut()
+            .play_music_loop(self.get_playlist(names));
     }
 }

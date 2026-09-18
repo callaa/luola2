@@ -25,7 +25,7 @@ use crate::{
         scripting::ScriptEnvironment,
     },
     gfx::Renderer,
-    sfx::{Mixer, MusicStore},
+    sfx::{Mixer, MusicStore, SfxStore, make_lua_sfx_api},
     states::{
         MainMenu,
         game_assets::{GameAssets, SelectableShip, SelectableWeapon},
@@ -76,7 +76,8 @@ fn load_resources(
         .load_textures(&find_datafile_path("textures/textures.toml")?)?;
 
     // Load sounds
-    mixer.borrow_mut().load_sound_effects();
+    let sfx = SfxStore::new(mixer.clone()).load_sound_effects();
+    let music = MusicStore::new(mixer.clone()).load_bundled_music();
 
     // Load list of levels
     let mut levels = LevelInfo::load_level_packs(&renderer.borrow())?;
@@ -102,8 +103,10 @@ fn load_resources(
     )?;
 
     // Sound effects are looked up outside functions, so we need sfx in scope also
-    lua.globals()
-        .set("sfx", Mixer::make_lua_api(&lua, mixer.clone())?)?;
+    lua.globals().set(
+        "sfx",
+        make_lua_sfx_api(&lua, Rc::new(RefCell::new(sfx.clone())))?,
+    )?;
 
     lua.load(r#"require "luola_main""#).exec()?;
 
@@ -164,8 +167,6 @@ fn load_resources(
         return Err(anyhow!("Default ship \"{}\" not found!", default_ship));
     }
 
-    let music = MusicStore::new(mixer.clone()).load_bundled_music();
-
     Ok(Rc::new(GameAssets {
         levels,
         weapons,
@@ -173,6 +174,7 @@ fn load_resources(
         default_ship,
         default_weapon,
         music,
+        sfx,
     }))
 }
 
@@ -222,7 +224,6 @@ impl StackableState for GameInitState {
                 ))),
                 self.controllers.clone(),
                 self.renderer.clone(),
-                self.mixer.clone(),
             ) {
                 Ok(g) => StackableStateResult::Replace(Box::new(g)),
                 Err(err) => StackableStateResult::Error(err),
@@ -233,7 +234,6 @@ impl StackableState for GameInitState {
                 self.assets.clone(),
                 self.controllers.clone(),
                 self.renderer.clone(),
-                self.mixer.clone(),
             ) {
                 Ok(mm) => mm,
                 Err(e) => {

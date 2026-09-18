@@ -34,7 +34,7 @@ use crate::game::world::WorldEffect;
 use crate::game::{GameControllerSet, PlayerId, PlayerState};
 use crate::gfx::{Color, Renderer, TextureStore};
 use crate::math::{LineF, RectF, Vec2};
-use crate::sfx::Mixer;
+use crate::sfx::{SfxStore, make_lua_sfx_api};
 
 pub struct ScriptEnvironment {
     lua: Lua,
@@ -129,7 +129,7 @@ impl ScriptEnvironment {
         critter_list: Rc<RefCell<GameObjectArray<Critter>>>,
         fixedobj_list: Rc<RefCell<GameObjectArray<FixedObject>>>,
         controllers: Rc<RefCell<GameControllerSet>>,
-        mixer: Rc<RefCell<Mixer>>,
+        sfx: Rc<RefCell<SfxStore>>,
     ) -> LuaResult<()> {
         let api = self.lua.create_table().unwrap();
 
@@ -450,7 +450,7 @@ impl ScriptEnvironment {
         globals.set("game", api)?;
 
         // Sound effects
-        globals.set("sfx", Mixer::make_lua_api(&self.lua, mixer.clone())?)?;
+        globals.set("sfx", make_lua_sfx_api(&self.lua, sfx)?)?;
 
         // Constructors for common types
         globals.set(

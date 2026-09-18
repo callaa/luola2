@@ -31,7 +31,7 @@ use crate::{
         TextOutline, TextureId, TextureStore,
     },
     math::{RectF, Vec2},
-    sfx::{Mixer, SoundEffectId},
+    sfx::{Audio, Mixer, PlayableSoundEffect, SfxStore, make_lua_sfx_api},
 };
 
 enum MenuAction {
@@ -90,8 +90,8 @@ struct MenuScreen {
 
     on_exit: Option<Function>,
 
-    selection_sound: Option<SoundEffectId>,
-    pop_sound: Option<SoundEffectId>,
+    selection_sound: Option<Audio>,
+    pop_sound: Option<Audio>,
 }
 
 pub struct LuaMenu {
@@ -337,7 +337,7 @@ impl LuaMenu {
     pub fn new(
         script_file: &str,
         renderer: Rc<RefCell<Renderer>>,
-        mixer: Rc<RefCell<Mixer>>,
+        sfx: Rc<RefCell<SfxStore>>,
         window: RectF,
     ) -> Result<Self> {
         let script_path = find_datafile_path("script")?;
@@ -477,8 +477,9 @@ impl LuaMenu {
             })?,
         )?;
 
-        lua.globals()
-            .set("sfx", Mixer::make_lua_api(&lua, mixer.clone())?)?;
+        let mixer = sfx.borrow().get_mixer();
+
+        lua.globals().set("sfx", make_lua_sfx_api(&lua, sfx)?)?;
 
         // Load menu script file and get main menu by running entrypoint function
         lua.load(format!(r#"require "{}""#, script_file)).exec()?;
@@ -638,8 +639,10 @@ impl LuaMenu {
             let stacksize = self.menu_stack.len();
             if stacksize > 1 {
                 self.menu_stack[stacksize - 1].hide();
-                if let Some(s) = self.menu_stack[stacksize - 1].pop_sound {
-                    self.mixer.borrow().play_blip(s);
+                if let Some(s) = &self.menu_stack[stacksize - 1].pop_sound {
+                    self.mixer
+                        .borrow()
+                        .play_soundeffect(PlayableSoundEffect::Blip(s.clone()));
                 }
                 self.menu_stack[stacksize - 2].appear();
             }
@@ -666,8 +669,10 @@ impl LuaMenu {
                 MenuAction::Pop => {
                     if let Some(top) = self.menu_stack.last_mut() {
                         top.hide();
-                        if let Some(s) = top.pop_sound {
-                            self.mixer.borrow().play_blip(s)
+                        if let Some(s) = &top.pop_sound {
+                            self.mixer
+                                .borrow()
+                                .play_soundeffect(PlayableSoundEffect::Blip(s.clone()));
                         }
                     }
                     let stacklen = self.menu_stack.len();
@@ -905,8 +910,8 @@ impl MenuScreen {
                         break;
                     }
                 }
-                if let Some(s) = self.selection_sound {
-                    mixer.play_blip(s);
+                if let Some(s) = &self.selection_sound {
+                    mixer.play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
                 }
             }
             MenuButton::Down(_) => {
@@ -920,8 +925,8 @@ impl MenuScreen {
                         break;
                     }
                 }
-                if let Some(s) = self.selection_sound {
-                    mixer.play_blip(s);
+                if let Some(s) = &self.selection_sound {
+                    mixer.play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
                 }
             }
             MenuButton::Left(_) => {
