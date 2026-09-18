@@ -261,6 +261,10 @@ impl PlayerSelection {
 }
 
 impl StackableState for PlayerSelection {
+    fn enter(&mut self) {
+        let playlist = self.assets.music.get_playlist(&[b"game-start"]);
+        self.mixer.borrow_mut().play_music_loop(playlist);
+    }
     fn resize_screen(&mut self) {
         self.starfield
             .borrow_mut()
@@ -307,7 +311,9 @@ impl StackableState for PlayerSelection {
             }
             MenuButton::Start => {
                 if !self.players.is_empty() {
-                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
+                    self.mixer
+                        .borrow()
+                        .play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
                     self.start_timer = Some(0.0);
                 }
             }
@@ -332,7 +338,9 @@ impl StackableState for PlayerSelection {
                             p.text
                                 .set_default_color(Color::player_color(idx as i32 + 1));
                         });
-                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
+                    self.mixer
+                        .borrow()
+                        .play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
                 } else {
                     // Add a player
                     self.players.push(JoiningPlayer {
@@ -366,7 +374,9 @@ impl StackableState for PlayerSelection {
                         player.target_rect = *rect;
                     }
                     self.players.last_mut().unwrap().rect = *boxes.last().unwrap();
-                    self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
+                    self.mixer
+                        .borrow()
+                        .play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
                 }
             }
             _ => {}

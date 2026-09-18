@@ -42,6 +42,7 @@ pub enum StackableStateResult {
 pub struct StateStack {
     states: Vec<Box<dyn StackableState>>,
     renderer: Rc<RefCell<Renderer>>,
+    state_changed: bool,
 }
 
 pub trait StackableState {
@@ -54,6 +55,10 @@ pub trait StackableState {
         StackableStateResult::Error(anyhow!("Unexpected return with value!"))
     }
 
+    // state entered or re-entered
+    fn enter(&mut self) {
+        /* default implementation does nothing */
+    }
     fn resize_screen(&mut self);
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult;
     fn state_iterate(&mut self, timestep: f32) -> StackableStateResult;
@@ -64,11 +69,13 @@ impl StateStack {
         Self {
             states: Vec::new(),
             renderer,
+            state_changed: false,
         }
     }
 
     pub fn push(&mut self, state: Box<dyn StackableState>) {
         self.states.push(state);
+        self.state_changed = true;
     }
 
     pub fn resize_screen(&mut self) {
@@ -79,7 +86,9 @@ impl StateStack {
 
     fn handle_state_result(&mut self, result: StackableStateResult) {
         match result {
-            StackableStateResult::Continue => {}
+            StackableStateResult::Continue => {
+                return;
+            }
             StackableStateResult::Return(retval) => {
                 self.states.pop();
                 let result = self
@@ -95,15 +104,18 @@ impl StateStack {
             }
             StackableStateResult::Replace(s) => {
                 self.states.pop();
-                self.states.push(s)
+                self.states.push(s);
             }
-            StackableStateResult::Push(s) => self.states.push(s),
+            StackableStateResult::Push(s) => {
+                self.states.push(s);
+            }
             StackableStateResult::Error(err) => {
                 self.states.clear();
                 self.states
                     .push(Box::new(ErrorScreenState::new(err, self.renderer.clone())));
             }
         };
+        self.state_changed = true;
     }
 
     pub fn handle_menu_button(&mut self, button: MenuButton) {
@@ -122,6 +134,10 @@ impl StateStack {
 
     pub fn state_iterate(&mut self, timestep: f32) -> AppResult {
         let result = if let Some(state) = self.states.last_mut() {
+            if self.state_changed {
+                self.state_changed = false;
+                state.enter();
+            }
             state.state_iterate(timestep)
         } else {
             return AppResult::Success;

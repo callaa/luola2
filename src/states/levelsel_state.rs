@@ -26,8 +26,8 @@ use crate::{
         Color, RenderDest, RenderOptions, RenderTextDest, RenderTextOptions, Renderer, Text,
         TextOutline, Texture,
     },
-    sfx::Mixer,
     math::{RectF, Vec2},
+    sfx::Mixer,
     states::game_assets::GameAssets,
 };
 
@@ -240,24 +240,37 @@ impl LevelSelection {
 }
 
 impl StackableState for LevelSelection {
+    fn enter(&mut self) {
+        let playlist = self.assets.music.get_playlist(&[b"game-start"]);
+        self.mixer.borrow_mut().play_music_loop(playlist);
+    }
+
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
             MenuButton::Right(_) if !self.start => {
                 self.selection = (self.selection + 1) % self.levelboxes.len();
-                self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
+                self.mixer
+                    .borrow()
+                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
             }
             MenuButton::Left(_) if !self.start => {
                 self.selection =
                     (self.selection as i32 - 1).rem_euclid(self.levelboxes.len() as i32) as usize;
-                self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
+                self.mixer
+                    .borrow()
+                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip2"));
             }
             MenuButton::Back => {
-                self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
+                self.mixer
+                    .borrow()
+                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip1"));
                 return StackableStateResult::Pop;
             }
             MenuButton::Start | MenuButton::Select(_) => {
                 self.start = true;
-                self.mixer.borrow().play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
+                self.mixer
+                    .borrow()
+                    .play_blip(self.mixer.borrow().find_soundeffect(b"blip3"));
             }
             _ => {}
         }

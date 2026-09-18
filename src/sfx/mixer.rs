@@ -2,18 +2,24 @@ use std::{
     cell::RefCell,
     collections::HashMap,
     os::unix::ffi::OsStringExt,
+    pin::Pin,
     ptr::{null, null_mut},
     rc::Rc,
-    u32,
 };
 
+use core::ffi::c_void;
 use mlua::{Lua, LuaString};
 use sdl3_mixer_sys::mixer::{
-    MIX_Audio, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio, MIX_DestroyMixer,
-    MIX_LoadAudio, MIX_Mixer, MIX_PlayTrack, MIX_SetTrackAudio, MIX_SetTrackFrequencyRatio,
-    MIX_SetTrackStereo, MIX_StereoGains, MIX_Track, MIX_TrackPlaying,
+    MIX_Audio, MIX_AudioMSToFrames, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio,
+    MIX_DestroyMixer, MIX_GetTrackAudio, MIX_LoadAudio, MIX_Mixer,
+    MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, MIX_PlayTrack, MIX_SetTrackAudio,
+    MIX_SetTrackFrequencyRatio, MIX_SetTrackStereo, MIX_SetTrackStoppedCallback, MIX_StereoGains,
+    MIX_StopTrack, MIX_Track, MIX_TrackPlaying,
 };
-use sdl3_sys::{audio::SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, properties::SDL_PropertiesID};
+use sdl3_sys::{
+    audio::SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+    properties::{SDL_CreateProperties, SDL_PropertiesID, SDL_SetNumberProperty},
+};
 
 use crate::{
     fs::{glob_datafiles, pathbuf_to_cstring},
@@ -26,13 +32,13 @@ pub struct SoundEffectId(u32);
 
 // Note: MIX_Audio is internally reference counted, but this refcount is not exposed in the public API
 // If this changes in some future version, we can use it directly.
-pub(super) type Audio = Rc<AudioWrapper>;
+pub type Audio = Rc<AudioWrapper>;
 
-pub(super) struct AudioWrapper(*mut MIX_Audio);
+pub struct AudioWrapper(pub(super) *mut MIX_Audio);
 
 pub struct Mixer {
     // mixer instance may be null if sounds couldn't be initialized
-    mixer: *mut MIX_Mixer,
+    pub(super) mixer: *mut MIX_Mixer,
 
     samples: Vec<Audio>,
     sample_map: HashMap<Vec<u8>, SoundEffectId>,
@@ -43,6 +49,22 @@ pub struct Mixer {
     blips: TrackPool<4>,
     explosions: TrackPool<12>,
     weapons: TrackPool<4>,
+
+    music: Pin<Box<Playlist>>,
+}
+
+struct Playlist {
+    mixer: *mut MIX_Mixer, // same mixer instance as owning Mixer
+    playlist: Vec<Audio>,
+    playlist_next: usize,
+    fadein_props: SDL_PropertiesID,
+
+    // two music tracks for crossfading
+    music1: *mut MIX_Track,
+    music2: *mut MIX_Track,
+
+    // Callbacks refer to this object so it must not move
+    _pin: std::marker::PhantomPinned,
 }
 
 pub type FrequencyRatio = f32;
@@ -103,6 +125,8 @@ impl Mixer {
         let explosions = TrackPool::new(mixer);
         let weapons = TrackPool::new(mixer);
 
+        let music = Box::pin(Playlist::new(mixer));
+
         Self {
             mixer,
             samples: Vec::new(),
@@ -112,6 +136,7 @@ impl Mixer {
             blips,
             explosions,
             weapons,
+            music,
         }
     }
 
@@ -234,6 +259,21 @@ impl Mixer {
         })
     }
 
+    // Stop all music playback
+    pub fn stop_music(&mut self, fadeout: i64) {
+        self.music.as_mut().stop(fadeout);
+    }
+
+    // Replace current playlist with a music file that plays only once
+    pub fn play_music_single(&mut self, audio: &Audio) {
+        self.music.as_mut().play_single(audio);
+    }
+
+    // Replace current playlist with a new looping playlist
+    pub fn play_music_loop(&mut self, playlist: Vec<Audio>) {
+        self.music.as_mut().play_loop(playlist);
+    }
+
     /// Shorthand function for playing UI blips
     pub fn play_blip(&self, id: SoundEffectId) {
         self.play_soundeffect(PlayableSoundEffect::Blip(id));
@@ -250,7 +290,7 @@ impl Mixer {
         match sound {
             PlayableSoundEffect::Blip(_) => self.blips.play_soundeffect(audio, None, 1.0),
             PlayableSoundEffect::Explosion(_, pos, frequency_ratio) => {
-                self.map_stereo_gains(pos).map_or(true, |gains| {
+                self.map_stereo_gains(pos).is_none_or(|gains| {
                     self.explosions
                         .play_soundeffect(audio, Some(gains), frequency_ratio)
                 })
@@ -340,6 +380,120 @@ impl Mixer {
     }
 }
 
+impl Playlist {
+    fn new(mixer: *mut MIX_Mixer) -> Self {
+        let music1 = unsafe { MIX_CreateTrack(mixer) };
+        let music2 = unsafe { MIX_CreateTrack(mixer) };
+        let fadein_props = unsafe { SDL_CreateProperties() };
+
+        Self {
+            mixer,
+            music1,
+            music2,
+            playlist: Vec::new(),
+            playlist_next: 0,
+            fadein_props,
+            _pin: std::marker::PhantomPinned,
+        }
+    }
+
+    fn play_music(&mut self, audio: &Audio, crossfade: i64, use_callback: bool) {
+        let playing1 = unsafe { MIX_TrackPlaying(self.music1) };
+        let playing2 = unsafe { MIX_TrackPlaying(self.music2) };
+
+        let mut stop_track: *mut MIX_Track = null_mut();
+        let play_track: *mut MIX_Track;
+
+        if playing1 && playing2 {
+            // TODO pick older track
+            stop_track = self.music2;
+            play_track = self.music1;
+        } else if playing1 {
+            stop_track = self.music1;
+            play_track = self.music2;
+        } else {
+            if playing2 {
+                stop_track = self.music2;
+            }
+            play_track = self.music1;
+        }
+
+        if !stop_track.is_null() {
+            unsafe {
+                let stop_audio = MIX_GetTrackAudio(stop_track);
+                if audio.same_as(stop_audio) {
+                    // Don't restart a running track
+                    return;
+                }
+
+                MIX_SetTrackStoppedCallback(stop_track, None, null_mut());
+                MIX_StopTrack(stop_track, MIX_AudioMSToFrames(stop_audio, crossfade));
+            }
+        }
+
+        unsafe {
+            MIX_SetTrackAudio(play_track, audio.0);
+            SDL_SetNumberProperty(
+                self.fadein_props,
+                MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
+                if stop_track.is_null() { 0 } else { crossfade },
+            );
+            MIX_PlayTrack(play_track, self.fadein_props);
+            if use_callback {
+                MIX_SetTrackStoppedCallback(
+                    play_track,
+                    Some(playlist_track_finished_callback),
+                    self as *mut Self as *mut c_void,
+                );
+            }
+        }
+    }
+
+    pub fn stop(self: Pin<&mut Self>, fadeout: i64) {
+        let this = unsafe { self.get_unchecked_mut() };
+        this.playlist.clear();
+
+        unsafe {
+            let audio = MIX_GetTrackAudio(this.music1);
+            if !audio.is_null() {
+                MIX_StopTrack(this.music1, MIX_AudioMSToFrames(audio, fadeout));
+            }
+
+            let audio = MIX_GetTrackAudio(this.music2);
+            if !audio.is_null() {
+                MIX_StopTrack(this.music2, MIX_AudioMSToFrames(audio, fadeout));
+            }
+        }
+    }
+
+    pub fn play_single(self: Pin<&mut Self>, music: &Audio) {
+        unsafe { self.get_unchecked_mut() }.play_music(music, 1000, false);
+    }
+
+    pub fn play_loop(self: Pin<&mut Self>, playlist: Vec<Audio>) {
+        if playlist.is_empty() {
+            self.stop(1000);
+        } else {
+            let this = unsafe { self.get_unchecked_mut() };
+            this.play_music(&playlist[0], 1000, true);
+            this.playlist_next = 1 % playlist.len();
+            this.playlist = playlist;
+        }
+    }
+}
+
+// Track finished callback. The reason Playlist must be Pinned.
+extern "C" fn playlist_track_finished_callback(userdata: *mut c_void, _track: *mut MIX_Track) {
+    let pl = unsafe { (userdata as *mut Playlist).as_mut() }
+        .expect("callback userdata should have been set");
+    let next = pl.playlist_next;
+    if next < pl.playlist.len() {
+        let audio = pl.playlist[next].clone();
+        pl.play_music(&audio, 1000, true);
+        pl.playlist_next = (next + 1) % pl.playlist.len();
+    }
+}
+
 impl SoundEffectId {
     fn invalid() -> Self {
         Self(u32::MAX)
@@ -396,6 +550,12 @@ impl Drop for Mixer {
         unsafe {
             MIX_DestroyMixer(self.mixer);
         }
+    }
+}
+
+impl AudioWrapper {
+    fn same_as(&self, audio: *mut MIX_Audio) -> bool {
+        self.0 == audio
     }
 }
 

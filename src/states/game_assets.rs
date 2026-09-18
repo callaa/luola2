@@ -14,7 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{game::level::LevelInfo, gfx::TextureId};
+use crate::{
+    game::level::LevelInfo,
+    gfx::TextureId,
+    sfx::{Mixer, MusicStore},
+};
+use std::{cell::RefCell, rc::Rc};
 
 /// Game assets (levels, weapons, etc.) loaded in the beginning
 pub struct GameAssets {
@@ -23,6 +28,7 @@ pub struct GameAssets {
     pub ships: Vec<SelectableShip>,
     pub default_weapon: String,
     pub default_ship: String,
+    pub music: MusicStore,
 }
 
 pub struct SelectableWeapon {
@@ -46,6 +52,7 @@ impl GameAssets {
             ships: Vec::new(),
             default_weapon: String::new(),
             default_ship: String::new(),
+            music: MusicStore::new(Rc::new(RefCell::new(Mixer::new(false)))),
         }
     }
 }

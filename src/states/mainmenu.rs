@@ -173,6 +173,11 @@ impl StackableState for MainMenu {
         }
     }
 
+    fn enter(&mut self) {
+        let playlist = self.assets.music.get_playlist(&[b"mainmenu"]);
+        self.mixer.borrow_mut().play_music_loop(playlist);
+    }
+
     fn resize_screen(&mut self) {
         let size = self.renderer.borrow().size();
         self.luamenu

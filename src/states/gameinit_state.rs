@@ -25,7 +25,7 @@ use crate::{
         scripting::ScriptEnvironment,
     },
     gfx::Renderer,
-    sfx::Mixer,
+    sfx::{Mixer, MusicStore},
     states::{
         MainMenu,
         game_assets::{GameAssets, SelectableShip, SelectableWeapon},
@@ -164,12 +164,15 @@ fn load_resources(
         return Err(anyhow!("Default ship \"{}\" not found!", default_ship));
     }
 
+    let music = MusicStore::new(mixer.clone()).load_bundled_music();
+
     Ok(Rc::new(GameAssets {
         levels,
         weapons,
         ships,
         default_ship,
         default_weapon,
+        music,
     }))
 }
 
