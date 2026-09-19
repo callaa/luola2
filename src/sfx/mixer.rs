@@ -5,6 +5,7 @@ use std::{
 };
 
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 use sdl3_mixer_sys::mixer::{
     MIX_Audio, MIX_AudioMSToFrames, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio,
@@ -144,6 +145,59 @@ impl Mixer {
             self.music.as_mut().play_loop(playlist);
         } else {
             self.stop_music(0);
+        }
+    }
+
+    pub fn play_soundeffects(&self, sounds: &mut Vec<PlayableSoundEffect>) {
+        if self.mixer.is_null() || !self.sounds_enabled {
+            return;
+        }
+
+        // Explosion effects are positional and they typically come in bursts.
+        // Merge together explosion sounds so we don't use up as many tracks
+        struct QueuedPositionalSound {
+            audio: Audio,
+            gains: MIX_StereoGains,
+            fr: FrequencyRatio,
+            count: f32,
+        }
+
+        let mut positional_queue = SmallVec::<[QueuedPositionalSound; 4]>::new();
+
+        for sound in sounds.drain(..) {
+            match sound {
+                PlayableSoundEffect::Blip(audio) => {
+                    self.blips.play_soundeffect(audio.ptr(), None, 1.0);
+                }
+                PlayableSoundEffect::Explosion(audio, pos, fr) => {
+                    if let Some(gains) = self.map_stereo_gains(pos) {
+                        if let Some(merge) =
+                            positional_queue.iter_mut().find(|qps| qps.audio == audio)
+                        {
+                            merge.gains.left += gains.left;
+                            merge.gains.right += gains.right;
+                            merge.fr += fr;
+                            merge.count += 1.0;
+                        } else {
+                            positional_queue.push(QueuedPositionalSound {
+                                audio,
+                                gains,
+                                fr,
+                                count: 1.0,
+                            });
+                        }
+                    }
+                }
+                PlayableSoundEffect::Weapon(audio, frequency_ratio) => {
+                    self.weapons
+                        .play_soundeffect(audio.ptr(), None, frequency_ratio);
+                }
+            }
+        }
+
+        for pqs in positional_queue {
+            self.explosions
+                .play_soundeffect(pqs.audio.ptr(), Some(pqs.gains), pqs.fr / pqs.count);
         }
     }
 
@@ -426,6 +480,12 @@ impl Audio {
 
     fn ptr(&self) -> *mut MIX_Audio {
         self.0.0
+    }
+}
+
+impl PartialEq for Audio {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr() == other.ptr()
     }
 }
 

@@ -142,13 +142,13 @@ impl SfxStore {
         self.soundeffect_queue.push(sound);
     }
 
-    /// Play as many queued sound effects as we have space for in the mixer.
+    /// Play all sound effects in the queue.
+    /// If there is no space in the mixer's track pool, remaining effects will be dropped.
     /// Note: you should call set_listener_positions before calling this
     pub fn play_queued_soundeffects(&mut self) {
-        let mixer = self.mixer.borrow();
-        for s in self.soundeffect_queue.drain(..) {
-            mixer.play_soundeffect(s);
-        }
+        self.mixer
+            .borrow()
+            .play_soundeffects(&mut self.soundeffect_queue);
     }
 
     pub fn set_listener_positions<L>(&mut self, listeners: L)
