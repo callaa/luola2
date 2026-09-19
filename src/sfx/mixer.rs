@@ -9,8 +9,9 @@ use core::ffi::c_void;
 use sdl3_mixer_sys::mixer::{
     MIX_Audio, MIX_AudioMSToFrames, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio,
     MIX_DestroyMixer, MIX_GetTrackAudio, MIX_Mixer, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
-    MIX_PlayTrack, MIX_SetTrackAudio, MIX_SetTrackFrequencyRatio, MIX_SetTrackStereo,
-    MIX_SetTrackStoppedCallback, MIX_StereoGains, MIX_StopTrack, MIX_Track, MIX_TrackPlaying,
+    MIX_PlayTrack, MIX_SetTrackAudio, MIX_SetTrackFrequencyRatio, MIX_SetTrackGain,
+    MIX_SetTrackStereo, MIX_SetTrackStoppedCallback, MIX_StereoGains, MIX_StopTrack, MIX_Track,
+    MIX_TrackPlaying,
 };
 use sdl3_sys::{
     audio::SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
@@ -25,6 +26,9 @@ pub struct Mixer {
     pub(super) mixer: *mut MIX_Mixer,
 
     listeners: Vec<Vec2>,
+
+    sounds_enabled: bool,
+    music_enabled: bool,
 
     blips: TrackPool<4>,
     explosions: TrackPool<12>,
@@ -102,7 +106,22 @@ impl Mixer {
             explosions,
             weapons,
             music,
+            sounds_enabled: true,
+            music_enabled: true,
         }
+    }
+
+    pub fn set_sfx_volume(&mut self, volume: f32) {
+        let volume = volume.clamp(0.0, 1.0);
+        self.sounds_enabled = volume > 0.01;
+        self.blips.set_volume(volume);
+        self.explosions.set_volume(volume);
+        self.weapons.set_volume(volume);
+    }
+
+    pub fn set_music_volume(&mut self, volume: f32) {
+        self.music_enabled = volume > 0.01;
+        self.music.set_volume(volume.clamp(0.0, 1.0));
     }
 
     // Stop all music playback
@@ -112,17 +131,25 @@ impl Mixer {
 
     // Replace current playlist with a music file that plays only once
     pub fn play_music_single(&mut self, audio: &Audio) {
-        self.music.as_mut().play_single(audio);
+        if self.music_enabled {
+            self.music.as_mut().play_single(audio);
+        } else {
+            self.stop_music(0);
+        }
     }
 
     // Replace current playlist with a new looping playlist
     pub fn play_music_loop(&mut self, playlist: Vec<Audio>) {
-        self.music.as_mut().play_loop(playlist);
+        if self.music_enabled {
+            self.music.as_mut().play_loop(playlist);
+        } else {
+            self.stop_music(0);
+        }
     }
 
     // Immediately play a sound effect
     pub fn play_soundeffect(&self, sound: PlayableSoundEffect) -> bool {
-        if self.mixer.is_null() {
+        if self.mixer.is_null() || !self.sounds_enabled {
             return true;
         }
 
@@ -216,6 +243,13 @@ impl Playlist {
             playlist_next: 0,
             fadein_props,
             _pin: std::marker::PhantomPinned,
+        }
+    }
+
+    fn set_volume(&self, volume: f32) {
+        unsafe {
+            MIX_SetTrackGain(self.music1, volume);
+            MIX_SetTrackGain(self.music2, volume);
         }
     }
 
@@ -331,6 +365,14 @@ impl<const N: usize> TrackPool<N> {
         }
 
         Self(tracks)
+    }
+
+    fn set_volume(&self, volume: f32) {
+        for t in self.0 {
+            unsafe {
+                MIX_SetTrackGain(t, volume);
+            }
+        }
     }
 
     /// Play a sound effect. Returns false if no track was available

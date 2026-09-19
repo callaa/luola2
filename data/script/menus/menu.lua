@@ -44,7 +44,7 @@ function settings_menu()
 		}),
 		Spacer(32),
 		Link({
-			label = "Video",
+			label = "Video/Audio",
 			action = video_menu,
 		}),
 		Link({
@@ -91,6 +91,39 @@ function video_menu()
 			action = function(item)
 				sfx.blip(BLIP2)
 				SETTINGS.video.fullscreen = item:toggle()
+				SETTINGS_CHANGED = true
+			end,
+		}),
+		Spacer(16),
+		Selectable({
+			label = "Music volume:",
+			value = Value.Integer(SETTINGS.audio.music_volume * 10),
+			left_action = function(item)
+				SETTINGS.audio.music_volume = item:add(-1, 0, 10) / 10.0
+				sfx.set_music_volume(SETTINGS.audio.music_volume)
+				sfx.blip(BLIP2)
+				SETTINGS_CHANGED = true
+			end,
+			right_action = function(item)
+				SETTINGS.audio.music_volume = item:add(1, 0, 10) / 10.0
+				sfx.set_music_volume(SETTINGS.audio.music_volume)
+				sfx.blip(BLIP2)
+				SETTINGS_CHANGED = true
+			end,
+		}),
+		Selectable({
+			label = "Sound effect volume:",
+			value = Value.Integer(SETTINGS.audio.sfx_volume * 10),
+			left_action = function(item)
+				SETTINGS.audio.sfx_volume = item:add(-1, 0, 10) / 10.0
+				sfx.set_sfx_volume(SETTINGS.audio.sfx_volume)
+				sfx.blip(BLIP2)
+				SETTINGS_CHANGED = true
+			end,
+			right_action = function(item)
+				SETTINGS.audio.sfx_volume = item:add(1, 0, 10) / 10.0
+				sfx.set_sfx_volume(SETTINGS.audio.sfx_volume)
+				sfx.blip(BLIP2)
 				SETTINGS_CHANGED = true
 			end,
 		}),

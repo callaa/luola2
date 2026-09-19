@@ -12,6 +12,22 @@ fn randomize_frequency_ratio(randomization: f32) -> f32 {
 pub fn make_lua_sfx_api(lua: &Lua, sfx: Rc<RefCell<SfxStore>>) -> mlua::Result<mlua::Table> {
     let api = lua.create_table()?;
 
+    // Set volumes
+    {
+        let mixer = sfx.borrow().get_mixer();
+        let mixer2 = mixer.clone();
+
+        api.set(
+            "set_sfx_volume",
+            lua.create_function(move |_, vol: f32| Ok(mixer.borrow_mut().set_sfx_volume(vol)))?,
+        )?;
+
+        api.set(
+            "set_music_volume",
+            lua.create_function(move |_, vol: f32| Ok(mixer2.borrow_mut().set_music_volume(vol)))?,
+        )?;
+    }
+
     // Function for finding an audio sample
     {
         let sfx = sfx.clone();

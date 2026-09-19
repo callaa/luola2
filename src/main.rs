@@ -126,6 +126,11 @@ impl AppState {
         let controllers = Rc::new(RefCell::new(controllers));
 
         let mixer = Rc::new(RefCell::new(Mixer::new(true)));
+        {
+            let mut mixer = mixer.borrow_mut();
+            mixer.set_sfx_volume(config.audio.sfx_volume);
+            mixer.set_music_volume(config.audio.music_volume);
+        }
 
         let mut statestack = StateStack::new(renderer.clone());
         statestack.push(Box::new(GameInitState::new(

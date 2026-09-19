@@ -658,7 +658,7 @@ impl LuaMenu {
         });
 
         if let Some(active_menu) = active_menu {
-            match active_menu.handle_button(&self.lua, button, &self.mixer.borrow())? {
+            match active_menu.handle_button(&self.lua, button, &self.mixer)? {
                 MenuAction::None => {}
                 MenuAction::Push(m) => {
                     if let Some(top) = self.menu_stack.last_mut() {
@@ -894,7 +894,7 @@ impl MenuScreen {
         &mut self,
         lua: &Lua,
         button: MenuButton,
-        mixer: &Mixer,
+        mixer: &RefCell<Mixer>,
     ) -> mlua::Result<MenuAction> {
         match button {
             MenuButton::Up(_) => {
@@ -909,7 +909,9 @@ impl MenuScreen {
                     }
                 }
                 if let Some(s) = &self.selection_sound {
-                    mixer.play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
+                    mixer
+                        .borrow()
+                        .play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
                 }
             }
             MenuButton::Down(_) => {
@@ -924,7 +926,9 @@ impl MenuScreen {
                     }
                 }
                 if let Some(s) = &self.selection_sound {
-                    mixer.play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
+                    mixer
+                        .borrow()
+                        .play_soundeffect(crate::sfx::PlayableSoundEffect::Blip(s.clone()));
                 }
             }
             MenuButton::Left(_) => {

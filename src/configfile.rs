@@ -44,6 +44,23 @@ pub struct VideoConfig {
     pub fullscreen: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AudioConfig {
+    #[serde(default = "default_musicvol")]
+    pub music_volume: f32,
+
+    #[serde(default = "default_sfxvol")]
+    pub sfx_volume: f32,
+}
+
+fn default_musicvol() -> f32 {
+    0.5
+}
+
+fn default_sfxvol() -> f32 {
+    1.0
+}
+
 fn default_true() -> bool {
     true
 }
@@ -79,6 +96,8 @@ pub struct UserConfig {
     #[serde(default)]
     pub video: VideoConfig,
     #[serde(default)]
+    pub audio: AudioConfig,
+    #[serde(default)]
     pub game: GameOptions,
     #[serde(default)]
     pub gamepad: GamepadOptions,
@@ -89,6 +108,7 @@ pub struct UserConfig {
 }
 
 default_from_serde!(VideoConfig);
+default_from_serde!(AudioConfig);
 default_from_serde!(GameOptions);
 default_from_serde!(GamepadOptions);
 default_from_serde!(UserConfig);
@@ -106,7 +126,7 @@ pub fn load_user_config() {
         }
     };
 
-    let config = match toml::from_str(&content) {
+    let config: UserConfig = match toml::from_str(&content) {
         Ok(c) => c,
         Err(e) => {
             error!("Couldn't parse user config file ({:?}: {}", filename, e);
