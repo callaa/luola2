@@ -72,13 +72,13 @@ impl GameRoundState {
         // Load level specific audio
         let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
         sfx.borrow_mut()
-            .load_extra_sound_effects(level.root_path(), &level.audio().extra_sfx);
+            .load_extra_sound_effects(level.root_path(), &level.extra_sfx());
 
         let music = Rc::new(RefCell::new(assets.music.clone()));
         {
             let mut music = music.borrow_mut();
-            music.load_extra_music(level.root_path(), &level.audio().extra_music);
-            music.load_extra_music(level.root_path(), &level.audio().music);
+            music.load_extra_music(level.root_path(), &level.extra_music());
+            music.load_extra_music(level.root_path(), &level.music());
         }
 
         // Load level specific textures
@@ -126,8 +126,7 @@ impl GameRoundState {
             "playlist",
             lua.to_value(
                 &level
-                    .audio()
-                    .music
+                    .music()
                     .iter()
                     .map(|filename| {
                         let dot = filename.find('.');

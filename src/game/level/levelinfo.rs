@@ -54,7 +54,9 @@ pub struct LevelInfo {
     starfield: bool,
     nospawnzones: Vec<RectF>,
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
-    audio: LevelAudio,
+    music: Vec<String>,
+    extra_music: Vec<String>,
+    extra_sfx: Vec<String>,
 }
 
 type TerrainPalette = [u8; 256];
@@ -83,9 +85,9 @@ struct LevelInfoToml {
     #[serde(rename = "script-settings")]
     script_settings: Option<toml::Table>,
 
-    #[serde(default)]
-    audio: LevelAudio,
-
+    music: Option<Vec<String>>,
+    extra_music: Option<Vec<String>>,
+    extra_sfx: Option<Vec<String>>,
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
 }
 
@@ -98,21 +100,6 @@ struct NoSpawnZoneToml {
 struct TerrainColors {
     water: Option<u32>,
     snow: Option<u32>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug, Default)]
-pub struct LevelAudio {
-    // Playlist which is played automatically when level starts
-    #[serde(default)]
-    pub music: Vec<String>,
-
-    // Extra music to load for use in level scripts
-    #[serde(default)]
-    pub extra_music: Vec<String>,
-
-    // Extra sound effects to load for use in level scripts
-    #[serde(default)]
-    pub extra_sfx: Vec<String>,
 }
 
 impl LevelInfo {
@@ -178,7 +165,9 @@ impl LevelInfo {
             colors: info.colors,
             nospawnzones,
             textures: info.textures,
-            audio: info.audio,
+            music: info.music.unwrap_or_default(),
+            extra_music: info.extra_music.unwrap_or_default(),
+            extra_sfx: info.extra_sfx.unwrap_or_default(),
         })
     }
 
@@ -253,8 +242,16 @@ impl LevelInfo {
         self.textures.as_ref()
     }
 
-    pub fn audio(&self) -> &LevelAudio {
-        &self.audio
+    pub fn music(&self) -> &Vec<String> {
+        &self.music
+    }
+
+    pub fn extra_music(&self) -> &Vec<String> {
+        &self.extra_music
+    }
+
+    pub fn extra_sfx(&self) -> &Vec<String> {
+        &self.extra_sfx
     }
 
     // Convert the given pixel values into the internal format using the terrain palette map
