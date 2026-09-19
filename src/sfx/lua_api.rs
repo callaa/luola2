@@ -1,4 +1,7 @@
-use crate::{math::Vec2, sfx::SfxStore};
+use crate::{
+    math::Vec2,
+    sfx::{MusicStore, SfxStore},
+};
 
 use super::{Audio, PlayableSoundEffect};
 use mlua::{Lua, LuaString};
@@ -9,7 +12,11 @@ fn randomize_frequency_ratio(randomization: f32) -> f32 {
     if r <= 0.0 { 1.0 / (-r + 1.0) } else { 1.0 + r }
 }
 
-pub fn make_lua_sfx_api(lua: &Lua, sfx: Rc<RefCell<SfxStore>>) -> mlua::Result<mlua::Table> {
+pub fn make_lua_sfx_api(
+    lua: &Lua,
+    sfx: Rc<RefCell<SfxStore>>,
+    music: Option<Rc<RefCell<MusicStore>>>,
+) -> mlua::Result<mlua::Table> {
     let api = lua.create_table()?;
 
     // Set volumes
@@ -79,5 +86,16 @@ pub fn make_lua_sfx_api(lua: &Lua, sfx: Rc<RefCell<SfxStore>>) -> mlua::Result<m
             Ok(())
         })?,
     )?;
+
+    // Music playback
+    if let Some(music) = music {
+        api.set(
+            "music_loop",
+            lua.create_function(move |_, playlist: Vec<String>| {
+                music.borrow_mut().play_playlist(&playlist);
+                Ok(())
+            })?,
+        )?;
+    }
     Ok(api)
 }

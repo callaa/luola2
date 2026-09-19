@@ -479,7 +479,8 @@ impl LuaMenu {
 
         let mixer = sfx.borrow().get_mixer();
 
-        lua.globals().set("sfx", make_lua_sfx_api(&lua, sfx)?)?;
+        lua.globals()
+            .set("sfx", make_lua_sfx_api(&lua, sfx, None)?)?;
 
         // Load menu script file and get main menu by running entrypoint function
         lua.load(format!(r#"require "{}""#, script_file)).exec()?;

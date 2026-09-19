@@ -3,7 +3,11 @@ use crate::fs::{glob_datafiles, pathbuf_to_cstring};
 use crate::gfx::SdlError;
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStringExt;
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use sdl3_mixer_sys::mixer::MIX_LoadAudio;
 
@@ -59,24 +63,52 @@ impl MusicStore {
         self
     }
 
+    pub fn load_extra_music<T: AsRef<str>>(&mut self, root: &Path, filenames: &[T]) {
+        let mixer = self.mixer.borrow().mixer;
+        for filename in filenames {
+            let path: PathBuf = [root, Path::new(filename.as_ref())].iter().collect();
+            let filestem = path
+                .file_stem()
+                .expect("non-empty filename")
+                .to_os_string()
+                .into_vec();
+            let pathstr = match pathbuf_to_cstring(path) {
+                Ok(p) => p,
+                Err(err) => {
+                    log::error!("Invalid path {}: {}", filename.as_ref(), err);
+                    continue;
+                }
+            };
+
+            let audio = unsafe { MIX_LoadAudio(mixer, pathstr.as_ptr(), false) };
+
+            if audio.is_null() {
+                SdlError::log(&format!("Couldn't load music {}", filename.as_ref()));
+            } else {
+                log::debug!("Loaded extra music: {:?}", filename.as_ref());
+                self.music.insert(filestem, Audio::new(audio));
+            }
+        }
+    }
+
     pub fn get(&self, name: &[u8]) -> Option<Audio> {
         self.music.get(name).cloned()
     }
 
-    pub fn get_playlist(&self, names: &[&[u8]]) -> Vec<Audio> {
+    pub fn get_playlist<T: AsRef<[u8]>>(&self, names: &[T]) -> Vec<Audio> {
         let mut playlist = Vec::new();
 
         for name in names {
-            if let Some(audio) = self.get(name) {
+            if let Some(audio) = self.get(name.as_ref()) {
                 playlist.push(audio);
             } else {
-                log::warn!("Music {:?} not found!", str::from_utf8(name))
+                log::warn!("Music {:?} not found!", str::from_utf8(name.as_ref()))
             }
         }
         playlist
     }
 
-    pub fn play_playlist(&self, names: &[&[u8]]) {
+    pub fn play_playlist<T: AsRef<[u8]>>(&self, names: &[T]) {
         self.mixer
             .borrow_mut()
             .play_music_loop(self.get_playlist(names));

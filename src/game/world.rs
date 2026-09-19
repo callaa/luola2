@@ -34,7 +34,7 @@ use crate::{
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer, TextureStore},
     math::{Rect, Vec2},
-    sfx::SfxStore,
+    sfx::{MusicStore, SfxStore},
 };
 
 use super::{
@@ -154,6 +154,7 @@ impl World {
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         sfx: Rc<RefCell<SfxStore>>,
+        music: Rc<RefCell<MusicStore>>,
         textures: Rc<TextureStore>,
     ) -> Result<Self> {
         let level = Rc::new(RefCell::new(Level::load_level(
@@ -184,6 +185,7 @@ impl World {
                 fixedobjects.clone(),
                 controllers,
                 sfx,
+                music,
             )?;
         }
 

@@ -5,7 +5,13 @@ use crate::{
     math::Vec2,
 };
 use sdl3_mixer_sys::mixer::MIX_LoadAudio;
-use std::{cell::RefCell, collections::HashMap, os::unix::ffi::OsStringExt, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    os::unix::ffi::OsStringExt,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 #[derive(Clone)]
 pub struct SfxStore {
@@ -63,6 +69,34 @@ impl SfxStore {
             log::warn!("No sound effects found!");
         }
         self
+    }
+
+    pub fn load_extra_sound_effects<T: AsRef<str>>(&mut self, root: &Path, filenames: &[T]) {
+        let mixer = self.mixer.borrow().mixer;
+        for filename in filenames {
+            let path: PathBuf = [root, Path::new(filename.as_ref())].iter().collect();
+            let filestem = path
+                .file_stem()
+                .expect("non-empty filename")
+                .to_os_string()
+                .into_vec();
+            let pathstr = match pathbuf_to_cstring(path) {
+                Ok(p) => p,
+                Err(err) => {
+                    log::error!("Invalid path {}: {}", filename.as_ref(), err);
+                    continue;
+                }
+            };
+
+            let audio = unsafe { MIX_LoadAudio(mixer, pathstr.as_ptr(), true) };
+
+            if audio.is_null() {
+                SdlError::log(&format!("Couldn't load {}", filename.as_ref()));
+            } else {
+                log::debug!("Loaded extra sound effect: {:?}", filename.as_ref());
+                self.sample_map.insert(filestem, Audio::new(audio));
+            }
+        }
     }
 
     /**

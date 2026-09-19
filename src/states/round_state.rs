@@ -69,10 +69,19 @@ impl GameRoundState {
         assets: Rc<GameAssets>,
         respawns: i32,
     ) -> Result<Self> {
+        // Load level specific audio
         let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
-        // TODO: load level specific sounds
-        // TODO: load level specific music
+        sfx.borrow_mut()
+            .load_extra_sound_effects(level.root_path(), &level.audio().extra_sfx);
 
+        let music = Rc::new(RefCell::new(assets.music.clone()));
+        {
+            let mut music = music.borrow_mut();
+            music.load_extra_music(level.root_path(), &level.audio().extra_music);
+            music.load_extra_music(level.root_path(), &level.audio().music);
+        }
+
+        // Load level specific textures
         let mut textures = assets.textures.clone();
         if let Some(lt) = level.textures() {
             Rc::make_mut(&mut textures).update_from_config(
@@ -88,6 +97,7 @@ impl GameRoundState {
             renderer.clone(),
             controllers.clone(),
             sfx.clone(),
+            music.clone(),
             textures.clone(),
         )?;
         let lua = world.scripting().lua();
@@ -112,6 +122,25 @@ impl GameRoundState {
         let settings = lua.create_table()?;
         settings.set("players", player_settings)?;
         settings.set("level", lua.to_value(level.script_settings())?)?;
+        settings.set(
+            "playlist",
+            lua.to_value(
+                &level
+                    .audio()
+                    .music
+                    .iter()
+                    .map(|filename| {
+                        let dot = filename.find('.');
+                        if let Some(dot) = dot {
+                            &filename[..dot]
+                        } else {
+                            &filename
+                        }
+                        .to_owned()
+                    })
+                    .collect::<Vec<String>>(),
+            )?,
+        )?;
 
         world
             .scripting()

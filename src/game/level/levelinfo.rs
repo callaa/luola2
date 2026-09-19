@@ -54,6 +54,7 @@ pub struct LevelInfo {
     starfield: bool,
     nospawnzones: Vec<RectF>,
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
+    audio: LevelAudio,
 }
 
 type TerrainPalette = [u8; 256];
@@ -82,6 +83,9 @@ struct LevelInfoToml {
     #[serde(rename = "script-settings")]
     script_settings: Option<toml::Table>,
 
+    #[serde(default)]
+    audio: LevelAudio,
+
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
 }
 
@@ -94,6 +98,21 @@ struct NoSpawnZoneToml {
 struct TerrainColors {
     water: Option<u32>,
     snow: Option<u32>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug, Default)]
+pub struct LevelAudio {
+    // Playlist which is played automatically when level starts
+    #[serde(default)]
+    pub music: Vec<String>,
+
+    // Extra music to load for use in level scripts
+    #[serde(default)]
+    pub extra_music: Vec<String>,
+
+    // Extra sound effects to load for use in level scripts
+    #[serde(default)]
+    pub extra_sfx: Vec<String>,
 }
 
 impl LevelInfo {
@@ -159,6 +178,7 @@ impl LevelInfo {
             colors: info.colors,
             nospawnzones,
             textures: info.textures,
+            audio: info.audio,
         })
     }
 
@@ -231,6 +251,10 @@ impl LevelInfo {
 
     pub fn textures(&self) -> Option<&HashMap<String, TextureConfigWithAlts>> {
         self.textures.as_ref()
+    }
+
+    pub fn audio(&self) -> &LevelAudio {
+        &self.audio
     }
 
     // Convert the given pixel values into the internal format using the terrain palette map

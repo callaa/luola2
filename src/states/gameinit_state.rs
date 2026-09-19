@@ -101,7 +101,7 @@ fn load_resources(
     // Sound effects are looked up outside functions, so we need sfx in scope also
     lua.globals().set(
         "sfx",
-        make_lua_sfx_api(&lua, Rc::new(RefCell::new(sfx.clone())))?,
+        make_lua_sfx_api(&lua, Rc::new(RefCell::new(sfx.clone())), None)?,
     )?;
 
     lua.load(r#"require "luola_main""#).exec()?;

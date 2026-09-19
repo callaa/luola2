@@ -49,6 +49,11 @@ function luola_init_game(settings)
 	end
 
 	luola_init_level(settings.level)
+
+	-- Play music once game starts
+	Scheduler.add_global(0, function()
+		sfx.music_loop(settings.playlist)
+	end)
 end
 
 -- Create a new ship (global function)
