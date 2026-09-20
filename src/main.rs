@@ -73,6 +73,9 @@ struct Arguments {
 
     #[argh(switch, short = 'w', description = "start in windowed mode")]
     window: bool,
+
+    #[argh(switch, long = "noaudio", description = "disable audio")]
+    noaudio: bool,
 }
 
 unsafe impl Send for AppState {}
@@ -95,13 +98,19 @@ impl AppState {
                 return AppResultWithState::Failure(None);
             }
 
-            if !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD) {
+            let mut flags = SDL_INIT_VIDEO | SDL_INIT_GAMEPAD;
+            if !args.noaudio {
+                flags |= SDL_INIT_AUDIO;
+            }
+            if !SDL_Init(flags) {
                 SdlError::log("Couldn't init SDL");
                 return AppResultWithState::Failure(None);
             }
 
-            if !MIX_Init() {
-                SdlError::log("Couldn't init SDL Mixer");
+            if !args.noaudio {
+                if !MIX_Init() {
+                    SdlError::log("Couldn't init SDL Mixer");
+                }
             }
         }
 

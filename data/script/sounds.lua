@@ -1,22 +1,20 @@
 -- Return a random sound from the set
 local function s(...sounds)
-	if #sounds == 1 then
-		local sound = sfx.get(sounds[1])
-		if not sound.is_valid then
-			print("Warning: couldn't find sound effect", sounds[1])
+	local set = {}
+	for _, sound in ipairs({ ... }) do
+		local s = sfx.get(sound)
+		if s.is_valid then
+			table.insert(set, sfx.get(sound))
+		else
+			print("Warning: couldn't find sound effect", sound)
 		end
-		return function() return sound end
-	else
-		local set = {}
-		for _, sound in ipairs({ ... }) do
-			local s = sfx.get(sound)
-			if s.is_valid then
-				table.insert(set, sfx.get(sound))
-			else
-				print("Warning: couldn't find sound effect", sound)
-			end
-		end
+	end
 
+	if #set == 0 then
+		return function() return nil end
+	elseif #set == 1 then
+		return function() return set[1] end
+	else
 		return function()
 			return set[math.random(1, #set)]
 		end

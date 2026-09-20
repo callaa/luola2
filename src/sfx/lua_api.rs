@@ -52,9 +52,11 @@ pub fn make_lua_sfx_api(
         let sfx = sfx.clone();
         api.set(
             "blip",
-            lua.create_function(move |_, audio: Audio| {
-                sfx.borrow()
-                    .play_soundeffect(PlayableSoundEffect::Blip(audio));
+            lua.create_function(move |_, audio: Option<Audio>| {
+                if let Some(audio) = audio {
+                    sfx.borrow()
+                        .play_soundeffect(PlayableSoundEffect::Blip(audio));
+                }
                 Ok(())
             })?,
         )?;
@@ -64,25 +66,31 @@ pub fn make_lua_sfx_api(
         let sfx = sfx.clone();
         api.set(
             "explosion",
-            lua.create_function(move |_, (id, pos, fr): (Audio, Vec2, Option<f32>)| {
-                sfx.borrow_mut()
-                    .enqueue_soundeffect(PlayableSoundEffect::Explosion(
-                        id,
-                        pos,
-                        fr.map_or(1.0, randomize_frequency_ratio),
-                    ));
-                Ok(())
-            })?,
+            lua.create_function(
+                move |_, (audio, pos, fr): (Option<Audio>, Vec2, Option<f32>)| {
+                    if let Some(audio) = audio {
+                        sfx.borrow_mut()
+                            .enqueue_soundeffect(PlayableSoundEffect::Explosion(
+                                audio,
+                                pos,
+                                fr.map_or(1.0, randomize_frequency_ratio),
+                            ));
+                    }
+                    Ok(())
+                },
+            )?,
         )?;
     }
     api.set(
         "weapon",
-        lua.create_function(move |_, (id, fr): (Audio, Option<f32>)| {
-            sfx.borrow_mut()
-                .enqueue_soundeffect(PlayableSoundEffect::Weapon(
-                    id,
-                    fr.map_or(1.0, randomize_frequency_ratio),
-                ));
+        lua.create_function(move |_, (audio, fr): (Option<Audio>, Option<f32>)| {
+            if let Some(audio) = audio {
+                sfx.borrow_mut()
+                    .enqueue_soundeffect(PlayableSoundEffect::Weapon(
+                        audio,
+                        fr.map_or(1.0, randomize_frequency_ratio),
+                    ));
+            }
             Ok(())
         })?,
     )?;
