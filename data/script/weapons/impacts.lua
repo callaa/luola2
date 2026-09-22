@@ -289,4 +289,13 @@ function impacts.toxin(this, terrain, obj)
 	end
 end
 
+-- Special weapon micro black hole
+function impacts.microblackhole(this, terrain, obj)
+	-- Note: is not destroyed on impact so hits the object multiple times
+	hit_object(this, obj, 3)
+	if terrain == Level.TER_LEVELBOUND then
+		this:destroy()
+	end
+end
+
 return impacts

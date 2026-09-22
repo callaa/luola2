@@ -16,7 +16,7 @@ Features:
  * Gamepad support
  * Pilot ejection for platformer mode!
  * Lua scripting, including per-level custom scripts
- * 22 special weapons to choose from
+ * 24 special weapons to choose from
  * Destructible terrain
  * 100% artisanal code and art: no gen-AI used!
 
@@ -26,10 +26,9 @@ The "finished" 1.0 version will have all the good features from Luola, as well a
 
 Planned features:
 
- * Multiple selectable ship types
- * Sound effects & music (pending release of SDL Mixer 3)
+ * More selectable ship types
+ * Music
  * Special playmodes such as timed battle with sudden death
- * Neutral and hostile stationary objects: jump gates and turrets
 
 ## Instructions
 

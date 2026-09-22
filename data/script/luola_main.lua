@@ -357,7 +357,12 @@ luola_weapons = {
 		title = "Repair Droid",
 		fire_func = sweapons.autorepair,
 		description = "Equip the ship with an AutoMech droid capable of carrying out repairs on the fly."
-	}
+	},
+	blackholegun = {
+		title = "(Micro) Blackhole gun",
+		fire_func = sweapons.blackholegun,
+		description = "Generates and accelerates a microscopic black hole capable of passing through all matter. The hole evaporates quickly, emitting a large amount of Hawking radiation as it does."
+	},
 }
 
 -- List of selectable ships

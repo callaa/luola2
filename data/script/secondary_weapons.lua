@@ -477,4 +477,54 @@ function weapons.autorepair(ship, trigger)
 	end
 end
 
+local function blackhole_emission(obj)
+	local d = obj.state.damage - 0.5
+	if d <= 0 then
+		obj:destroy()
+	else
+		obj.state.damage = d
+	end
+
+	local tex = textures.get("dot8x8")
+	for i = 0, 360, 36 do
+		game.effect("AddParticle", {
+			pos = obj.pos,
+			vel = obj.vel + Vec2_for_angle(i, 100),
+			texture = tex,
+			color = 0xffffffff,
+			target_color = 0x00ffffff,
+			lifetime = 0.5,
+		})
+	end
+	return 0.1
+end
+
+function weapons.blackholegun(ship)
+	if ship:consume_ammo(10, 0.4) then
+		game.effect("AddBullet", {
+			pos = ship.pos,
+			vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
+			mass = 30,
+			radius = 30,
+			drag = 0,
+			antigrav = true,
+			owner = ship.player,
+			texture = textures.get("dot8x8"),
+			color = 0xff000000,
+			terrain_collision = "passthrough",
+			timer = 0,
+			state = {
+				damage = 10,
+				on_impact = Impacts.microblackhole,
+				scheduler = blackhole_emission,
+			}
+		})
+		game.player_effect("rumble", ship.controller, {
+			high = 0.15,
+			duration = 0.1,
+		})
+		sfx.weapon(sounds.laser(), 0.1)
+	end
+end
+
 return weapons
