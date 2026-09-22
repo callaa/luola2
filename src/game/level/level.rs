@@ -138,6 +138,7 @@ pub struct Level {
     pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
     pub snow_color: u32,  // pixel value used when creating snow
+    pub allow_sand: bool, // allow creation of new dynamic terrain
 }
 
 pub enum TerrainLineHit {
@@ -334,6 +335,7 @@ impl Level {
             forcefields: Vec::new(),
             water_color,
             snow_color,
+            allow_sand: info.allow_sand(),
             nospawnzones: info.nospawnzones().clone(),
         })
     }

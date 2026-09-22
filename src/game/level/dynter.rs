@@ -90,6 +90,18 @@ impl DynamicTerrainCell {
         )
     }
 
+    pub fn is_falling_sand(&self) -> bool {
+        matches!(
+            self,
+            DynamicTerrainCell::LooseningSand
+                | DynamicTerrainCell::Sand {
+                    terrain: _,
+                    solidify: _,
+                    color: _
+                }
+        )
+    }
+
     pub fn from_lua_table(table: &mlua::Table) -> mlua::Result<Self> {
         let typ = table.get::<mlua::LuaString>("type")?;
         match typ.as_bytes().deref() {

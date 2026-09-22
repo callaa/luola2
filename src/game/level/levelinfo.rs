@@ -52,6 +52,7 @@ pub struct LevelInfo {
     transparent_color_index: Option<u8>,
     script_settings: toml::Table,
     starfield: bool,
+    sand: bool,
     nospawnzones: Vec<RectF>,
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
     music: Vec<String>,
@@ -60,6 +61,10 @@ pub struct LevelInfo {
 }
 
 type TerrainPalette = [u8; 256];
+
+fn default_true() -> bool {
+    true
+}
 
 #[derive(serde::Deserialize, Debug)]
 struct LevelInfoToml {
@@ -72,6 +77,9 @@ struct LevelInfoToml {
 
     #[serde(default)]
     starfield: bool,
+
+    #[serde(default = "default_true")]
+    sand: bool, // allow creation of sand type dynamic terrain in this level
 
     #[serde(default)]
     nospawnzones: Vec<NoSpawnZoneToml>,
@@ -162,6 +170,7 @@ impl LevelInfo {
             transparent_color_index,
             script_settings: info.script_settings.unwrap_or_default(),
             starfield: info.starfield,
+            sand: info.sand,
             colors: info.colors,
             nospawnzones,
             textures: info.textures,
@@ -232,6 +241,10 @@ impl LevelInfo {
 
     pub fn use_starfield(&self) -> bool {
         self.starfield
+    }
+
+    pub fn allow_sand(&self) -> bool {
+        self.sand
     }
 
     pub fn nospawnzones(&self) -> &Vec<RectF> {

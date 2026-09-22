@@ -5,6 +5,9 @@ thumbnail = "demo3-thumb.png"
 terrain = "demo3-level.png"
 artwork = "demo3-level.png"
 
+# Falling sand is enabled by default
+#sand = true
+
 # Mapping of terrain types to palette indices
 # All unmapped colors will be mapped to "ground"
 [terrain-palette]

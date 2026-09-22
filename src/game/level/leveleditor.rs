@@ -287,7 +287,9 @@ impl<'a> LevelEditor<'a> {
 
     /// Add a new dynamic terrain cell
     pub fn add_dynterrain(&mut self, pos: Vec2, dter: DynamicTerrainCell) {
-        if !dter.destroys_ground() || !terrain::is_indestructible_solid(self.level.terrain_at(pos))
+        if (self.level.allow_sand || !dter.is_falling_sand())
+            && (!dter.destroys_ground()
+                || !terrain::is_indestructible_solid(self.level.terrain_at(pos)))
         {
             let mut cells = self.level.dynterrain.take();
             cells.insert(LevelCoordinate::from_world_coordinate(pos), dter);

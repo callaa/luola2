@@ -17,6 +17,10 @@ background = "grid.png"
 # A starfield background can be drawn behind the parallax background
 starfield = true
 
+# Setting sand to false here blocks the creation (or activation) of falling sand type
+# dynamic terrain. Sand can be created by terrain particles even in levels without any painted in.
+sand = true
+
 [colors]
 # There is typically no need to specify the water color explicitly.
 # By default, the color from the terrain image palette is used.
