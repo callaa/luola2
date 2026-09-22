@@ -166,6 +166,7 @@ impl mlua::FromLua for Critter {
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.025),
                     impulse: Vec2::ZERO,
                     terrain_collision_mode: TerrainCollisionMode::Simple,
+                    antigrav: table.get::<Option<bool>>("antigrav")?.unwrap_or_default(),
                 },
                 id: table.get::<Option<u32>>("id")?.unwrap_or(0),
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),

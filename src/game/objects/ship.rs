@@ -208,6 +208,7 @@ impl mlua::FromLua for Ship {
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.025),
                     impulse: Vec2::ZERO,
                     terrain_collision_mode: TerrainCollisionMode::Simple,
+                    antigrav: table.get::<Option<bool>>("antigrav")?.unwrap_or_default(),
                 },
                 angle: table.get::<Option<f32>>("angle")?.unwrap_or(0.0),
                 thrust: table.get::<Option<f32>>("thrust")?.unwrap_or(50.0),

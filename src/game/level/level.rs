@@ -139,6 +139,7 @@ pub struct Level {
     pub water_color: u32, // pixel value used when creating water
     pub snow_color: u32,  // pixel value used when creating snow
     pub allow_sand: bool, // allow creation of new dynamic terrain
+    pub gravity: f32,     // strength of gravity (default: 9.81)
 }
 
 pub enum TerrainLineHit {
@@ -336,6 +337,7 @@ impl Level {
             water_color,
             snow_color,
             allow_sand: info.allow_sand(),
+            gravity: info.gravity(),
             nospawnzones: info.nospawnzones().clone(),
         })
     }

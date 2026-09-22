@@ -8,17 +8,13 @@ local mines = {}
 -- Disowns itself after a second and becomes dangerous even
 -- to the original player
 function mines.create_mine(pos, owner)
-	local drag = 1 / 1.2
-	if game.terrain_at(pos) == 0x80 then
-		drag = 1 / 60.0
-	end
-
 	game.effect("AddMine", {
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 300,
 		radius = 5,
-		drag = drag,
+		drag = 0.8,
+		antigrav = true,
 		owner = owner,
 		texture = textures.get("mine"),
 		state = {
@@ -58,17 +54,13 @@ end
 
 -- A magnetic mine that is attracted to nearby ships
 function mines.create_magmine(pos, owner)
-	local drag = 1 / 1.2
-	if game.terrain_at(pos) == 0x80 then
-		drag = 1 / 60.0
-	end
-
 	game.effect("AddMine", {
 		pos = pos,
 		vel = Vec2(0, 0),
 		mass = 300,
 		radius = 8,
-		drag = drag,
+		drag = 0.8,
+		antigrav = true,
 		owner = owner,
 		texture = textures.get("magmine"),
 		state = {
@@ -141,7 +133,6 @@ function mines.create_landmine(pos, angle, owner)
 		vel = Vec2_for_angle(-angle + 180, 1000),
 		mass = 300,
 		radius = 0,
-		drag = drag,
 		owner = owner,
 		texture = textures.get("dot3x3"),
 		color = 0x80808080,

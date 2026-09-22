@@ -94,6 +94,7 @@ impl mlua::FromLua for Projectile {
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.0025),
                     impulse: Vec2::ZERO,
                     terrain_collision_mode,
+                    antigrav: table.get::<Option<bool>>("antigrav")?.unwrap_or_default(),
                 },
                 texture: AnimatedTexture::new(table.get("texture")?),
                 owner: table.get::<Option<i32>>("owner")?.unwrap_or(0),

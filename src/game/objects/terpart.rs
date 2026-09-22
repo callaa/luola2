@@ -60,6 +60,7 @@ impl mlua::FromLua for TerrainParticle {
                     } else {
                         TerrainCollisionMode::Simple
                     },
+                    antigrav: false,
                 },
                 texture: table.get("texture")?,
                 stain,
@@ -91,6 +92,7 @@ impl TerrainParticle {
                 drag: 0.3,
                 impulse: Vec2::ZERO,
                 terrain_collision_mode: TerrainCollisionMode::Simple,
+                antigrav: false,
             },
             texture,
             terrain,

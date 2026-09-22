@@ -50,6 +50,7 @@ pub struct LevelInfo {
     terrain_palette: TerrainPalette,
     colors: TerrainColors,
     transparent_color_index: Option<u8>,
+    gravity: f32,
     script_settings: toml::Table,
     starfield: bool,
     sand: bool,
@@ -74,6 +75,8 @@ struct LevelInfoToml {
     thumbnail: String,
     background: Option<String>,
     script: Option<String>,
+
+    gravity: Option<f32>,
 
     #[serde(default)]
     starfield: bool,
@@ -168,6 +171,7 @@ impl LevelInfo {
             script_file: info.script,
             terrain_palette,
             transparent_color_index,
+            gravity: info.gravity.unwrap_or(9.81),
             script_settings: info.script_settings.unwrap_or_default(),
             starfield: info.starfield,
             sand: info.sand,
@@ -276,6 +280,10 @@ impl LevelInfo {
 
     pub fn transparent_color_index(&self) -> Option<u8> {
         self.transparent_color_index
+    }
+
+    pub fn gravity(&self) -> f32 {
+        self.gravity
     }
 
     pub(super) fn find_water_color(

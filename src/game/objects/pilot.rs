@@ -123,6 +123,7 @@ impl mlua::FromLua for Pilot {
                     drag: PARACHUTE_DRAG,
                     impulse: Vec2::ZERO,
                     terrain_collision_mode: TerrainCollisionMode::Simple,
+                    antigrav: false,
                 },
                 player_id: table.get("player")?,
                 controller: table.get("controller")?,

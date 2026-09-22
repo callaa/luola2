@@ -46,6 +46,7 @@ pub struct PhysicalObject {
     pub drag: f32,     // drag coefficient used for resistance and buyouancy
     pub impulse: Vec2, // impulse accumulator
     pub terrain_collision_mode: TerrainCollisionMode,
+    pub antigrav: bool, // if true, object is not affected by gravity
 }
 
 impl PhysicalObject {
@@ -59,7 +60,7 @@ impl PhysicalObject {
 
         let density = if is_water { 60.0 } else { 1.2 };
 
-        let g = 9.81 * SCALE_FACTOR;
+        let g = level.gravity * SCALE_FACTOR;
 
         // Add impulse
         self.vel = self.vel + self.impulse * self.imass;
@@ -67,14 +68,15 @@ impl PhysicalObject {
 
         let vv = self.vel.dot(self.vel);
 
-        let mut a =
-            // Gravity
-            Vec2(0.0, g)
-            // Air/water resistance (capped so we don't bounce when entering water)
-            - (self.vel.normalized() * (0.5 * density * vv * 0.1 * self.drag).min(vv * timestep))
-            // Buoyancy
-            - Vec2(0.0, g * (density * self.drag))
-            ;
+        // Gravity and buoyancy
+        let mut a = if self.antigrav {
+            Vec2::ZERO
+        } else {
+            Vec2(0.0, g - g * (density * self.drag))
+        };
+
+        // Air/water resistance (capped so we don't bounce when entering water)
+        a = a - self.vel.normalized() * (0.5 * density * vv * 0.1 * self.drag).min(vv * timestep);
 
         // Force fields
         for ff in &level.forcefields {
