@@ -279,3 +279,15 @@ blend = "Add"
 
 [trophy]
 file = "trophy.png"
+
+[gamepad-guide-pilot]
+file = "gamepad-guide_pilot.png"
+
+[gamepad-guide-ship]
+file = "gamepad-guide_ship.png"
+
+[keyboard-guide-pilot]
+file = "keyboard-guide_pilot.png"
+
+[keyboard-guide-ship]
+file = "keyboard-guide_ship.png"

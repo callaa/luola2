@@ -1,7 +1,9 @@
-BLIP0 = sfx.get("blip0")
-BLIP1 = sfx.get("blip1")
-BLIP2 = sfx.get("blip2")
-BLIP3 = sfx.get("blip3")
+local help_menu = require("menus.help")
+
+local BLIP0 = sfx.get("blip0")
+local BLIP1 = sfx.get("blip1")
+local BLIP2 = sfx.get("blip2")
+local BLIP3 = sfx.get("blip3")
 
 function main_menu()
 	return Menu({
@@ -20,6 +22,10 @@ function main_menu()
 		Link({
 			label = "Settings",
 			action = settings_menu
+		}),
+		Link({
+			label = "Help",
+			action = help_menu
 		}),
 		Link({
 			label = "Quit",

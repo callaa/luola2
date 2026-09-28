@@ -310,11 +310,12 @@ fn make_image(table: Table, texture_store: &TextureStore) -> mlua::Result<MenuIt
     };
 
     let tex = texture_store.get_texture(texid);
+    let scale = table.get::<Option<f32>>("scale")?.unwrap_or(1.0).max(0.1);
 
     Ok(MenuItem {
         content: MenuItemContent::Image(texid),
         center: table.get::<Option<bool>>("center")?.unwrap_or(false),
-        rect: RectF::new(0.0, 0.0, tex.width(), tex.height()),
+        rect: RectF::new(0.0, 0.0, tex.width() * scale, tex.height() * scale),
         value: MenuItemValue::None,
         action: None,
         left_action: None,
