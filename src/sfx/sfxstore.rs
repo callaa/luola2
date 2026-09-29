@@ -8,7 +8,6 @@ use sdl3_mixer_sys::mixer::MIX_LoadAudio;
 use std::{
     cell::RefCell,
     collections::HashMap,
-    os::unix::ffi::OsStringExt,
     path::{Path, PathBuf},
     rc::Rc,
 };
@@ -61,7 +60,8 @@ impl SfxStore {
                 SdlError::log("Couldn't load file");
             } else {
                 log::debug!("Loaded sound effect: {:?}", name);
-                self.sample_map.insert(name.into_vec(), Audio::new(audio));
+                self.sample_map
+                    .insert(name.into_encoded_bytes(), Audio::new(audio));
             }
         }
 
@@ -79,7 +79,7 @@ impl SfxStore {
                 .file_stem()
                 .expect("non-empty filename")
                 .to_os_string()
-                .into_vec();
+                .into_encoded_bytes();
             let pathstr = match pathbuf_to_cstring(path) {
                 Ok(p) => p,
                 Err(err) => {

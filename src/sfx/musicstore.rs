@@ -2,7 +2,6 @@ use super::mixer::{Audio, Mixer};
 use crate::fs::{glob_datafiles, pathbuf_to_cstring};
 use crate::gfx::SdlError;
 use std::collections::HashMap;
-use std::os::unix::ffi::OsStringExt;
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},
@@ -52,7 +51,8 @@ impl MusicStore {
             if audio.is_null() {
                 SdlError::log("Couldn't load file");
             } else {
-                self.music.insert(name.into_vec(), Audio::new(audio));
+                self.music
+                    .insert(name.into_encoded_bytes(), Audio::new(audio));
             }
         }
 
@@ -71,7 +71,7 @@ impl MusicStore {
                 .file_stem()
                 .expect("non-empty filename")
                 .to_os_string()
-                .into_vec();
+                .into_encoded_bytes();
             let pathstr = match pathbuf_to_cstring(path) {
                 Ok(p) => p,
                 Err(err) => {

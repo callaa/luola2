@@ -12,6 +12,7 @@ static = [
 	"mlua/vendored",
 	"sdl3-sys/build-from-source-static",
 	"sdl3-ttf-sys/build-static-vendored",
+	"sdl3-mixer-sys/build-static-vendored",
 ]
 
 [dependencies]
