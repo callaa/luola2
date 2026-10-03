@@ -1,0 +1,12 @@
+artwork = "basestations-art.png"
+terrain = "basestations-terrain.png"
+
+[subimages]
+base_1 = [4, 8, 52, 18]
+
+[terrain-palette]
+space = 0
+ground = 1
+water = 2
+highexplosive = 3
+noregenbase = 4

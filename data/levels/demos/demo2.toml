@@ -1,7 +1,6 @@
 title = "Bullet Hell Demo"
 thumbnail = "demo2-thumb.png"
 terrain = "demo2-level.png"
-artwork = "demo2-level.png"
 
 # custom script to load
 # override function luola_level_init(options) to customize level environment

@@ -19,6 +19,7 @@ use std::{cell::Cell, ops::Add};
 use super::{
     LevelInfo,
     dynter::DynamicTerrainMap,
+    procedural::ProceduralLevel,
     terrain,
     terrain::TER_BIT_WATER,
     tileiterator::{MutableTileIterator, TileIterator},
@@ -171,14 +172,35 @@ impl mlua::FromLua for Forcefield {
 }
 
 impl Level {
-    pub fn load_level(renderer: &Renderer, info: &LevelInfo) -> Result<Level> {
-        let terrain = Image::from_file(info.terrain_path())?;
+    pub fn load_level(renderer: &Renderer, info: &LevelInfo) -> Result<(Level, toml::Table)> {
+        let (terrain, artwork, script_settings) =
+            if let Some(script_name) = info.generation_script_name() {
+                let pc = ProceduralLevel::generate(
+                    info.root_path().into(),
+                    script_name,
+                    info.script_config(),
+                    info.script_settings(),
+                )?;
+                (pc.terrain, pc.artwork, pc.script_settings)
+            } else {
+                (
+                    Image::from_file(info.terrain_path())?,
+                    Image::from_file(info.artwork_path())?.ensure_argb888()?,
+                    info.script_settings().clone(),
+                )
+            };
 
         if terrain.width() % TILE_SIZE > 0 || terrain.height() % TILE_SIZE > 0 {
             return Err(anyhow!(
                 "Level dimensions not a multiple of 64 ({}x{})",
                 terrain.width(),
                 terrain.height()
+            ));
+        }
+
+        if artwork.width() != terrain.width() || artwork.height() != terrain.height() {
+            return Err(anyhow!(
+                "Level artwork size does not match terrain map size"
             ));
         }
 
@@ -189,18 +211,11 @@ impl Level {
         let tiles_wide = terrain.width() / TILE_SIZE;
         let tiles_high = terrain.height() / TILE_SIZE;
 
-        let artwork = Image::from_file(info.artwork_path())?.ensure_argb888()?;
         let transparent_color_index = if info.terrain_is_same_as_artwork() {
             info.transparent_color_index()
         } else {
             None
         };
-
-        if artwork.width() != terrain.width() || artwork.height() != terrain.height() {
-            return Err(anyhow!(
-                "Level artwork size does not match terrain map size"
-            ));
-        }
 
         let background = if let Some(path) = info.background_path() {
             Some(Texture::from_file(renderer, path)?)
@@ -220,8 +235,9 @@ impl Level {
             .indexed_pixels()
             .expect("Didn't we call ensure_index8?");
 
-        let water_color = info
-            .find_water_color(terrain.palette().unwrap(), SDL_PIXELFORMAT_ARGB8888)
+        let water_color = terrain
+            .palette()
+            .and_then(|p| info.find_water_color(p, SDL_PIXELFORMAT_ARGB8888))
             .unwrap_or(0xff0000ff);
 
         let snow_color = info.get_snow_color();
@@ -320,26 +336,29 @@ impl Level {
 
         artwork.set_scalemode(TextureScaleMode::Nearest);
 
-        Ok(Level {
-            tiles,
-            artwork,
-            minimap,
-            background,
-            dynterrain: Cell::default(),
-            regen,
-            windspeed: 0.0,
-            width,
-            height,
-            size_scale: Vec2(1.0 / width, 1.0 / height),
-            tiles_wide,
-            tiles_high,
-            forcefields: Vec::new(),
-            water_color,
-            snow_color,
-            allow_sand: info.allow_sand(),
-            gravity: info.gravity(),
-            nospawnzones: info.nospawnzones().clone(),
-        })
+        Ok((
+            Level {
+                tiles,
+                artwork,
+                minimap,
+                background,
+                dynterrain: Cell::default(),
+                regen,
+                windspeed: 0.0,
+                width,
+                height,
+                size_scale: Vec2(1.0 / width, 1.0 / height),
+                tiles_wide,
+                tiles_high,
+                forcefields: Vec::new(),
+                water_color,
+                snow_color,
+                allow_sand: info.allow_sand(),
+                gravity: info.gravity(),
+                nospawnzones: info.nospawnzones().clone(),
+            },
+            script_settings,
+        ))
     }
 
     /// Level width in world coordinates

@@ -1,5 +1,5 @@
 // This file is part of Luola2
-// Copyright (C) 2025 Calle Laakkonen
+// Copyright (C) 2025, 2026 Calle Laakkonen
 //
 // Luola2 is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ pub struct LevelInfo {
     colors: TerrainColors,
     transparent_color_index: Option<u8>,
     gravity: f32,
+    script_config: toml::Table,
     script_settings: toml::Table,
     starfield: bool,
     sand: bool,
@@ -71,7 +72,7 @@ fn default_true() -> bool {
 struct LevelInfoToml {
     title: String,
     terrain: String,
-    artwork: String,
+    artwork: Option<String>,
     thumbnail: String,
     background: Option<String>,
     script: Option<String>,
@@ -88,10 +89,13 @@ struct LevelInfoToml {
     nospawnzones: Vec<NoSpawnZoneToml>,
 
     #[serde(rename = "terrain-palette")]
-    terrain_palette: toml::Table,
+    terrain_palette: Option<toml::Table>,
 
     #[serde(default)]
     colors: TerrainColors,
+
+    #[serde(rename = "script-config")]
+    script_config: Option<toml::Table>,
 
     #[serde(rename = "script-settings")]
     script_settings: Option<toml::Table>,
@@ -122,7 +126,20 @@ impl LevelInfo {
             .expect("level info file path has no parent?")
             .to_owned();
 
-        let terrain_palette = parse_palette_mapping(&info.terrain_palette)?;
+        let terrain_palette = if let Some(tp) = info.terrain_palette {
+            parse_palette_mapping(&tp)?
+        } else {
+            // Regular levels *should* use a mapping, since the internal format
+            // is not guaranteed to be stable.
+            if !info.terrain.ends_with(".lua") {
+                log::warn!(
+                    "Non-procedurally generated level {:?} should have a [terrain-mapping] block!",
+                    path
+                );
+            }
+            identity_palette_mapping()
+        };
+
         // Find the first color mapped to free space. This will be used
         // as transparency key if the terrain artwork is the same as the terrain map
         let transparent_color_index = terrain_palette
@@ -164,7 +181,7 @@ impl LevelInfo {
                 .to_owned(),
             name: path.file_stem().unwrap().to_str().unwrap().to_owned(),
             title: info.title,
-            artwork_file: info.artwork,
+            artwork_file: info.artwork.unwrap_or(info.terrain.clone()),
             terrain_file: info.terrain,
             thumbnail,
             background_file: info.background,
@@ -172,6 +189,7 @@ impl LevelInfo {
             terrain_palette,
             transparent_color_index,
             gravity: info.gravity.unwrap_or(9.81),
+            script_config: info.script_config.unwrap_or_default(),
             script_settings: info.script_settings.unwrap_or_default(),
             starfield: info.starfield,
             sand: info.sand,
@@ -211,12 +229,29 @@ impl LevelInfo {
         &self.title
     }
 
+    /// Script config is used by procedural level generator
+    pub fn script_config(&self) -> &toml::Table {
+        &self.script_config
+    }
+
     pub fn script_settings(&self) -> &toml::Table {
         &self.script_settings
     }
 
     pub fn root_path(&self) -> &Path {
         &self.root
+    }
+
+    pub fn is_generated(&self) -> bool {
+        self.terrain_file.ends_with(".lua")
+    }
+
+    pub fn generation_script_name(&self) -> Option<&str> {
+        if self.is_generated() {
+            Some(&self.terrain_file)
+        } else {
+            None
+        }
     }
 
     pub fn terrain_path(&self) -> PathBuf {
@@ -228,7 +263,7 @@ impl LevelInfo {
     }
 
     pub fn terrain_is_same_as_artwork(&self) -> bool {
-        self.terrain_file == self.artwork_file
+        self.terrain_file == self.artwork_file && !self.is_generated()
     }
 
     pub fn thumbnail(&self) -> Option<&Texture> {
@@ -317,7 +352,15 @@ impl LevelInfo {
     }
 }
 
-fn parse_palette_mapping(table: &toml::Table) -> Result<TerrainPalette> {
+fn identity_palette_mapping() -> TerrainPalette {
+    let mut mapping = [0; 256];
+    for i in 1..=255u8 {
+        mapping[i as usize] = i;
+    }
+    mapping
+}
+
+pub(super) fn parse_palette_mapping(table: &toml::Table) -> Result<TerrainPalette> {
     // Default is to map all unmapped colors to solid ground.
     // This means we should have at least one free-space mapping
     // for the level to be playable

@@ -18,6 +18,7 @@ mod dynter;
 mod level;
 mod leveleditor;
 mod levelinfo;
+mod procedural;
 mod rectiter;
 mod starfield;
 pub mod terrain;

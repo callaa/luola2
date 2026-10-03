@@ -20,7 +20,11 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::{Result, anyhow};
 
 use crate::{
-    game::{GameControllerSet, MenuButton, Player, PlayerId, level::LevelInfo, world::World},
+    game::{
+        GameControllerSet, MenuButton, Player, PlayerId,
+        level::{Level, LevelInfo},
+        world::World,
+    },
     gfx::{Color, RenderOptions, Renderer, TextureId, TextureStore},
     math::{Rect, RectF, Vec2},
     sfx::SfxStore,
@@ -63,7 +67,7 @@ pub struct RoundWinner(pub PlayerId, pub bool);
 impl GameRoundState {
     pub fn new(
         players: Vec<Player>,
-        level: &LevelInfo,
+        levelinfo: &LevelInfo,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
         assets: Rc<GameAssets>,
@@ -72,28 +76,31 @@ impl GameRoundState {
         // Load level specific audio
         let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
         sfx.borrow_mut()
-            .load_extra_sound_effects(level.root_path(), &level.extra_sfx());
+            .load_extra_sound_effects(levelinfo.root_path(), &levelinfo.extra_sfx());
 
         let music = Rc::new(RefCell::new(assets.music.clone()));
         {
             let mut music = music.borrow_mut();
-            music.load_extra_music(level.root_path(), &level.extra_music());
-            music.load_extra_music(level.root_path(), &level.music());
+            music.load_extra_music(levelinfo.root_path(), &levelinfo.extra_music());
+            music.load_extra_music(levelinfo.root_path(), &levelinfo.music());
         }
 
         // Load level specific textures
         let mut textures = assets.textures.clone();
-        if let Some(lt) = level.textures() {
+        if let Some(lt) = levelinfo.textures() {
             Rc::make_mut(&mut textures).update_from_config(
                 &renderer.borrow(),
-                level.root_path(),
+                levelinfo.root_path(),
                 lt.clone(),
             )?;
         }
 
+        let (level, script_settings) = Level::load_level(&renderer.borrow(), levelinfo)?;
+
         let world = World::new(
             &players,
             level,
+            levelinfo,
             renderer.clone(),
             controllers.clone(),
             sfx.clone(),
@@ -121,11 +128,11 @@ impl GameRoundState {
 
         let settings = lua.create_table()?;
         settings.set("players", player_settings)?;
-        settings.set("level", lua.to_value(level.script_settings())?)?;
+        settings.set("level", lua.to_value(&script_settings)?)?;
         settings.set(
             "playlist",
             lua.to_value(
-                &level
+                &levelinfo
                     .music()
                     .iter()
                     .map(|filename| {

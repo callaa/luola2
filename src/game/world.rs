@@ -150,6 +150,7 @@ enum DebugMode {
 impl World {
     pub fn new(
         players: &[Player],
+        level: Level,
         levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
@@ -157,10 +158,7 @@ impl World {
         music: Rc<RefCell<MusicStore>>,
         textures: Rc<TextureStore>,
     ) -> Result<Self> {
-        let level = Rc::new(RefCell::new(Level::load_level(
-            &renderer.borrow(),
-            levelinfo,
-        )?));
+        let level = Rc::new(RefCell::new(level));
 
         let mut scripting = ScriptEnvironment::new(renderer.clone(), textures.clone())?;
 

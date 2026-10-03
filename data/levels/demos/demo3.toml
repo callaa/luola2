@@ -3,7 +3,6 @@ title = "Dynamic Terrain Demo"
 thumbnail = "demo3-thumb.png"
 
 terrain = "demo3-level.png"
-artwork = "demo3-level.png"
 
 # Falling sand is enabled by default
 #sand = true

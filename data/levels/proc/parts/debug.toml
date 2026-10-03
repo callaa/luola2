@@ -1,0 +1,11 @@
+artwork = "debug.png"
+terrain = "debug.png"
+
+[subimages]
+red_cross = [0, 0, 16, 16]
+green_cross = [0, 16, 16, 16]
+blue_cross = [0, 32, 16, 16]
+
+[terrain-palette]
+space = 0
+paint = [1, 2, 3]

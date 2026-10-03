@@ -15,11 +15,13 @@
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::Result;
+use anyhow::anyhow;
+use core::ops::Deref;
 use core::slice;
 use sdl3_sys::{
     pixels::{
         SDL_GetPixelFormatName, SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX4MSB,
-        SDL_PIXELFORMAT_INDEX8, SDL_Palette, SDL_SetPaletteColors,
+        SDL_PIXELFORMAT_INDEX8, SDL_Palette, SDL_PixelFormat, SDL_SetPaletteColors,
     },
     rect::SDL_Rect,
     surface::{
@@ -43,7 +45,22 @@ impl Drop for Image {
     }
 }
 
+impl Clone for Image {
+    fn clone(&self) -> Self {
+        unsafe { self.0.as_mut() }.unwrap().refcount += 1;
+        Self(self.0)
+    }
+}
+
 impl Image {
+    pub fn blank(width: i32, height: i32, format: SDL_PixelFormat) -> Result<Image> {
+        let surface = unsafe { SDL_CreateSurface(width, height, format) };
+        if surface.is_null() {
+            return Err(SdlError::get_error("SDL_CreateSurface").into());
+        }
+        Ok(Image(surface))
+    }
+
     pub fn from_file(path: PathBuf) -> Result<Image> {
         let path = pathbuf_to_cstring(path)?;
         let surface = unsafe { SDL_LoadPNG(path.as_ptr()) };
@@ -192,6 +209,17 @@ impl Image {
         })
     }
 
+    pub fn indexed_pixels_mut(&mut self) -> Option<&mut [u8]> {
+        let surface = unsafe { &*self.0 };
+        if surface.format != SDL_PIXELFORMAT_INDEX8 {
+            return None;
+        }
+
+        Some(unsafe {
+            slice::from_raw_parts_mut(surface.pixels as *mut u8, (surface.w * surface.h) as usize)
+        })
+    }
+
     pub fn palette(&self) -> Option<&SDL_Palette> {
         unsafe { SDL_GetSurfacePalette(self.0).as_ref() }
     }
@@ -249,5 +277,49 @@ impl Image {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum ImageAlign {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Center,
+}
+
+impl ImageAlign {
+    pub fn offset(&self, w: i32, h: i32) -> (i32, i32) {
+        match self {
+            Self::TopLeft => (0, 0),
+            Self::TopRight => (-w, 0),
+            Self::BottomLeft => (0, -h),
+            Self::BottomRight => (-w, -h),
+            Self::Center => (-w / 2, -h / 2),
+        }
+    }
+}
+
+impl mlua::FromLua for ImageAlign {
+    fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Nil => Ok(Self::TopLeft),
+            mlua::Value::String(s) => match s.as_bytes().deref() {
+                b"top-left" => Ok(Self::TopLeft),
+                b"top-right" => Ok(Self::TopRight),
+                b"bottom-left" => Ok(Self::BottomLeft),
+                b"bottom-right" => Ok(Self::BottomRight),
+                b"center" => Ok(Self::Center),
+                unknown => {
+                    Err(anyhow!("Unknown alignment: {}", str::from_utf8(unknown).unwrap()).into())
+                }
+            },
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "ImageAlign".to_owned(),
+                message: Some("expected ImageAlign".to_string()),
+            }),
+        }
     }
 }

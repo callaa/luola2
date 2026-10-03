@@ -1,0 +1,32 @@
+title = "Asteroid Field"
+thumbnail = "asteroid-field.png"
+terrain = "asteroid-field.lua"
+script = "levelscripts.lua"
+
+starfield = true
+sand = false
+gravity = 0
+
+# Script config is passed to the level generation script
+[script-config]
+width = 1800
+height = 1200
+
+asteroids = {
+	l = 5,
+	m = 20,
+	s = 32,
+}
+
+# Script settings are used by the actual game. Settings may be modified by the generator script
+[script-settings]
+wind = false
+
+[textures]
+lvl_grav = {
+	file = "gravity-generator.png",
+	frames = 5,
+	width = 150,
+	height = 6,
+	duration = 0.5,
+}
