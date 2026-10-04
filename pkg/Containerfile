@@ -1,5 +1,5 @@
 # Container for making AppImage and Windows builds
-FROM rust:1.92
+FROM rust:1.99
 
 # Build deps
 # See https://wiki.libsdl.org/SDL3/README-linux#build-dependencies
