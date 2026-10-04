@@ -110,6 +110,8 @@ impl AppState {
             if !args.noaudio {
                 if !MIX_Init() {
                     SdlError::log("Couldn't init SDL Mixer");
+                } else {
+                    //Mixer::list_supported_decoders();
                 }
             }
         }

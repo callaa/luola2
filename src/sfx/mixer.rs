@@ -4,15 +4,15 @@ use std::{
     rc::Rc,
 };
 
-use core::ffi::c_void;
 use smallvec::SmallVec;
+use std::ffi::{CStr, c_void};
 
 use sdl3_mixer_sys::mixer::{
     MIX_Audio, MIX_AudioMSToFrames, MIX_CreateMixerDevice, MIX_CreateTrack, MIX_DestroyAudio,
-    MIX_DestroyMixer, MIX_GetTrackAudio, MIX_Mixer, MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER,
-    MIX_PlayTrack, MIX_SetTrackAudio, MIX_SetTrackFrequencyRatio, MIX_SetTrackGain,
-    MIX_SetTrackStereo, MIX_SetTrackStoppedCallback, MIX_StereoGains, MIX_StopTrack, MIX_Track,
-    MIX_TrackPlaying,
+    MIX_DestroyMixer, MIX_GetAudioDecoder, MIX_GetNumAudioDecoders, MIX_GetTrackAudio, MIX_Mixer,
+    MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, MIX_PlayTrack, MIX_SetTrackAudio,
+    MIX_SetTrackFrequencyRatio, MIX_SetTrackGain, MIX_SetTrackStereo, MIX_SetTrackStoppedCallback,
+    MIX_StereoGains, MIX_StopTrack, MIX_Track, MIX_TrackPlaying,
 };
 use sdl3_sys::{
     audio::SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
@@ -109,6 +109,13 @@ impl Mixer {
             music,
             sounds_enabled: true,
             music_enabled: true,
+        }
+    }
+
+    pub fn list_supported_decoders() {
+        for i in 0..unsafe { MIX_GetNumAudioDecoders() } {
+            let decoder = unsafe { CStr::from_ptr(MIX_GetAudioDecoder(i)) };
+            log::info!("SDL_Mixer supported decoder: {:?}", decoder);
         }
     }
 
