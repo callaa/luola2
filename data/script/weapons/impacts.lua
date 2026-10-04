@@ -257,7 +257,7 @@ function impacts.freezer(this, terrain, obj)
 			type = "Freezer",
 		})
 	end
-	sfx.explosion(SFXSET_FREEZING(), this.pos, 0.1)
+	sfx.explosion(sounds.freezing(), this.pos, 0.1)
 end
 
 function impacts.nitroglycerin(this, terrain, obj)

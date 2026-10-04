@@ -27,7 +27,7 @@ return {
 	click = s("stone-click"),
 	small_explosion = s("small-explosion"),
 	big_explosion = s("big-explosion"),
-	freezings = s("freezing", "freezing2"),
+	freezing = s("freezing", "freezing2"),
 	glass_break = s("glass-break"),
 	grenade_launcher = s("grenade-launcher"),
 	big_launcher = s("big-launcher"),

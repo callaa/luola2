@@ -470,7 +470,7 @@ function weapons.autorepair(ship, trigger)
 		end)
 		Scheduler.add_to_object(ship, 0, function(ship)
 			if ship.state.autorepair then
-				sfx.weapon(SFXSET_REPAIR(), 0.1)
+				sfx.weapon(sounds.repair(), 0.1)
 				return 0.8
 			end
 		end)
