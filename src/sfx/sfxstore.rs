@@ -57,9 +57,9 @@ impl SfxStore {
             let audio = unsafe { MIX_LoadAudio(mixer, pathstr.as_ptr(), true) };
 
             if audio.is_null() {
-                SdlError::log("Couldn't load file");
+                SdlError::log(&format!("Couldn't load {:?}", pathstr));
             } else {
-                log::debug!("Loaded sound effect: {:?}", name);
+                log::debug!("Loaded sound effect: {:?}", pathstr);
                 self.sample_map
                     .insert(name.into_encoded_bytes(), Audio::new(audio));
             }
