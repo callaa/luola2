@@ -97,6 +97,8 @@ impl<'a> LevelEditor<'a> {
 
         let hole_rect = Rect::new(center_x - r, center_y - r, r * 2, r * 2);
 
+        let gravity = self.level.gravity;
+
         for (i, j, tile) in self.level.tile_iterator_lc_mut(hole_rect) {
             if let TileContentHint::Destructible = tile.content_hint {
                 let mut dirty = false;
@@ -176,6 +178,7 @@ impl<'a> LevelEditor<'a> {
                                         *ter,
                                         None,
                                         Color::from_argb_u32(*art),
+                                        gravity < 0.01
                                     ),
                                 ));
                             }

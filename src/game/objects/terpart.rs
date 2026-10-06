@@ -37,6 +37,7 @@ pub struct TerrainParticle {
     phys: PhysicalObject,
     texture: Option<TextureId>,
     color: Color,
+    lifetime: f32,
     wind: bool,       // does wind and jitter affect this particle
     stain: bool,      // if true, recolor an existing pixel rather than creating a new one
     terrain: Terrain, // if zero, this particle won't turn into real terrain (unused in stain mode)
@@ -69,6 +70,7 @@ impl mlua::FromLua for TerrainParticle {
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
                 wind: table.get::<Option<bool>>("wind")?.unwrap_or(true),
+                lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(60.6),
                 destroyed: false,
             })
         } else {
@@ -82,11 +84,11 @@ impl mlua::FromLua for TerrainParticle {
 }
 
 impl TerrainParticle {
-    pub fn new(pos: Vec2, terrain: Terrain, texture: Option<TextureId>, color: Color) -> Self {
+    pub fn new(pos: Vec2, terrain: Terrain, texture: Option<TextureId>, color: Color, zerogravity: bool) -> Self {
         TerrainParticle {
             phys: PhysicalObject {
                 pos,
-                vel: Vec2::ZERO,
+                vel: if zerogravity { Vec2::for_rad(fastrand::f32() * 2.0 * std::f32::consts::PI, fastrand::f32() * 100.0 + 50.0) } else { Vec2::ZERO },
                 imass: 100.0,
                 radius: LEVEL_SCALE / 2.0,
                 drag: 0.3,
@@ -94,11 +96,12 @@ impl TerrainParticle {
                 terrain_collision_mode: TerrainCollisionMode::Simple,
                 antigrav: false,
             },
+            lifetime: 60.0,
             texture,
             terrain,
             color,
             stain: false,
-            wind: true,
+            wind: !zerogravity,
             destroyed: false,
         }
     }
@@ -130,9 +133,6 @@ impl TerrainParticle {
             if self.terrain != 0 || self.stain {
                 if terrain::is_level_boundary(ter) || terrain::is_effective_base(ter) {
                     // Don't accumulate on level boundaries or bases.
-                    // We don't want any new terrain sticking to the sides or top of the level.
-                    // Bottom would be OK in most cases, but the bottom is typically already covered
-                    // by water or a thick layer of terrain.
                     // Bases we don't want covered because it could make them easily unusable by
                     // accident. (Lore explanation: the pit crew keeps cleaning them up.)
                     return None;
@@ -145,6 +145,11 @@ impl TerrainParticle {
 
                 return Some((self.pos(), self.terrain, self.color));
             }
+        }
+
+        self.lifetime -= timestep;
+        if self.lifetime <= 0.0 {
+            self.destroyed = true;
         }
 
         None

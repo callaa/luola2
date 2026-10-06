@@ -28,9 +28,12 @@ pub struct Vec2(pub f32, pub f32);
 impl Vec2 {
     pub const ZERO: Vec2 = Vec2(0.0, 0.0);
 
-    pub fn for_angle(a: f32, mag: f32) -> Self {
-        let arad = a * PI / 180.0;
+    pub fn for_rad(arad: f32, mag: f32) -> Self {
         Vec2(arad.cos() * mag, arad.sin() * mag)
+    }
+
+    pub fn for_angle(a: f32, mag: f32) -> Self {
+        Self::for_rad(a * PI / 180.0, mag)
     }
 
     pub fn angle(&self) -> f32 {
