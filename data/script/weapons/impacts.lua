@@ -90,7 +90,7 @@ function impacts.diggerbeam(this, terrain, obj)
 	this:destroy()
 	game.effect("MakeBigHole", {
 		pos = this.pos,
-		r = 2,
+		r = 4,
 		dust = 0.5
 	})
 	sfx.explosion(sounds.sand(), this.pos, 0.3)
