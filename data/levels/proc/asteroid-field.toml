@@ -24,9 +24,9 @@ wind = false
 
 [textures]
 lvl_grav = {
-	file = "gravity-generator.png",
-	frames = 5,
-	width = 150,
-	height = 6,
-	duration = 0.5,
+	file = "tex/grav.png",
+	frames = 7,
+	width = 32,
+	height = 18,
+	duration = 0.7,
 }

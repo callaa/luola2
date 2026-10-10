@@ -1,7 +1,7 @@
 local Utils = require("utils")
 
 local asteroids = Utils.partbuckets(images.load_set("parts/asteroids.toml"))
-local basestations = Utils.partbuckets(images.load_set("parts/basestations.toml"))
+local bases = Utils.partbuckets(images.load_set("parts/bases.toml"))
 -- debugparts = images.load_set("parts/debug.toml")
 
 --level:rand_set_seed(1)
@@ -33,7 +33,7 @@ end
 level.settings.gravity_generators = {}
 
 for _ = 1, 4 do
-	local base = basestations.base:rand()
+	local base = bases.spacebase:rand()
 	local _, point = Utils.take_random_item(points)
 	if point == nil then
 		print("No room for more bases!")

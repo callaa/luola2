@@ -11,7 +11,7 @@ local function create_gravity_generator(x, y, radius)
 	game.effect("AddFixedObject", {
 		pos = Vec2(x, y),
         texture = textures.get("lvl_grav"),
-		radius = 5,
+		radius = 9,
         id = UniqID.new(),
         state = {
 			on_bullet_hit = gravgen_bullet_hit,
