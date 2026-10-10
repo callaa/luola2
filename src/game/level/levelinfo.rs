@@ -112,9 +112,9 @@ struct NoSpawnZoneToml {
 }
 
 #[derive(serde::Deserialize, Clone, Debug, Default)]
-struct TerrainColors {
-    water: Option<u32>,
-    snow: Option<u32>,
+pub struct TerrainColors {
+    pub water: Option<u32>,
+    pub snow: Option<u32>,
 }
 
 impl LevelInfo {
@@ -319,6 +319,10 @@ impl LevelInfo {
 
     pub fn gravity(&self) -> f32 {
         self.gravity
+    }
+
+    pub fn colors(&self) -> &TerrainColors {
+        &self.colors
     }
 
     pub(super) fn find_water_color(

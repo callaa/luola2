@@ -1,0 +1,14 @@
+title = "Worm Cave"
+thumbnail = "wormcave.png"
+terrain = "wormcave.lua"
+background = "wormcave-bg.png"
+
+[colors]
+water = 0xff295ac7
+
+[script-config]
+width = 1900
+height = 1200
+
+[script-settings]
+wind = false

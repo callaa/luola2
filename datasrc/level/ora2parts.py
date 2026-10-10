@@ -117,11 +117,11 @@ def calculate_bounds(offset, layer):
         dims = [calculate_bounds(offset, l) for l in layer]
         x, y, w, h = dims[0]
         left, top, right, bottom = x, y, x+w, y+h
-        for d in dims[1:]:
-            left = min(x, d[0])
-            top = min(y, d[1])
-            right = max(right, d[0] + d[2])
-            bottom = max(bottom, d[1] + d[3])
+        for (x2, y2, w2, h2) in dims:
+            left = min(left, x2)
+            top = min(top, y2)
+            right = max(right, x2+w2)
+            bottom = max(bottom, y2+h2)
 
         return (left, top, right-left, bottom-top)
     else:

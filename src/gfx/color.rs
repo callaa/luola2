@@ -152,6 +152,15 @@ impl Color {
         a << 24 | (self.r_u8() as u32) << 16 | (self.g_u8() as u32) << 8 | self.b_u8() as u32
     }
 
+    pub fn as_premultiplied_argb_u32(&self) -> u32 {
+        let a = (self.a * 255.0).clamp(0.0, 255.0);
+
+        (a as u32) << 24
+            | ((self.r * a).clamp(0.0, 255.0) as u32) << 16
+            | ((self.g * a).clamp(0.0, 255.0) as u32) << 8
+            | (self.b * a).clamp(0.0, 255.0) as u32
+    }
+
     pub fn blend(&self, over: Color) -> Color {
         let a = over.a + self.a * (1.0 - over.a);
         Color {
@@ -161,6 +170,26 @@ impl Color {
             a,
         }
     }
+
+    pub fn blend_argb8888(under: u32, over: u32) -> u32 {
+        let under: [u8; 4] = under.to_le_bytes();
+        let over: [u8; 4] = over.to_le_bytes();
+
+        let a = 255 - over[3] as u32;
+        let out = [
+            over[0] + u8_mult(under[0] as u32, a) as u8,
+            over[1] + u8_mult(under[1] as u32, a) as u8,
+            over[2] + u8_mult(under[2] as u32, a) as u8,
+            over[3] + u8_mult(under[3] as u32, a) as u8,
+        ];
+
+        u32::from_le_bytes(out)
+    }
+}
+
+fn u8_mult(a: u32, b: u32) -> u32 {
+    let c = a * b + 0x80;
+    ((c >> 8) + c) >> 8
 }
 
 impl Sub for Color {

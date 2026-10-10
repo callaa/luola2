@@ -1,0 +1,25 @@
+artwork = "bases-art.png"
+terrain = "bases-terrain.png"
+
+[subimages]
+decor_4 = [2, 43, 5, 19]
+decor_3 = [44, 24, 12, 15]
+decor_2 = [55, 7, 6, 13]
+decor_1 = [45, 5, 8, 15]
+floatdecor_1 = [49, 65, 11, 21]
+floatbase_1 = [1, 104, 37, 10]
+smalluwbase_1 = [1, 75, 24, 17]
+uwfloatbase_1 = [1, 64, 37, 10]
+smallbase_1 = [0, 21, 24, 16]
+base_1 = [0, 1, 41, 17]
+spacebase_1 = [12, 43, 52, 18]
+
+[terrain-palette]
+space = 0
+ground = 1
+water = 2
+highexplosive = 3
+noregenbase = 4
+basesupport = 5
+walkway = 6
+base = 7

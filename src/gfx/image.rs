@@ -18,9 +18,10 @@ use anyhow::Result;
 use anyhow::anyhow;
 use core::ops::Deref;
 use core::slice;
+use sdl3_sys::surface::SDL_PremultiplySurfaceAlpha;
 use sdl3_sys::{
     pixels::{
-        SDL_GetPixelFormatName, SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX4MSB,
+        SDL_Color, SDL_GetPixelFormatName, SDL_PIXELFORMAT_ARGB8888, SDL_PIXELFORMAT_INDEX4MSB,
         SDL_PIXELFORMAT_INDEX8, SDL_Palette, SDL_PixelFormat, SDL_SetPaletteColors,
     },
     rect::SDL_Rect,
@@ -58,6 +59,11 @@ impl Image {
         if surface.is_null() {
             return Err(SdlError::get_error("SDL_CreateSurface").into());
         }
+
+        if format == SDL_PIXELFORMAT_INDEX8 {
+            Self::set_trivial_palette(surface);
+        }
+
         Ok(Image(surface))
     }
 
@@ -71,6 +77,13 @@ impl Image {
         Ok(Image(surface))
     }
 
+    pub fn premultiplied(self) -> Result<Self> {
+        if unsafe { !SDL_PremultiplySurfaceAlpha(self.0, false) } {
+            return Err(SdlError::get_error("SDL_LoadPNG").into());
+        }
+        Ok(self)
+    }
+
     pub fn width(&self) -> i32 {
         unsafe { (*self.0).w }
     }
@@ -79,11 +92,36 @@ impl Image {
         unsafe { (*self.0).h }
     }
 
+    pub fn bounds(&self) -> Rect {
+        Rect::new(0, 0, self.width(), self.height())
+    }
+
+    fn set_trivial_palette(surface: *mut SDL_Surface) {
+        let new_palette = unsafe { SDL_CreateSurfacePalette(surface) };
+        let mut colors = Vec::with_capacity(256);
+        for i in 0..=255u8 {
+            colors.push(SDL_Color {
+                r: i,
+                g: i,
+                b: i,
+                a: 255,
+            });
+        }
+        unsafe {
+            SDL_SetPaletteColors(new_palette, colors.as_ptr(), 0, 256);
+        }
+    }
+
     pub fn ensure_index8(self) -> SdlResult<Image> {
         let desired_format = SDL_PIXELFORMAT_INDEX8;
 
         let surface = unsafe { &*self.0 };
+        let old_palette = unsafe { SDL_GetSurfacePalette(self.0) };
+
         if surface.format == desired_format {
+            if old_palette.is_null() {
+                Self::set_trivial_palette(self.0);
+            }
             return Ok(self);
         }
 
@@ -95,15 +133,17 @@ impl Image {
             ));
         }
 
-        let old_palette = unsafe { SDL_GetSurfacePalette(self.0) };
-        let new_palette = unsafe { SDL_CreateSurfacePalette(new_surface) };
-        unsafe {
-            SDL_SetPaletteColors(
-                new_palette,
-                (*old_palette).colors,
-                0,
-                (*old_palette).ncolors,
-            );
+        if old_palette.is_null() {
+            Self::set_trivial_palette(new_surface);
+        } else {
+            unsafe {
+                SDL_SetPaletteColors(
+                    SDL_CreateSurfacePalette(new_surface),
+                    (*old_palette).colors,
+                    0,
+                    (*old_palette).ncolors,
+                );
+            }
         }
 
         match surface.format {
@@ -155,13 +195,13 @@ impl Image {
     }
 
     pub fn ensure_argb888(self) -> SdlResult<Image> {
-        let format = SDL_PIXELFORMAT_ARGB8888;
+        let desired_format = SDL_PIXELFORMAT_ARGB8888;
 
-        if unsafe { &*self.0 }.format == format {
+        if unsafe { &*self.0 }.format == desired_format {
             return Ok(self);
         }
 
-        let newsurface = unsafe { SDL_ConvertSurface(self.0, format) };
+        let newsurface = unsafe { SDL_ConvertSurface(self.0, desired_format) };
 
         if newsurface.is_null() {
             return Err(SdlError::get_error("Couldn't convert surface"));
@@ -284,8 +324,10 @@ impl Image {
 pub enum ImageAlign {
     TopLeft,
     TopRight,
+    TopCenter,
     BottomLeft,
     BottomRight,
+    BottomCenter,
     Center,
 }
 
@@ -294,8 +336,10 @@ impl ImageAlign {
         match self {
             Self::TopLeft => (0, 0),
             Self::TopRight => (-w, 0),
+            Self::TopCenter => (-w / 2, 0),
             Self::BottomLeft => (0, -h),
             Self::BottomRight => (-w, -h),
+            Self::BottomCenter => (-w / 2, -h),
             Self::Center => (-w / 2, -h / 2),
         }
     }
@@ -308,8 +352,10 @@ impl mlua::FromLua for ImageAlign {
             mlua::Value::String(s) => match s.as_bytes().deref() {
                 b"top-left" => Ok(Self::TopLeft),
                 b"top-right" => Ok(Self::TopRight),
+                b"top-center" => Ok(Self::TopCenter),
                 b"bottom-left" => Ok(Self::BottomLeft),
                 b"bottom-right" => Ok(Self::BottomRight),
+                b"bottom-center" => Ok(Self::BottomCenter),
                 b"center" => Ok(Self::Center),
                 unknown => {
                     Err(anyhow!("Unknown alignment: {}", str::from_utf8(unknown).unwrap()).into())

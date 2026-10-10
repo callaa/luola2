@@ -1,0 +1,17 @@
+artwork = "rocks-art.png"
+terrain = "rocks-terrain.png"
+
+[subimages]
+s_7 = [203, 10, 38, 39]
+s_6 = [199, 74, 46, 40]
+s_5 = [74, 77, 48, 46]
+s_4 = [6, 86, 50, 21]
+s_3 = [135, 15, 47, 35]
+s_2 = [70, 13, 51, 40]
+s_1 = [5, 8, 42, 47]
+
+[terrain-palette]
+space = 0
+ground = 1
+water = 2
+ground-i = 3

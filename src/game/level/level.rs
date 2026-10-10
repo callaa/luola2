@@ -174,13 +174,8 @@ impl mlua::FromLua for Forcefield {
 impl Level {
     pub fn load_level(renderer: &Renderer, info: &LevelInfo) -> Result<(Level, toml::Table)> {
         let (terrain, artwork, script_settings) =
-            if let Some(script_name) = info.generation_script_name() {
-                let pc = ProceduralLevel::generate(
-                    info.root_path().into(),
-                    script_name,
-                    info.script_config(),
-                    info.script_settings(),
-                )?;
+            if info.is_generated() {
+                let pc = ProceduralLevel::generate(&info)?;
                 (pc.terrain, pc.artwork, pc.script_settings)
             } else {
                 (

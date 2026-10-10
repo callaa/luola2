@@ -1,0 +1,9 @@
+artwork = "dirt-art.png"
+terrain = "ground.png"
+
+[subimages]
+dirt = [0, 0, 256, 256]
+
+[terrain-palette]
+space = 0
+ground = 1
