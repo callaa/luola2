@@ -77,7 +77,7 @@ impl GameRoundState {
         let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
         sfx.borrow_mut().load_extra_sound_effects(
             preloaded_level.info.root_path(),
-            &preloaded_level.info.extra_sfx(),
+            preloaded_level.info.extra_sfx(),
         );
 
         let music = Rc::new(RefCell::new(assets.music.clone()));
@@ -85,11 +85,11 @@ impl GameRoundState {
             let mut music = music.borrow_mut();
             music.load_extra_music(
                 preloaded_level.info.root_path(),
-                &preloaded_level.info.extra_music(),
+                preloaded_level.info.extra_music(),
             );
             music.load_extra_music(
                 preloaded_level.info.root_path(),
-                &preloaded_level.info.music(),
+                preloaded_level.info.music(),
             );
         }
 
@@ -102,7 +102,7 @@ impl GameRoundState {
                 if let Some(dot) = dot {
                     &filename[..dot]
                 } else {
-                    &filename
+                    filename
                 }
                 .to_owned()
             })

@@ -26,12 +26,18 @@ pub fn make_lua_sfx_api(
 
         api.set(
             "set_sfx_volume",
-            lua.create_function(move |_, vol: f32| Ok(mixer.borrow_mut().set_sfx_volume(vol)))?,
+            lua.create_function(move |_, vol: f32| {
+                mixer.borrow_mut().set_sfx_volume(vol);
+                Ok(())
+            })?,
         )?;
 
         api.set(
             "set_music_volume",
-            lua.create_function(move |_, vol: f32| Ok(mixer2.borrow_mut().set_music_volume(vol)))?,
+            lua.create_function(move |_, vol: f32| {
+                mixer2.borrow_mut().set_music_volume(vol);
+                Ok(())
+            })?,
         )?;
     }
 

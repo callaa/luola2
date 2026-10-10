@@ -311,7 +311,7 @@ impl ProceduralLevel {
 
         for ((ter_row, _), (art_row, _)) in terrain_iterator.zip(artwork_iterator) {
             for (t, a) in ter_row.iter_mut().zip(art_row.iter_mut()) {
-                *t = *t | TER_BIT_WATER;
+                *t |= TER_BIT_WATER;
                 if *a == 0 {
                     *a = water_color;
                 } else {
@@ -437,7 +437,8 @@ impl UserData for ProceduralLevel {
         methods.add_method_mut(
             "put_image",
             |_, this, (x, y, image, align, mode): (i32, i32, ImagePart, ImageAlign, BlitMode)| {
-                Ok(this.put_image(x, y, &image, align, mode))
+                this.put_image(x, y, &image, align, mode);
+                Ok(())
             },
         );
 
@@ -451,11 +452,15 @@ impl UserData for ProceduralLevel {
                 HoleTemplate,
                 ImageAlign,
                 Option<u8>,
-            )| { Ok(this.make_hole(x, y, &template, align, threshold.unwrap_or(0))) },
+            )| {
+                this.make_hole(x, y, &template, align, threshold.unwrap_or(0));
+                Ok(())
+            },
         );
 
         methods.add_method_mut("put_water", |_, this, (rect, alpha): (Rect, f32)| {
-            Ok(this.put_water(rect, this.water_color, alpha))
+            this.put_water(rect, this.water_color, alpha);
+            Ok(())
         });
 
         // Sampling
@@ -613,12 +618,14 @@ impl UserData for HoleTemplate {
 
     fn add_methods<M: mlua::prelude::LuaUserDataMethods<Self>>(methods: &mut M) {
         methods.add_method_mut("draw_circle", |_, this, (pos, r): (Vec2, i32)| {
-            Ok(this.draw_circle(pos.0 as i32, pos.1 as i32, r))
+            this.draw_circle(pos.0 as i32, pos.1 as i32, r);
+            Ok(())
         });
         methods.add_method_mut(
             "draw_line",
             |_, this, (start, end, r): (Vec2, Vec2, i32)| {
-                Ok(this.draw_line(start, end, r, r as f32 * 0.5))
+                this.draw_line(start, end, r, r as f32 * 0.5);
+                Ok(())
             },
         );
 
