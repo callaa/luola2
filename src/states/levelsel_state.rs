@@ -96,7 +96,15 @@ impl LevelSelection {
             .levels
             .iter()
             .map(|level| {
-                let (w, h) = if let Some(t) = level.thumbnail() {
+                let thumbnail = match Texture::from_file(&renderer.borrow(), level.thumbnail_path())
+                {
+                    Ok(t) => Some(t),
+                    Err(err) => {
+                        log::warn!("Couldn't load thumbnail: {}", err);
+                        None
+                    }
+                };
+                let (w, h) = if let Some(t) = &thumbnail {
                     (t.width(), t.height())
                 } else {
                     (512.0, 512.0)
@@ -105,7 +113,7 @@ impl LevelSelection {
                 let xpos = last_xpos + 40.0;
                 last_xpos = xpos + w;
                 LevelBox {
-                    thumbnail: level.thumbnail().cloned(),
+                    thumbnail,
                     title: renderer
                         .borrow()
                         .fontset()

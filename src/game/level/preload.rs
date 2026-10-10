@@ -5,6 +5,9 @@ use crate::{
     gfx::Image,
 };
 
+use std::sync::mpsc;
+use std::thread;
+
 /**
  * Preloaded level artwork and terrain.
  *
@@ -17,6 +20,60 @@ pub struct PreloadedLevel {
     pub terrain: Image,
     pub script_settings: toml::Table,
     pub info: LevelInfo,
+}
+
+pub struct PreloadingLevel {
+    level: Option<Result<PreloadedLevel>>,
+    recv: mpsc::Receiver<Result<PreloadedLevel>>,
+}
+
+pub enum PreloadingResult<'a> {
+    Ok(&'a PreloadedLevel),
+    Failed,
+    Awaiting,
+}
+
+impl PreloadingLevel {
+    pub fn start(info: LevelInfo) -> Self {
+        let (send, recv) = mpsc::channel();
+
+        thread::spawn(move || {
+            send.send(preload_level(info)).unwrap();
+        });
+
+        PreloadingLevel { level: None, recv }
+    }
+
+    pub fn try_level(&mut self) -> PreloadingResult<'_> {
+        if self.level.is_some() {
+            match self.level.as_ref().unwrap() {
+                Ok(l) => PreloadingResult::Ok(l),
+                Err(_) => PreloadingResult::Failed,
+            }
+        } else {
+            match self.recv.try_recv() {
+                Ok(l) => {
+                    self.level = Some(l);
+                    match self.level.as_ref().unwrap() {
+                        Ok(l) => PreloadingResult::Ok(l),
+                        Err(_) => PreloadingResult::Failed,
+                    }
+                }
+                Err(mpsc::TryRecvError::Empty) => PreloadingResult::Awaiting,
+                Err(mpsc::TryRecvError::Disconnected) => panic!("Level generation thread died!"),
+            }
+        }
+    }
+
+    pub fn take_level(self) -> Result<PreloadedLevel> {
+        if let Some(level) = self.level {
+            level
+        } else {
+            self.recv
+                .recv()
+                .expect("Level generation thread should have returned a result!")
+        }
+    }
 }
 
 pub fn preload_level(info: LevelInfo) -> Result<PreloadedLevel> {

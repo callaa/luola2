@@ -21,9 +21,9 @@ use crate::{
     demos::AnimatedStarfield,
     game::{
         GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId,
-        level::{LevelInfo, PreloadedLevel, preload_level},
+        level::{LevelInfo, PreloadingLevel},
     },
-    gfx::{Renderer, Texture},
+    gfx::Renderer,
     states::{
         StackableState, StackableStateResult,
         game_assets::GameAssets,
@@ -38,7 +38,7 @@ use crate::{
 enum LevelState {
     Unselected,
     Selected(LevelInfo),
-    Preloaded(PreloadedLevel),
+    Preloaded(Rc<RefCell<PreloadingLevel>>),
 }
 
 /// The super-state for managing the different sub-states of the actual game
@@ -251,15 +251,13 @@ impl StackableState for GameState {
                             "Entered weapon selection state with no level set!"
                         ));
                     }
-                    LevelState::Selected(info) => match preload_level(info.clone()) {
-                        Ok(p) => p,
-                        Err(err) => {
-                            return StackableStateResult::Error(err);
-                        }
-                    },
+                    LevelState::Selected(info) => {
+                        Rc::new(RefCell::new(PreloadingLevel::start(info.clone())))
+                    }
                     LevelState::Preloaded(p) => p,
                 };
 
+                /*
                 let level_art = match Texture::from_image(&self.renderer.borrow(), &preload.artwork)
                 {
                     Ok(t) => t,
@@ -267,7 +265,9 @@ impl StackableState for GameState {
                         return StackableStateResult::Error(err);
                     }
                 };
+                */
 
+                let preloading_level = Rc::clone(&preload);
                 self.level = LevelState::Preloaded(preload);
 
                 StackableStateResult::Push(Box::new(
@@ -275,7 +275,7 @@ impl StackableState for GameState {
                         self.assets.clone(),
                         &self.players,
                         self.round_winners.len() as i32 + 1,
-                        Some(level_art),
+                        preloading_level,
                         self.starfield.clone(),
                         self.renderer.clone(),
                         &self.controllers.borrow(),
@@ -295,13 +295,15 @@ impl StackableState for GameState {
                             "Entered round start state with no level set!"
                         ));
                     }
-                    LevelState::Selected(info) => match preload_level(info.clone()) {
-                        Ok(p) => p,
-                        Err(err) => {
-                            return StackableStateResult::Error(err);
-                        }
-                    },
-                    LevelState::Preloaded(l) => l,
+                    LevelState::Selected(info) => PreloadingLevel::start(info.clone()),
+                    LevelState::Preloaded(l) => Rc::into_inner(l).expect("there should be no other references to preloading level when starting a new round").into_inner(),
+                };
+
+                let level = match level.take_level() {
+                    Ok(l) => l,
+                    Err(err) => {
+                        return StackableStateResult::Error(err);
+                    }
                 };
 
                 StackableStateResult::Push(Box::new(

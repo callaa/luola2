@@ -79,7 +79,7 @@ fn load_resources(
     let music = MusicStore::new(mixer.clone()).load_bundled_music();
 
     // Load list of levels
-    let mut levels = LevelInfo::load_level_packs(&renderer.borrow())?;
+    let mut levels = LevelInfo::load_level_packs()?;
 
     if levels.is_empty() {
         return Err(anyhow!("No levels found!"));

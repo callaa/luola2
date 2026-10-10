@@ -30,10 +30,7 @@ use anyhow::{Result, anyhow};
 
 use super::terrain::*;
 use crate::{
-    fs::glob_datafiles,
-    game::level::LEVEL_SCALE,
-    gfx::{Renderer, Texture, TextureConfigWithAlts},
-    math::RectF,
+    fs::glob_datafiles, game::level::LEVEL_SCALE, gfx::TextureConfigWithAlts, math::RectF,
 };
 
 #[derive(Clone)]
@@ -44,7 +41,7 @@ pub struct LevelInfo {
     title: String,
     artwork_file: String,
     terrain_file: String,
-    thumbnail: Option<Texture>,
+    thumbnail: String,
     background_file: Option<String>,
     script_file: Option<String>,
     terrain_palette: TerrainPalette,
@@ -118,7 +115,7 @@ pub struct TerrainColors {
 }
 
 impl LevelInfo {
-    pub fn load(path: &Path, renderer: &Renderer) -> Result<LevelInfo> {
+    pub fn load(path: &Path) -> Result<LevelInfo> {
         let content = fs::read_to_string(path)?;
         let info: LevelInfoToml = toml::from_str(&content)?;
         let root = path
@@ -148,14 +145,6 @@ impl LevelInfo {
             .find(|(_, p)| **p == 0)
             .map(|(idx, _)| idx as u8);
 
-        let thumbnail = match Texture::from_file(renderer, root.join(info.thumbnail)) {
-            Ok(t) => Some(t),
-            Err(err) => {
-                log::warn!("Couldn't load thumbnail: {}", err);
-                None
-            }
-        };
-
         let nospawnzones = info
             .nospawnzones
             .iter()
@@ -183,7 +172,7 @@ impl LevelInfo {
             title: info.title,
             artwork_file: info.artwork.unwrap_or(info.terrain.clone()),
             terrain_file: info.terrain,
-            thumbnail,
+            thumbnail: info.thumbnail,
             background_file: info.background,
             script_file: info.script,
             terrain_palette,
@@ -202,12 +191,12 @@ impl LevelInfo {
         })
     }
 
-    pub fn load_level_packs(renderer: &Renderer) -> Result<Vec<LevelInfo>> {
+    pub fn load_level_packs() -> Result<Vec<LevelInfo>> {
         let files = glob_datafiles("levels", "*/*.toml")?;
 
         Ok(files
             .iter()
-            .filter_map(|f| match LevelInfo::load(f, renderer) {
+            .filter_map(|f| match LevelInfo::load(f) {
                 Ok(l) => Some(l),
                 Err(err) => {
                     error!("Couldn't load level info: {}", err);
@@ -266,8 +255,8 @@ impl LevelInfo {
         self.terrain_file == self.artwork_file && !self.is_generated()
     }
 
-    pub fn thumbnail(&self) -> Option<&Texture> {
-        self.thumbnail.as_ref()
+    pub fn thumbnail_path(&self) -> PathBuf {
+        self.root.join(&self.thumbnail)
     }
 
     pub fn background_path(&self) -> Option<PathBuf> {

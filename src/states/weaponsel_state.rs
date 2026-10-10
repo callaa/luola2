@@ -21,7 +21,10 @@ use anyhow::Result;
 use super::{StackableState, StackableStateResult};
 use crate::{
     demos::AnimatedStarfield,
-    game::{GameControllerSet, MappedKey, MenuButton, Player, PlayerId, level::LEVEL_SCALE},
+    game::{
+        GameControllerSet, MappedKey, MenuButton, Player, PlayerId,
+        level::{LEVEL_SCALE, PreloadingLevel, PreloadingResult},
+    },
     gfx::{
         Color, RenderDest, RenderMode, RenderOptions, RenderTextDest, RenderTextOptions, Renderer,
         Text, TextOutline, Texture, make_button_icon,
@@ -36,12 +39,20 @@ struct Texts {
     flavor_text: Text,
 }
 
+enum BackgrounState {
+    Loading(Rc<RefCell<PreloadingLevel>>),
+    Loaded {
+        background: Texture,
+        background_rect: RectF,
+        background_scroll: Vec2,
+        background_fadein: f32,
+    },
+}
+
 pub struct WeaponSelection {
     starfield: Rc<RefCell<AnimatedStarfield>>,
     assets: Rc<GameAssets>,
-    background: Option<Texture>,
-    background_rect: RectF,
-    background_scroll: Vec2,
+    background: BackgrounState,
     round_text: Text,
     renderer: Rc<RefCell<Renderer>>,
     players: Vec<PlayerWeaponChoice>,
@@ -49,7 +60,6 @@ pub struct WeaponSelection {
     longest_weapon_text_width: f32,
     flavortext_selection: usize,
     fadein: f32,
-    background_fadein: f32,
     start_timer: Option<f32>,
 }
 
@@ -147,7 +157,7 @@ impl WeaponSelection {
         assets: Rc<GameAssets>,
         players: &[Player],
         round: i32,
-        background: Option<Texture>,
+        preloading_level: Rc<RefCell<PreloadingLevel>>,
         starfield: Rc<RefCell<AnimatedStarfield>>,
         renderer: Rc<RefCell<Renderer>>,
         controllers: &GameControllerSet,
@@ -216,18 +226,10 @@ impl WeaponSelection {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let background_rect = if let Some(bg) = &background {
-            Self::make_background_rect(bg, &renderer.borrow())
-        } else {
-            RectF::new(0.0, 0.0, 0.0, 0.0)
-        };
-
         let flavortext_selection = choices[0].selection;
         Ok(Self {
             assets,
-            background,
-            background_rect,
-            background_scroll: Vec2(15.0, 8.0),
+            background: BackgrounState::Loading(preloading_level),
             texts,
             players: choices,
             round_text,
@@ -237,7 +239,6 @@ impl WeaponSelection {
             flavortext_selection,
             start_timer: None,
             fadein: 0.0,
-            background_fadein: 0.0,
         })
     }
 
@@ -373,13 +374,19 @@ impl WeaponSelection {
 
         // Render background
         self.starfield.borrow().render(renderer);
-        if let Some(bg) = &self.background {
-            bg.render(
+        if let BackgrounState::Loaded {
+            background,
+            background_rect,
+            background_fadein,
+            ..
+        } = &self.background
+        {
+            background.render(
                 renderer,
                 &RenderOptions {
-                    source: Some(self.background_rect),
+                    source: Some(*background_rect),
                     dest: RenderDest::Fill,
-                    color: Color::WHITE.with_alpha(self.background_fadein),
+                    color: Color::WHITE.with_alpha(*background_fadein),
                     ..Default::default()
                 },
             );
@@ -540,8 +547,13 @@ impl StackableState for WeaponSelection {
             .iter_mut()
             .for_each(|t| t.flavor_text.set_wrapwidth(ww));
 
-        if let Some(bg) = &self.background {
-            self.background_rect = Self::make_background_rect(bg, &self.renderer.borrow());
+        if let BackgrounState::Loaded {
+            background,
+            background_rect,
+            ..
+        } = &mut self.background
+        {
+            *background_rect = Self::make_background_rect(background, &self.renderer.borrow());
         }
     }
 
@@ -550,19 +562,49 @@ impl StackableState for WeaponSelection {
         self.starfield.borrow_mut().step(timestep);
 
         self.fadein = (self.fadein + timestep).min(1.0);
-        self.background_fadein = (self.background_fadein + timestep * 0.3).min(1.0);
 
-        if let Some(bg) = &self.background {
-            self.background_rect = self.background_rect + self.background_scroll * timestep;
-            if self.background_rect.right() >= bg.width() || self.background_rect.x() <= 0.0 {
-                self.background_scroll =
-                    self.background_scroll.element_wise_product(Vec2(-1.0, 1.0));
+        if let BackgrounState::Loading(preload) = &self.background {
+            let level_art = match preload.borrow_mut().try_level() {
+                PreloadingResult::Ok(level) => {
+                    match Texture::from_image(&self.renderer.borrow(), &level.artwork) {
+                        Ok(tex) => Some(tex),
+                        Err(e) => return StackableStateResult::Error(e),
+                    }
+                }
+                PreloadingResult::Failed => None,
+                PreloadingResult::Awaiting => None,
+            };
+
+            if let Some(level_art) = level_art {
+                let background_rect =
+                    Self::make_background_rect(&level_art, &self.renderer.borrow());
+
+                self.background = BackgrounState::Loaded {
+                    background: level_art,
+                    background_rect,
+                    background_scroll: Vec2(15.0, 8.0),
+                    background_fadein: 0.0,
+                }
+            }
+        }
+
+        if let BackgrounState::Loaded {
+            background,
+            background_rect,
+            background_scroll,
+            background_fadein,
+        } = &mut self.background
+        {
+            *background_rect = *background_rect + *background_scroll * timestep;
+            if background_rect.right() >= background.width() || background_rect.x() <= 0.0 {
+                *background_scroll = background_scroll.element_wise_product(Vec2(-1.0, 1.0));
             }
 
-            if self.background_rect.bottom() >= bg.height() || self.background_rect.y() <= 0.0 {
-                self.background_scroll =
-                    self.background_scroll.element_wise_product(Vec2(1.0, -1.0));
+            if background_rect.bottom() >= background.height() || background_rect.y() <= 0.0 {
+                *background_scroll = background_scroll.element_wise_product(Vec2(1.0, -1.0));
             }
+
+            *background_fadein = (*background_fadein + timestep * 0.3).min(1.0);
         }
 
         // Game start fadeout animation

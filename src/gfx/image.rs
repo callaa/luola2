@@ -38,6 +38,8 @@ use crate::{fs::pathbuf_to_cstring, math::Rect};
 
 pub struct Image(pub(super) *mut SDL_Surface);
 
+unsafe impl Send for Image {}
+
 impl Drop for Image {
     fn drop(&mut self) {
         unsafe {
