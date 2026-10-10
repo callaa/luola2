@@ -72,6 +72,11 @@ impl ProceduralLevel {
             .as_integer()
             .ok_or_else(|| anyhow!("height is not an integer!"))? as i32;
 
+        let rng_seed: Option<i64> = info
+            .script_config()
+            .get("seed")
+            .and_then(|v| v.as_integer());
+
         // Create Lua environment for generating the level
         let lua = Lua::new();
 
@@ -91,7 +96,11 @@ impl ProceduralLevel {
                     config: lua.to_value(info.script_config())?,
                     settings: lua.to_value(info.script_settings())?,
                     water_color: Color::from_argb_u32(info.colors().water.unwrap_or(0xff0000ff)),
-                    rng: fastrand::Rng::new(),
+                    rng: if let Some(seed) = rng_seed {
+                        fastrand::Rng::with_seed(seed as u64)
+                    } else {
+                        fastrand::Rng::new()
+                    },
                 },
             )?;
 
@@ -472,11 +481,6 @@ impl UserData for ProceduralLevelLua {
         // Random number generation
         // We should use this instead of the Lua interpreter's RNG so that explicitly
         // choosing a seed will recreate the same levels.
-        methods.add_method_mut("rand_set_seed", |_, this, seed: u64| {
-            this.rng.seed(seed);
-            Ok(())
-        });
-
         methods.add_method_mut("randi", |_, this, (min, max): (i32, i32)| {
             Ok(this.rng.i32(min..=max))
         });

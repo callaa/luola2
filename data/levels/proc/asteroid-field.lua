@@ -4,8 +4,6 @@ local asteroids = Utils.partbuckets(images.load_set("parts/asteroids.toml"))
 local bases = Utils.partbuckets(images.load_set("parts/bases.toml"))
 -- debugparts = images.load_set("parts/debug.toml")
 
---level:rand_set_seed(1)
-
 -- A set of random points on the level where asteroids can be added
 local points = level:rand_points(120)
 local used_points = {}

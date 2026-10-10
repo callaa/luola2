@@ -10,5 +10,9 @@ water = 0xff295ac7
 width = 1900
 height = 1200
 
+# RNG seed can be set explicitly to reproduce specific levels.
+# This is useful mainly for testing.
+#seed = 1
+
 [script-settings]
 wind = false
