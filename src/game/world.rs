@@ -25,7 +25,7 @@ use crate::{
         GameControllerSet, Player, PlayerId, PlayerState,
         hud::{PlayerHud, draw_hud, draw_minimap},
         level::{
-            DynamicTerrainCell, LEVEL_SCALE, LevelInfo, Starfield,
+            DynamicTerrainCell, LEVEL_SCALE, Starfield,
             terrain::{self, Terrain},
         },
         objects::{
@@ -151,7 +151,6 @@ impl World {
     pub fn new(
         players: &[Player],
         level: Level,
-        levelinfo: &LevelInfo,
         renderer: Rc<RefCell<Renderer>>,
         controllers: Rc<RefCell<GameControllerSet>>,
         sfx: Rc<RefCell<SfxStore>>,
@@ -187,11 +186,17 @@ impl World {
             )?;
         }
 
-        if let Some(levelscript) = levelinfo.script_path() {
+        if let Some(levelscript) = level.borrow().info().script_path() {
             scripting.load_level_specific_script(&levelscript)?;
         }
 
         let noise_texture = AnimatedTexture::new(textures.find_texture(b"noise")?);
+
+        let starfield = if level.borrow().info().use_starfield() {
+            Some(Starfield::new())
+        } else {
+            None
+        };
 
         Ok(World {
             players,
@@ -211,11 +216,7 @@ impl World {
             particles: GameObjectArray::new(),
             fixedobjects,
             noise_texture,
-            starfield: if levelinfo.use_starfield() {
-                Some(Starfield::new())
-            } else {
-                None
-            },
+            starfield,
             winner: None,
             debug_mode: DebugMode::None,
         })

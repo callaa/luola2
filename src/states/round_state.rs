@@ -22,7 +22,7 @@ use anyhow::{Result, anyhow};
 use crate::{
     game::{
         GameControllerSet, MenuButton, Player, PlayerId,
-        level::{Level, LevelInfo},
+        level::{Level, PreloadedLevel},
         world::World,
     },
     gfx::{Color, RenderOptions, Renderer, TextureId, TextureStore},
@@ -67,7 +67,7 @@ pub struct RoundWinner(pub PlayerId, pub bool);
 impl GameRoundState {
     pub fn new(
         players: Vec<Player>,
-        levelinfo: &LevelInfo,
+        preloaded_level: PreloadedLevel,
         controllers: Rc<RefCell<GameControllerSet>>,
         renderer: Rc<RefCell<Renderer>>,
         assets: Rc<GameAssets>,
@@ -75,32 +75,54 @@ impl GameRoundState {
     ) -> Result<Self> {
         // Load level specific audio
         let sfx = Rc::new(RefCell::new(assets.sfx.clone()));
-        sfx.borrow_mut()
-            .load_extra_sound_effects(levelinfo.root_path(), &levelinfo.extra_sfx());
+        sfx.borrow_mut().load_extra_sound_effects(
+            preloaded_level.info.root_path(),
+            &preloaded_level.info.extra_sfx(),
+        );
 
         let music = Rc::new(RefCell::new(assets.music.clone()));
         {
             let mut music = music.borrow_mut();
-            music.load_extra_music(levelinfo.root_path(), &levelinfo.extra_music());
-            music.load_extra_music(levelinfo.root_path(), &levelinfo.music());
+            music.load_extra_music(
+                preloaded_level.info.root_path(),
+                &preloaded_level.info.extra_music(),
+            );
+            music.load_extra_music(
+                preloaded_level.info.root_path(),
+                &preloaded_level.info.music(),
+            );
         }
+
+        let playlist = preloaded_level
+            .info
+            .music()
+            .iter()
+            .map(|filename| {
+                let dot = filename.find('.');
+                if let Some(dot) = dot {
+                    &filename[..dot]
+                } else {
+                    &filename
+                }
+                .to_owned()
+            })
+            .collect::<Vec<String>>();
 
         // Load level specific textures
         let mut textures = assets.textures.clone();
-        if let Some(lt) = levelinfo.textures() {
+        if let Some(lt) = preloaded_level.info.textures() {
             Rc::make_mut(&mut textures).update_from_config(
                 &renderer.borrow(),
-                levelinfo.root_path(),
+                preloaded_level.info.root_path(),
                 lt.clone(),
             )?;
         }
 
-        let (level, script_settings) = Level::load_level(&renderer.borrow(), levelinfo)?;
+        let (level, script_settings) = Level::load_level(&renderer.borrow(), preloaded_level)?;
 
         let world = World::new(
             &players,
             level,
-            levelinfo,
             renderer.clone(),
             controllers.clone(),
             sfx.clone(),
@@ -129,24 +151,7 @@ impl GameRoundState {
         let settings = lua.create_table()?;
         settings.set("players", player_settings)?;
         settings.set("level", lua.to_value(&script_settings)?)?;
-        settings.set(
-            "playlist",
-            lua.to_value(
-                &levelinfo
-                    .music()
-                    .iter()
-                    .map(|filename| {
-                        let dot = filename.find('.');
-                        if let Some(dot) = dot {
-                            &filename[..dot]
-                        } else {
-                            &filename
-                        }
-                        .to_owned()
-                    })
-                    .collect::<Vec<String>>(),
-            )?,
-        )?;
+        settings.set("playlist", lua.to_value(&playlist)?)?;
 
         world
             .scripting()

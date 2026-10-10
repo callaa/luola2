@@ -55,6 +55,26 @@ impl fmt::Display for Rect {
     }
 }
 
+impl fmt::Debug for Rect {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rect")
+            .field("x", &self.0.x)
+            .field("y", &self.0.y)
+            .field("w", &self.0.w)
+            .field("h", &self.0.h)
+            .finish()
+    }
+}
+
+impl std::cmp::PartialEq for Rect {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.x == other.0.x
+            && self.0.y == other.0.y
+            && self.0.w == other.0.w
+            && self.0.h == other.0.h
+    }
+}
+
 impl RectF {
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
         Self(SDL_FRect { x, y, w, h })

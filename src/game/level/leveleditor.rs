@@ -178,7 +178,7 @@ impl<'a> LevelEditor<'a> {
                                         *ter,
                                         None,
                                         Color::from_argb_u32(*art),
-                                        gravity < 0.01
+                                        gravity < 0.01,
                                     ),
                                 ));
                             }

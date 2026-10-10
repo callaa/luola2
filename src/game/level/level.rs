@@ -17,9 +17,8 @@
 use std::{cell::Cell, ops::Add};
 
 use super::{
-    LevelInfo,
+    LevelInfo, PreloadedLevel,
     dynter::DynamicTerrainMap,
-    procedural::ProceduralLevel,
     terrain,
     terrain::TER_BIT_WATER,
     tileiterator::{MutableTileIterator, TileIterator},
@@ -133,8 +132,9 @@ pub struct Level {
     tiles_wide: i32,  // width in tiles
     tiles_high: i32,  // height in tiles
 
+    info: LevelInfo,
+
     windspeed: f32, // Wind speed (horizontal)
-    nospawnzones: Vec<RectF>,
 
     pub forcefields: Vec<Forcefield>,
     pub water_color: u32, // pixel value used when creating water
@@ -172,34 +172,20 @@ impl mlua::FromLua for Forcefield {
 }
 
 impl Level {
-    pub fn load_level(renderer: &Renderer, info: &LevelInfo) -> Result<(Level, toml::Table)> {
-        let (terrain, artwork, script_settings) =
-            if info.is_generated() {
-                let pc = ProceduralLevel::generate(&info)?;
-                (pc.terrain, pc.artwork, pc.script_settings)
-            } else {
-                (
-                    Image::from_file(info.terrain_path())?,
-                    Image::from_file(info.artwork_path())?.ensure_argb888()?,
-                    info.script_settings().clone(),
-                )
-            };
+    pub fn load_level(
+        renderer: &Renderer,
+        preloaded: PreloadedLevel,
+    ) -> Result<(Level, toml::Table)> {
+        let info = preloaded.info;
 
-        if terrain.width() % TILE_SIZE > 0 || terrain.height() % TILE_SIZE > 0 {
-            return Err(anyhow!(
-                "Level dimensions not a multiple of 64 ({}x{})",
-                terrain.width(),
-                terrain.height()
-            ));
-        }
+        // these should have been verified by now
+        assert!(
+            preloaded.terrain.width() % TILE_SIZE == 0
+                && preloaded.terrain.height() % TILE_SIZE == 0
+        );
+        assert_eq!(preloaded.terrain.bounds(), preloaded.artwork.bounds());
 
-        if artwork.width() != terrain.width() || artwork.height() != terrain.height() {
-            return Err(anyhow!(
-                "Level artwork size does not match terrain map size"
-            ));
-        }
-
-        let terrain = terrain.ensure_index8()?;
+        let terrain = preloaded.terrain;
 
         let width = terrain.width() as f32 * LEVEL_SCALE;
         let height = terrain.height() as f32 * LEVEL_SCALE;
@@ -223,12 +209,13 @@ impl Level {
         let mut regen: Vec<RegeneratingTerrain> = Vec::new();
         let regen_enabled = GAME_CONFIG.read().unwrap().game.baseregen;
 
-        let artwork_pixels = artwork
+        let artwork_pixels = preloaded
+            .artwork
             .argb8888_pixels()
-            .expect("Didn't we call ensure_argb8888?");
+            .expect("ensure_argb8888 should have been called on artwork image");
         let terrain_pixels = terrain
             .indexed_pixels()
-            .expect("Didn't we call ensure_index8?");
+            .expect("ensure_index8 should have been called on terrain image");
 
         let water_color = terrain
             .palette()
@@ -305,7 +292,8 @@ impl Level {
         // Though we could update this as the terrain gets modified, it's probably not worth the effort
         let minimap = if GAME_CONFIG.read().unwrap().game.minimap {
             Some(
-                artwork
+                preloaded
+                    .artwork
                     .scaled(64, 64, true)
                     .and_then(|i| Texture::from_image(renderer, &Self::prettify_minimap(i)))?,
             )
@@ -314,7 +302,11 @@ impl Level {
         };
 
         // Initialize level texture. This will be updated when level is modified
-        let mut artwork = Texture::new_streaming(renderer, artwork.width(), artwork.height())?;
+        let mut artwork = Texture::new_streaming(
+            renderer,
+            preloaded.artwork.width(),
+            preloaded.artwork.height(),
+        )?;
 
         for i in 0..tiles_wide {
             for j in 0..tiles_high {
@@ -350,9 +342,9 @@ impl Level {
                 snow_color,
                 allow_sand: info.allow_sand(),
                 gravity: info.gravity(),
-                nospawnzones: info.nospawnzones().clone(),
+                info,
             },
-            script_settings,
+            preloaded.script_settings,
         ))
     }
 
@@ -381,6 +373,10 @@ impl Level {
 
     pub fn set_windspeed(&mut self, ws: f32) {
         self.windspeed = ws
+    }
+
+    pub fn info(&self) -> &LevelInfo {
+        &self.info
     }
 
     /// Return the color at the given point
@@ -662,7 +658,7 @@ impl Level {
                 in_area.y() + fastrand::f32() * in_area.h(),
             );
 
-            for nospawn in &self.nospawnzones {
+            for nospawn in self.info().nospawnzones() {
                 if nospawn.contains(pos) {
                     continue 'retry;
                 }

@@ -84,11 +84,24 @@ impl mlua::FromLua for TerrainParticle {
 }
 
 impl TerrainParticle {
-    pub fn new(pos: Vec2, terrain: Terrain, texture: Option<TextureId>, color: Color, zerogravity: bool) -> Self {
+    pub fn new(
+        pos: Vec2,
+        terrain: Terrain,
+        texture: Option<TextureId>,
+        color: Color,
+        zerogravity: bool,
+    ) -> Self {
         TerrainParticle {
             phys: PhysicalObject {
                 pos,
-                vel: if zerogravity { Vec2::for_rad(fastrand::f32() * 2.0 * std::f32::consts::PI, fastrand::f32() * 100.0 + 50.0) } else { Vec2::ZERO },
+                vel: if zerogravity {
+                    Vec2::for_rad(
+                        fastrand::f32() * 2.0 * std::f32::consts::PI,
+                        fastrand::f32() * 100.0 + 50.0,
+                    )
+                } else {
+                    Vec2::ZERO
+                },
                 imass: 100.0,
                 radius: LEVEL_SCALE / 2.0,
                 drag: 0.3,

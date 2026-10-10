@@ -19,7 +19,10 @@ use std::{cell::RefCell, mem::take, rc::Rc};
 
 use crate::{
     demos::AnimatedStarfield,
-    game::{GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId, level::LevelInfo},
+    game::{
+        GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId,
+        level::{LevelInfo, PreloadedLevel, preload_level},
+    },
     gfx::{Renderer, Texture},
     states::{
         StackableState, StackableStateResult,
@@ -32,12 +35,18 @@ use crate::{
     },
 };
 
+enum LevelState {
+    Unselected,
+    Selected(LevelInfo),
+    Preloaded(PreloadedLevel),
+}
+
 /// The super-state for managing the different sub-states of the actual game
 pub struct GameState {
     assets: Rc<GameAssets>,
     starfield: Rc<RefCell<AnimatedStarfield>>,
     players: Vec<Player>,
-    level: Option<LevelInfo>,
+    level: LevelState,
     rounds: i32,
     respawns: i32,
     round_winners: Vec<PlayerId>,
@@ -73,7 +82,7 @@ impl GameState {
             rounds,
             respawns,
             round_winners: Vec::new(),
-            level: None,
+            level: LevelState::Unselected,
             substate: GameSubState::SelectNextLevel,
             controllers,
             renderer,
@@ -94,9 +103,9 @@ impl GameState {
             // (obviously, this is for testing/debugging purposes)
             substate = GameSubState::GameResults;
 
-            None
+            LevelState::Unselected
         } else if config.level.is_empty() {
-            None
+            LevelState::Unselected
         } else {
             // Level set, skip selector
             substate = GameSubState::SelectWeapons;
@@ -105,7 +114,8 @@ impl GameState {
                 .levels
                 .iter()
                 .find(|l| l.name() == config.level)
-                .cloned()
+                .map(|i| LevelState::Selected(i.clone()))
+                .ok_or_else(|| anyhow!("Level {} not found!", config.level))?
         };
 
         let round_winners = config.winners;
@@ -142,7 +152,7 @@ impl GameState {
 impl StackableState for GameState {
     fn receive_return(&mut self, retval: Box<dyn std::any::Any>) -> StackableStateResult {
         if let Some(level) = retval.downcast_ref::<LevelInfo>() {
-            self.level = Some(level.clone());
+            self.level = LevelState::Selected(level.clone());
             self.substate = GameSubState::SelectWeapons;
         } else if let Some(weapons) = retval.downcast_ref::<SelectedWeapons>() {
             self.players.iter_mut().zip(&weapons.0).for_each(|(p, w)| {
@@ -208,14 +218,14 @@ impl StackableState for GameState {
             GameSubState::SelectNextLevel | GameSubState::SelectLevel => {
                 let fadein_round_text = matches!(self.substate, GameSubState::SelectNextLevel);
                 self.substate = GameSubState::GameResults;
-                let selection = if let Some(level) = &self.level {
+                let selection = if let LevelState::Selected(level) = &self.level {
                     self.assets.levels.iter().position(|l| {
                         l.levelpack() == level.levelpack() && l.name() == level.name()
                     })
                 } else {
                     None
                 }
-                .unwrap_or(0);
+                .unwrap_or_else(|| fastrand::usize(0..self.assets.levels.len()));
 
                 StackableStateResult::Push(Box::new(
                     match LevelSelection::new(
@@ -235,25 +245,37 @@ impl StackableState for GameState {
             }
             GameSubState::SelectWeapons => {
                 self.substate = GameSubState::SelectLevel;
-                let level_art = if let Some(lev) = &self.level {
-                    match Texture::from_file(&self.renderer.borrow(), lev.artwork_path()) {
-                        Ok(t) => Some(t),
-                        Err(e) => {
-                            log::error!("Couldn't open level art {:?}: {}", lev.artwork_path(), e);
-                            None
-                        }
+                let preload = match std::mem::replace(&mut self.level, LevelState::Unselected) {
+                    LevelState::Unselected => {
+                        return StackableStateResult::Error(anyhow!(
+                            "Entered weapon selection state with no level set!"
+                        ));
                     }
-                } else {
-                    log::error!("Entered weapon selection state with no level set!");
-                    None
+                    LevelState::Selected(info) => match preload_level(info.clone()) {
+                        Ok(p) => p,
+                        Err(err) => {
+                            return StackableStateResult::Error(err);
+                        }
+                    },
+                    LevelState::Preloaded(p) => p,
                 };
+
+                let level_art = match Texture::from_image(&self.renderer.borrow(), &preload.artwork)
+                {
+                    Ok(t) => t,
+                    Err(err) => {
+                        return StackableStateResult::Error(err);
+                    }
+                };
+
+                self.level = LevelState::Preloaded(preload);
 
                 StackableStateResult::Push(Box::new(
                     match WeaponSelection::new(
                         self.assets.clone(),
                         &self.players,
                         self.round_winners.len() as i32 + 1,
-                        level_art,
+                        Some(level_art),
                         self.starfield.clone(),
                         self.renderer.clone(),
                         &self.controllers.borrow(),
@@ -267,13 +289,25 @@ impl StackableState for GameState {
             }
             GameSubState::PlayRound => {
                 self.substate = GameSubState::GameResults;
+                let level = match std::mem::replace(&mut self.level, LevelState::Unselected) {
+                    LevelState::Unselected => {
+                        return StackableStateResult::Error(anyhow!(
+                            "Entered round start state with no level set!"
+                        ));
+                    }
+                    LevelState::Selected(info) => match preload_level(info.clone()) {
+                        Ok(p) => p,
+                        Err(err) => {
+                            return StackableStateResult::Error(err);
+                        }
+                    },
+                    LevelState::Preloaded(l) => l,
+                };
 
                 StackableStateResult::Push(Box::new(
                     match GameRoundState::new(
                         self.players.clone(),
-                        self.level
-                            .as_ref()
-                            .expect("Level should have been loaded at this point"),
+                        level,
                         self.controllers.clone(),
                         self.renderer.clone(),
                         self.assets.clone(),

@@ -1,6 +1,6 @@
 use crate::game::level::rectiter::{MutableRectIterator, RectIterator};
 use crate::game::level::terrain::{TER_BIT_WATER, is_space};
-use crate::game::level::{LevelInfo, parse_palette_mapping, terrain};
+use crate::game::level::{LevelInfo, PreloadedLevel, parse_palette_mapping, terrain};
 use crate::gfx::{Color, Image, ImageAlign};
 use crate::math::Vec2;
 use crate::{game::level::TILE_SIZE, math::Rect};
@@ -13,14 +13,9 @@ use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
-pub struct ProceduralLevel {
-    pub artwork: Image,
-    pub terrain: Image,
-    pub script_settings: toml::Table,
-}
-
-struct ProceduralLevelLua {
-    level: ProceduralLevel,
+struct ProceduralLevel {
+    artwork: Image,
+    terrain: Image,
     config: mlua::Value,
     settings: mlua::Value,
     water_color: Color,
@@ -43,20 +38,84 @@ pub enum BlitMode {
     Under,
 }
 
-impl ProceduralLevel {
-    fn new(width: i32, height: i32) -> Result<Self> {
-        // round up sizes to a multiple of TILE_SIZE
-        let width = (width + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE;
-        let height = (height + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE;
+pub fn generate_procedural_level(info: LevelInfo) -> Result<PreloadedLevel> {
+    // Create Lua environment for generating the level
+    let lua = Lua::new();
 
-        Ok(ProceduralLevel {
-            artwork: Image::blank(width, height, SDL_PIXELFORMAT_ARGB8888)?,
-            terrain: Image::blank(width, height, SDL_PIXELFORMAT_INDEX8)?,
-            script_settings: toml::Table::new(),
-        })
+    {
+        let globals = lua.globals();
+        // Load modules from the script path only
+        globals.get::<Table>("package")?.set(
+            "path",
+            format!("{}/?.lua", info.root_path().to_str().unwrap()),
+        )?;
+
+        // Add the level we're working on
+        globals.set("level", ProceduralLevel::new(&lua, &info)?)?;
+
+        // Image loading tools
+        let images = lua.create_table()?;
+        {
+            let root_path = info.root_path().to_owned();
+            images.set(
+                "load_set",
+                lua.create_function(move |lua, filename: String| {
+                    Ok(load_imageset(lua, root_path.join(filename))?)
+                })?,
+            )?;
+        }
+        {
+            let root_path = info.root_path().to_owned();
+            images.set(
+                "load_hole_template",
+                lua.create_function(move |_lua, filename: String| {
+                    Ok(HoleTemplate::load(root_path.join(filename))?)
+                })?,
+            )?;
+        }
+
+        images.set(
+            "new_hole_template",
+            lua.create_function(move |_lua, (w, h): (i32, i32)| Ok(HoleTemplate::new(w, h)?))?,
+        )?;
+
+        globals.set("images", images)?;
+
+        // Common types
+        globals.set(
+            "Vec2",
+            lua.create_function(|_, (x, y): (f32, f32)| Ok(Vec2(x, y)))?,
+        )?;
+
+        globals.set(
+            "Rect",
+            lua.create_function(|_, (x, y, w, h): (i32, i32, i32, i32)| Ok(Rect::new(x, y, w, h)))?,
+        )?;
     }
 
-    pub fn generate(info: &LevelInfo) -> Result<Self> {
+    // Run level creation script
+    let script_name = info
+        .generation_script_name()
+        .expect("script name shoulstruct ProceduralLevel {}d have been set");
+    lua.load(format!(
+        r#"require "{}""#,
+        &script_name[0..script_name.len() - 4]
+    ))
+    .exec()?;
+
+    // Done. Extract the finished level
+    let level = lua.globals().get::<ProceduralLevel>("level")?;
+
+    Ok(PreloadedLevel {
+        artwork: level.artwork.clone(),
+        terrain: level.terrain.clone(),
+        script_settings: lua.from_value(level.settings)?,
+        info,
+    })
+}
+
+impl ProceduralLevel {
+    fn new(lua: &Lua, info: &LevelInfo) -> Result<Self> {
         // Width and height are set in script config (but we have fallbacks in case they aren't)
         let width = info
             .script_config()
@@ -72,99 +131,42 @@ impl ProceduralLevel {
             .as_integer()
             .ok_or_else(|| anyhow!("height is not an integer!"))? as i32;
 
+        // round up sizes to a multiple of TILE_SIZE
+        let width = (width + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE;
+        let height = (height + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE;
+
         let rng_seed: Option<i64> = info
             .script_config()
             .get("seed")
             .and_then(|v| v.as_integer());
 
-        // Create Lua environment for generating the level
-        let lua = Lua::new();
-
-        {
-            let globals = lua.globals();
-            // Load modules from the script path only
-            globals.get::<Table>("package")?.set(
-                "path",
-                format!("{}/?.lua", info.root_path().to_str().unwrap()),
-            )?;
-
-            // Add the level we're working on
-            globals.set(
-                "level",
-                ProceduralLevelLua {
-                    level: ProceduralLevel::new(width, height)?,
-                    config: lua.to_value(info.script_config())?,
-                    settings: lua.to_value(info.script_settings())?,
-                    water_color: Color::from_argb_u32(info.colors().water.unwrap_or(0xff0000ff)),
-                    rng: if let Some(seed) = rng_seed {
-                        fastrand::Rng::with_seed(seed as u64)
-                    } else {
-                        fastrand::Rng::new()
-                    },
-                },
-            )?;
-
-            // Image loading tools
-            let images = lua.create_table()?;
-            {
-                let root_path = info.root_path().to_owned();
-                images.set(
-                    "load_set",
-                    lua.create_function(move |lua, filename: String| {
-                        Ok(load_imageset(lua, root_path.join(filename))?)
-                    })?,
-                )?;
-            }
-            {
-                let root_path = info.root_path().to_owned();
-                images.set(
-                    "load_hole_template",
-                    lua.create_function(move |_lua, filename: String| {
-                        Ok(HoleTemplate::load(root_path.join(filename))?)
-                    })?,
-                )?;
-            }
-
-            images.set(
-                "new_hole_template",
-                lua.create_function(move |_lua, (w, h): (i32, i32)| Ok(HoleTemplate::new(w, h)?))?,
-            )?;
-
-            globals.set("images", images)?;
-
-            // Common types
-            globals.set(
-                "Vec2",
-                lua.create_function(|_, (x, y): (f32, f32)| Ok(Vec2(x, y)))?,
-            )?;
-
-            globals.set(
-                "Rect",
-                lua.create_function(|_, (x, y, w, h): (i32, i32, i32, i32)| {
-                    Ok(Rect::new(x, y, w, h))
-                })?,
-            )?;
-        }
-
-        // Run level creation script
-        let script_name = info
-            .generation_script_name()
-            .expect("script name should have been set");
-        lua.load(format!(
-            r#"require "{}""#,
-            &script_name[0..script_name.len() - 4]
-        ))
-        .exec()?;
-
-        // Done. Extract the finished level
-        let mut level = lua.globals().get::<ProceduralLevelLua>("level")?;
-        level.level.script_settings = lua.from_value(level.settings)?;
-
-        Ok(level.level)
+        Ok(ProceduralLevel {
+            artwork: Image::blank(width, height, SDL_PIXELFORMAT_ARGB8888)?,
+            terrain: Image::blank(width, height, SDL_PIXELFORMAT_INDEX8)?,
+            config: lua.to_value(info.script_config())?,
+            settings: lua.to_value(info.script_settings())?,
+            water_color: Color::from_argb_u32(info.colors().water.unwrap_or(0xff0000ff)),
+            rng: if let Some(seed) = rng_seed {
+                fastrand::Rng::with_seed(seed as u64)
+            } else {
+                fastrand::Rng::new()
+            },
+        })
     }
 
     fn bounds(&self) -> Rect {
         Rect::new(0, 0, self.artwork.width(), self.artwork.height())
+    }
+
+    fn random_points_in(&mut self, rect: Rect, count: usize) -> Vec<Vec2> {
+        let mut list = Vec::with_capacity(count);
+        for _ in 0..count {
+            list.push(Vec2(
+                rect.x() as f32 + self.rng.f32() * rect.w() as f32,
+                rect.y() as f32 + self.rng.f32() * rect.h() as f32,
+            ));
+        }
+        list
     }
 
     fn put_image(&mut self, x: i32, y: i32, image: &ImagePart, align: ImageAlign, mode: BlitMode) {
@@ -423,23 +425,10 @@ fn blit_level_part(
     }
 }
 
-impl ProceduralLevelLua {
-    fn random_points_in(&mut self, rect: Rect, count: usize) -> Vec<Vec2> {
-        let mut list = Vec::with_capacity(count);
-        for _ in 0..count {
-            list.push(Vec2(
-                rect.x() as f32 + self.rng.f32() * rect.w() as f32,
-                rect.y() as f32 + self.rng.f32() * rect.h() as f32,
-            ));
-        }
-        list
-    }
-}
-
-impl UserData for ProceduralLevelLua {
+impl UserData for ProceduralLevel {
     fn add_fields<F: mlua::prelude::LuaUserDataFields<Self>>(fields: &mut F) {
-        fields.add_field_method_get("width", |_, this| Ok(this.level.terrain.width()));
-        fields.add_field_method_get("height", |_, this| Ok(this.level.terrain.height()));
+        fields.add_field_method_get("width", |_, this| Ok(this.terrain.width()));
+        fields.add_field_method_get("height", |_, this| Ok(this.terrain.height()));
         fields.add_field_method_get("config", |_, this| Ok(this.config.clone()));
         fields.add_field_method_get("settings", |_, this| Ok(this.settings.clone()));
     }
@@ -448,7 +437,7 @@ impl UserData for ProceduralLevelLua {
         methods.add_method_mut(
             "put_image",
             |_, this, (x, y, image, align, mode): (i32, i32, ImagePart, ImageAlign, BlitMode)| {
-                Ok(this.level.put_image(x, y, &image, align, mode))
+                Ok(this.put_image(x, y, &image, align, mode))
             },
         );
 
@@ -462,21 +451,15 @@ impl UserData for ProceduralLevelLua {
                 HoleTemplate,
                 ImageAlign,
                 Option<u8>,
-            )| {
-                Ok(this
-                    .level
-                    .make_hole(x, y, &template, align, threshold.unwrap_or(0)))
-            },
+            )| { Ok(this.make_hole(x, y, &template, align, threshold.unwrap_or(0))) },
         );
 
         methods.add_method_mut("put_water", |_, this, (rect, alpha): (Rect, f32)| {
-            Ok(this.level.put_water(rect, this.water_color, alpha))
+            Ok(this.put_water(rect, this.water_color, alpha))
         });
 
         // Sampling
-        methods.add_method("terrain_at", |_, this, pos: Vec2| {
-            Ok(this.level.terrain_at(pos))
-        });
+        methods.add_method("terrain_at", |_, this, pos: Vec2| Ok(this.terrain_at(pos)));
 
         // Random number generation
         // We should use this instead of the Lua interpreter's RNG so that explicitly
@@ -487,12 +470,7 @@ impl UserData for ProceduralLevelLua {
 
         methods.add_method_mut("rand_points", |_, this, n: usize| {
             Ok(this.random_points_in(
-                Rect::new(
-                    0,
-                    0,
-                    this.level.terrain.width(),
-                    this.level.terrain.height(),
-                ),
+                Rect::new(0, 0, this.terrain.width(), this.terrain.height()),
                 n,
             ))
         });
@@ -614,14 +592,14 @@ impl HoleTemplate {
     }
 }
 
-impl mlua::FromLua for ProceduralLevelLua {
+impl mlua::FromLua for ProceduralLevel {
     fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
         match value {
             mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
-                to: "ProceduralLevelLua".to_owned(),
-                message: Some("expected ProceduralLevelLua".to_string()),
+                to: "ProceduralLevel".to_owned(),
+                message: Some("expected ProceduralLevel".to_string()),
             }),
         }
     }
