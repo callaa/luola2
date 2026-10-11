@@ -47,4 +47,22 @@ function weapons.delta_cannon(ship)
 	sfx.weapon(sounds.gunshot(), 1.0)
 end
 
+function weapons.harpoon(ship)
+	ship.primary_weapon_cooldown = 0.11
+
+	sfx.weapon(sounds.gunshot(), 1.0)
+	game.effect("AddBullet", {
+		pos = ship.pos,
+		vel = ship.vel + Vec2_for_angle(-ship.angle, 1200.0),
+		drag = 0.001,
+		color = 0xffffffff,
+		radius = 3,
+		owner = ship.player,
+		texture = textures.get("harpoon"),
+		state = {
+			on_impact = Impacts.harpoon,
+		},
+	})
+end
+
 return weapons

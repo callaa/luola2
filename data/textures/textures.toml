@@ -16,6 +16,15 @@ angles = 12
 width = 80
 height = 80
 
+[barracuda]
+file = "barracuda.png"
+subrect = [0, 0, 960, 80]
+alts.Decal.subrect = [0, 0, 960, 80]
+alts.Damage.subrect = [0, 80, 960, 80]
+angles = 12
+width = 80
+height = 80
+
 [pilot_stand]
 file = "pilot.png"
 subrect = [0, 0, 32, 32]
@@ -82,6 +91,11 @@ subrect = [0, 0, 3, 3]
 [dot8x8]
 file = "bullets.png"
 subrect = [8, 0, 8, 8]
+
+[harpoon]
+file = "bullets.png"
+subrect = [0, 0, 8, 2]
+needs_rotation = true
 
 [mine]
 file = "mine.png"

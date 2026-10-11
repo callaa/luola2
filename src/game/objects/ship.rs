@@ -191,6 +191,10 @@ impl UserData for Ship {
                 true
             })
         });
+        methods.add_method_mut("impulse", |_, this, v: Vec2| {
+            this.phys.add_impulse(v);
+            Ok(())
+        });
     }
 }
 

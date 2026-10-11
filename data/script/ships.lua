@@ -32,6 +32,15 @@ local function vwing_thrust_effect(ship, uw, thrust)
 	end
 end
 
+function barracuda_thrust_effect(ship, uw, thrust)
+	vwing_thrust_effect(ship, uw, thrust)
+
+	-- Underwater boost for barracuda
+	if uw then
+		ship:impulse(Vec2_for_angle(-ship.angle, 50000))
+	end
+end
+
 local function deltabomber_thrust_effect(ship, uw, thrust)
 	local tex
 	local a
@@ -239,6 +248,29 @@ local ships = {
 			}
 		},
 	},
+	barracuda = {
+		title = "Barracuda",
+		description = "A flying submarine specializing in marine warfafe.",
+		template = {
+			texture = textures.get("barracuda"),
+			mass = 1000,
+			drag = 0.04,
+			radius = 16,
+			thrust = 30,
+			turn_speed = 260,
+			hitpoints = 90,
+			state = {
+				on_fire_primary = weapons.harpoon,
+				on_destroyed = on_ship_destroyed,
+				on_base = ship_on_base,
+				on_thrust = barracuda_thrust_effect,
+				on_touch_greygoo = ship_touch_greygoo,
+				on_eject = on_ship_eject,
+				on_bullet_hit = ship_bullet_hit,
+				on_terrain_damage = ship_terrain_damage,
+			}
+		},
+	}
 }
 
 return ships
