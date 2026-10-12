@@ -322,6 +322,7 @@ function weapons.freezer(ship)
 			owner = ship.player,
 			texture = textures.get("dot8x8"),
 			color = 0xffb7f5fc,
+			waterproof = false,
 			state = {
 				on_impact = Impacts.freezer,
 				scheduler = function(proj)
