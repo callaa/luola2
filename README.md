@@ -17,7 +17,7 @@ Features:
  * Pilot ejection for platformer mode!
  * Lua scripting, including per-level custom scripts
  * 24 special weapons to choose from
- * Destructible terrain
+ * Destructible terrain with special effects such as falling sand simulation
  * 100% artisanal code and art: no gen-AI used!
 
 ## Roadmap to 1.0.0
@@ -26,44 +26,34 @@ The "finished" 1.0 version will have all the good features from Luola, as well a
 
 Planned features:
 
- * More selectable ship types
  * Music
  * Special playmodes such as timed battle with sudden death
 
 ## Instructions
 
-**Key bindings:** up to 4 players can share a keyboard. The bindings can be edited in the Controls menu.
+**Key bindings:** up to 4 players can share a keyboard. Key bindings are customizable.
 
 The following keys can be used in menus:
 
- * Arrow keys: move cursor
+ * Arrow keys: move cursor or change numeric value
  * Enter, or any player's Fire1 button: select menu item
- * Esc: return to previous menu or end round
- * F12: toggle debug mode
+ * Esc: return to previous menu
+ * F12: screenshot
 
-**Ship controls:**
+The following non-player keys can be used in-game:
 
- * Turn the ship with Left/Right keys or right thumbstick
- * Accelerate with the Up key or left thumbstick.
- * Fire primary weapon (unlimited ammo) with Fire1 key (East button or right trigger on gamepads)
- * Fire secondary weapon with Fire2 key (South button or left trigger on gamepads.)
- * Land on a base to repair and rearm
- * Eject the pilot by hitting Fire2 when the ship is spinning out of control, or at any time by pressing Down+Fire1 (or left+right shoulder buttons on a gamepad)
+ * Esc: pause the game
+ * F11: toggle debug visualizations
+ * F12: screenshot
 
-**Pilot controls:**
-
- * Walk/parachute/swim with the left thumbstick or WASD
- * Shoot with Fire1 button (gamepad East/right trigger)
- * Jump/jetpack with Up key or gamepad North button
- * Activate parachute and/or aiming mode by holding down Fire2 (gamepad South/left trigger)
- * Summon a new ship with the eject button combo when standing on a base
+**Gamepad:** See the Help menu for button mappings. (Gamepad buttons are not customizable)
 
 **Winning:**
 
- * Number of rounds needed to win the game can be set with Left/Right keys in the player selection screen
- * Number of respawns per level can be set with Up/Down keys in player selection screen
+ * Number of rounds in the game can be set in the player selection screen
  * Last player left wins the round
  * If all players are destroyed, the round ends in a draw
+ * Player with most victories wins the game
 
 ## Build instructions
 
