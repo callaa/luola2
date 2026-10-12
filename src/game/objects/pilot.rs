@@ -108,7 +108,7 @@ const NORMAL_DRAG: f32 = 0.015;
 const PARACHUTE_DRAG: f32 = 0.7;
 const DANGER_SPEED: f32 = 500.0;
 const NINJAROPE_SPEED: f32 = 800.0;
-const NINJAROPE_MAX_LEN: f32 = 300.0;
+const NINJAROPE_MAX_LEN: f32 = 400.0;
 const NINJAROPE_CLIMB_SPEED: f32 = 200.0;
 
 impl mlua::FromLua for Pilot {
