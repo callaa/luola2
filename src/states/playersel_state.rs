@@ -40,14 +40,17 @@ pub struct PlayerSelection {
 
     start_text: Text,
     prompt_text: Text,
-    rounds_label: Text,
-    respawns_label: Text,
+
+    option_selection: i32,
 
     rounds_to_win: i32,
     rounds_to_win_text: Text,
+    rounds_label: Text,
 
     respawns: i32,
     respawns_text: Text,
+    respawns_label: Text,
+
     players: Vec<JoiningPlayer>,
 
     /// Fade out timer after which the game will start
@@ -82,7 +85,7 @@ impl PlayerSelection {
         let rounds_label = r
             .fontset()
             .menu
-            .create_text(&r, "ROUNDS")
+            .create_text(&r, "◀ROUNDS▶")
             .unwrap()
             .with_color(red);
         let respawns_label = r
@@ -123,6 +126,7 @@ impl PlayerSelection {
             rounds_label,
             respawns_label,
             start_text,
+            option_selection: 0,
             rounds_to_win,
             rounds_to_win_text,
             respawns,
@@ -254,6 +258,34 @@ impl PlayerSelection {
 
         rects
     }
+
+    fn update_option_selector_texts(&mut self) {
+        let set = |content, idx, text: &mut Text| {
+            if self.option_selection == idx {
+                text.set_text(&format!("◀{}▶", content));
+            } else {
+                text.set_text(content);
+            }
+        };
+        set("ROUNDS", 0, &mut self.rounds_label);
+        set("RESPAWNS", 1, &mut self.respawns_label);
+    }
+
+    fn update_option_selector(&mut self, dir: i32) {
+        match self.option_selection {
+            0 => {
+                self.rounds_to_win = (self.rounds_to_win + dir).clamp(1, 99);
+                self.rounds_to_win_text
+                    .set_text(&format!("{:02}", self.rounds_to_win));
+            }
+            1 => {
+                self.respawns = (self.respawns + dir).clamp(0, 99);
+                self.respawns_text
+                    .set_text(&format!("{:02}", self.respawns));
+            }
+            _ => panic!("Shouldn't happen: unhandled option_selection"),
+        }
+    }
 }
 
 impl StackableState for PlayerSelection {
@@ -278,32 +310,18 @@ impl StackableState for PlayerSelection {
                 return StackableStateResult::Pop;
             }
             MenuButton::Up(_) => {
-                if self.respawns < 99 {
-                    self.respawns += 1;
-                    self.respawns_text
-                        .set_text(&format!("{:02}", self.respawns));
-                }
+                self.update_option_selector(1);
             }
             MenuButton::Down(_) => {
-                if self.respawns > 0 {
-                    self.respawns -= 1;
-                    self.respawns_text
-                        .set_text(&format!("{:02}", self.respawns));
-                }
+                self.update_option_selector(-1);
             }
             MenuButton::Left(_) => {
-                if self.rounds_to_win > 1 {
-                    self.rounds_to_win -= 1;
-                    self.rounds_to_win_text
-                        .set_text(&format!("{:02}", self.rounds_to_win));
-                }
+                self.option_selection = (self.option_selection - 1).rem_euclid(2);
+                self.update_option_selector_texts();
             }
             MenuButton::Right(_) => {
-                if self.rounds_to_win < 99 {
-                    self.rounds_to_win += 1;
-                    self.rounds_to_win_text
-                        .set_text(&format!("{:02}", self.rounds_to_win));
-                }
+                self.option_selection = (self.option_selection + 1) % 2;
+                self.update_option_selector_texts();
             }
             MenuButton::Start => {
                 if !self.players.is_empty() {
