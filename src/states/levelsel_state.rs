@@ -1,5 +1,5 @@
 // This file is part of Luola2
-// Copyright (C) 2025 Calle Laakkonen
+// Copyright (C) 2025, 2026 Calle Laakkonen
 //
 // Luola2 is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -295,9 +295,7 @@ impl StackableState for LevelSelection {
             self.fadeout -= timestep * 2.0;
 
             if self.fadeout <= 0.0 {
-                return StackableStateResult::Return(Box::new(
-                    self.assets.levels[self.selection].clone(),
-                ));
+                return StackableStateResult::Return(Box::new(self.selection));
             }
         }
 
