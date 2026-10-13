@@ -209,7 +209,7 @@ impl Pilot {
         const MAX_SLOPE: i32 = 5;
 
         // Downhill
-        for i in 0..MAX_SLOPE {
+        for i in 0..(MAX_SLOPE + 2) {
             let new_pos = Vec2(new_x, pos.1 + i as f32 * LEVEL_SCALE);
             let ter_at = level.terrain_at(new_pos);
             if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {

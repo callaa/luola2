@@ -228,7 +228,7 @@ impl Critter {
 
         for i in 0..MAX_SLOPE {
             // uphill
-            let new_pos = Vec2(new_x, self.phys.pos.1 + i as f32 * LEVEL_SCALE);
+            let new_pos = Vec2(new_x, self.phys.pos.1 - i as f32 * LEVEL_SCALE);
             let ter_at = level.terrain_at(new_pos);
             if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
@@ -237,9 +237,11 @@ impl Critter {
                     return (above, false);
                 }
             }
+        }
 
-            // downhill
-            let new_pos = Vec2(new_x, self.phys.pos.1 - i as f32 * LEVEL_SCALE);
+        for i in 1..(MAX_SLOPE + 2) {
+            // downhill, we need to look two pixels further as we're looking for a foothold
+            let new_pos = Vec2(new_x, self.phys.pos.1 + i as f32 * LEVEL_SCALE);
             let ter_at = level.terrain_at(new_pos);
             if terrain::is_solid(ter_at) && !terrain::can_walk_through(ter_at) {
                 // pixel above must be free
