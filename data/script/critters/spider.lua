@@ -8,7 +8,11 @@ function Spider.on_touch_ledge(critter)
 	critter.walking = -critter.walking
 end
 
-function Spider.on_touch_ground(critter)
+function Spider.on_touch_ground(critter, ter)
+	if Level.is_water(ter) then
+		critter:destroy()
+	end
+
 	if critter.state.slinging and not critter.rope_attached then
 		critter.state.slinging = false
 		critter.walking = 1
@@ -116,6 +120,7 @@ function Spider.create(pos)
 		walking = 1,
 		drag = 0.1,
 		texture = textures.get("spider"),
+		waterproof = false,
 		state = Spider:new(pos),
 		timer = 0,
 	})
