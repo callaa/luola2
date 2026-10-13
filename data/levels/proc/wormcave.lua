@@ -18,13 +18,23 @@ end
 local cavern = images.new_hole_template(level.width, level.height)
 
 local big_caves = level:rand_points(8)
+local random_bats = {}
 for _, point in ipairs(big_caves) do
 	-- draw a bunch of partially overlapping circles rather than one big one
 	-- for a more organic/messy look
 	for _, p in ipairs(level:rand_points_in({point.x - 80, point.y - 80, 160, 160}, 8)) do
 		cavern:draw_circle(p, 30)
 	end
+
+	if point.y < water_level then
+		table.insert(random_bats, {
+			count = 3,
+			area = { point.x - 80, point.y - 80, 160, 160 },
+		})
+	end
 end
+level.settings["random-bats"] = random_bats
+
 
 -- Draw random tunnels
 local points = { table.unpack(big_caves), table.unpack(level:rand_points(80)) }
@@ -47,7 +57,7 @@ for _, point in ipairs(level:rand_points(20)) do
 	end
 end
 
--- Add bases to tunnel dead-ends
+-- Add bases (and spiders) to tunnel dead-ends
 local function put_base_decorations(point)
 	local points = {
 		table.unpack(level:rand_points_in({point.x - 55, point.y, 40, 0}, 2)),
@@ -64,13 +74,33 @@ end
 
 local base_count = 6
 local potential_base_locations = Utils.find_dead_ends(tunnels)
+
+-- There's a spider at every tunnel dead-end
+local random_spiders = {}
+for _, point in ipairs(potential_base_locations) do
+	if point.y < water_level then
+		table.insert(random_spiders, {
+			count = 1,
+			area = { point.x - 10, point.y - 10, 20, 20 },
+		})
+	end
+end
+level.settings["random-spiders"] = random_spiders
+
+local random_fish = {}
 while base_count > 0 and #potential_base_locations > 0 do
 	local point = table.remove(potential_base_locations, level:randi(1, #potential_base_locations))
 	if point.y > water_level then
 		local roof = Utils.find_solid_ground(point, Vec2(0, -1), 60)
-		if roof ~= nil then
+		if roof ~= nil and roof.y + 10 > water_level then
 			level:put_image(roof.x, roof.y - 2, bases.smalluwbase:rand(), "top-center", "under")
 			base_count = base_count - 1
+
+			-- underwater bases are guarded by sharks
+			table.insert(random_fish, {
+				count = 1,
+				area = { point.x - 20, point.y - 20, 40, 40 },
+			})
 		elseif point.y - 60 < water_level then
 			level:put_image(point.x, water_level, bases.floatbase:rand(), "center")
 			base_count = base_count - 1
@@ -92,6 +122,7 @@ while base_count > 0 and #potential_base_locations > 0 do
 		end
 	end
 end
+level.settings["random-fish"] = random_fish
 
 -- Draw water
 level:put_water({0, water_level, level.width, level.height}, 0.2)
