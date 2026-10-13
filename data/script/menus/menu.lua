@@ -169,6 +169,14 @@ function game_menu()
 				SETTINGS_CHANGED = true
 			end,
 		}),
+		Link({
+			label = "Random critters:",
+			value = Value.Toggle(SETTINGS.game.critters),
+			action = function(item)
+				SETTINGS.game.critters = item:toggle()
+				SETTINGS_CHANGED = true
+			end,
+		}),
 		Selectable({
 			label = "Rounds:",
 			value = Value.Integer(SETTINGS.game.rounds),

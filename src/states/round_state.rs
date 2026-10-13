@@ -20,6 +20,7 @@ use std::{cell::RefCell, rc::Rc};
 use anyhow::{Result, anyhow};
 
 use crate::{
+    configfile::GAME_CONFIG,
     game::{
         GameControllerSet, MenuButton, Player, PlayerId,
         level::{Level, PreloadedLevel},
@@ -118,7 +119,7 @@ impl GameRoundState {
             )?;
         }
 
-        let (level, script_settings) = Level::load_level(&renderer.borrow(), preloaded_level)?;
+        let (level, mut script_settings) = Level::load_level(&renderer.borrow(), preloaded_level)?;
 
         let world = World::new(
             &players,
@@ -130,6 +131,14 @@ impl GameRoundState {
             textures.clone(),
         )?;
         let lua = world.scripting().lua();
+
+        // Remove random critters from level settings if disabled
+        if !GAME_CONFIG.read().unwrap().game.critters {
+            script_settings.remove("random-birds");
+            script_settings.remove("random-bats");
+            script_settings.remove("random-fish");
+            script_settings.remove("random-spiders");
+        }
 
         // Call game init script
         let player_settings = lua.create_table()?;

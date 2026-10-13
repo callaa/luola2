@@ -83,6 +83,8 @@ pub struct GameOptions {
     pub rounds: i32,
     #[serde(default = "default_respawns")]
     pub respawns: i32,
+    #[serde(default = "default_true")]
+    pub critters: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
