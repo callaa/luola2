@@ -142,7 +142,13 @@ function luola_explosive_terrain(pos, color)
 		})
 	end
 
-	Impacts.make_firestarters(3, pos)
+	game.effect("AddTerrainParticle", {
+		pos = pos,
+		vel = Vec2_for_angle(math.random(0, 360), 500),
+		ground_interaction = "ember",
+		lifetime = 8,
+	})
+
 	sfx.explosion(sounds.small_explosion(), pos, 0.8)
 end
 
