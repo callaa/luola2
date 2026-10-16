@@ -108,7 +108,7 @@ impl mlua::FromLua for TerrainParticle {
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
                 wind: table.get::<Option<bool>>("wind")?.unwrap_or(true),
-                lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(60.6),
+                lifetime: table.get::<Option<f32>>("lifetime")?.unwrap_or(60.0),
                 destroyed: false,
             })
         } else {
@@ -122,17 +122,32 @@ impl mlua::FromLua for TerrainParticle {
 }
 
 impl TerrainParticle {
-    pub fn new(
-        pos: Vec2,
-        ground_interaction: GroundInteractionStyle,
-        texture: Option<TextureId>,
-        color: Color,
-        zerogravity: bool,
-    ) -> Self {
+    pub fn ember(pos: Vec2) -> Self {
         TerrainParticle {
             phys: PhysicalObject {
                 pos,
-                vel: if zerogravity {
+                vel: Vec2::ZERO,
+                imass: 100.0,
+                radius: LEVEL_SCALE / 2.0,
+                drag: 0.6,
+                impulse: Vec2::ZERO,
+                terrain_collision_mode: TerrainCollisionMode::Passthrough,
+                antigrav: false,
+            },
+            lifetime: 4.0,
+            texture: None,
+            color: Color::WHITE,
+            ground_interaction: GroundInteractionStyle::Ember,
+            wind: true,
+            destroyed: false,
+        }
+    }
+
+    pub fn sand(pos: Vec2, terrain: Terrain, color: Color, is_zerogravity: bool) -> Self {
+        TerrainParticle {
+            phys: PhysicalObject {
+                pos,
+                vel: if is_zerogravity {
                     Vec2::for_rad(
                         fastrand::f32() * 2.0 * std::f32::consts::PI,
                         fastrand::f32() * 100.0 + 50.0,
@@ -148,10 +163,10 @@ impl TerrainParticle {
                 antigrav: false,
             },
             lifetime: 60.0,
-            texture,
+            texture: None,
             color,
-            ground_interaction,
-            wind: !zerogravity,
+            ground_interaction: GroundInteractionStyle::Sand(terrain),
+            wind: !is_zerogravity,
             destroyed: false,
         }
     }

@@ -29,7 +29,7 @@ use crate::{
                 TER_TYPE_ICE, Terrain,
             },
         },
-        objects::{GroundInteractionStyle, TerrainParticle},
+        objects::TerrainParticle,
         scripting::ScriptEnvironment,
         world::WorldEffect,
     },
@@ -173,10 +173,9 @@ impl<'a> LevelEditor<'a> {
                                 );
 
                                 scripting.add_effect(WorldEffect::AddTerrainParticle(
-                                    TerrainParticle::new(
+                                    TerrainParticle::sand(
                                         pos,
-                                        GroundInteractionStyle::Sand(*ter),
-                                        None,
+                                        *ter,
                                         Color::from_argb_u32(*art),
                                         gravity < 0.01,
                                     ),
@@ -462,6 +461,15 @@ impl<'a> LevelEditor<'a> {
                                 cinder,
                             },
                         );
+
+                        let below = LevelCoordinate(pos.0, pos.1 + 1);
+                        if terrain::is_space(self.level.terrain_at_lc(below))
+                            && fastrand::f32() < 0.1
+                        {
+                            scripting.add_effect(WorldEffect::AddTerrainParticle(
+                                TerrainParticle::ember(below.as_world_coordinate()),
+                            ));
+                        }
                     } else if cinder {
                         let shade = fastrand::f32() * 0.1 + 0.2;
                         self.replace_point_lc(
