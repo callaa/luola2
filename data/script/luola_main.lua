@@ -363,6 +363,11 @@ luola_weapons = {
 		fire_func = sweapons.blackholegun,
 		description = "Generates and accelerates a microscopic black hole capable of passing through all matter. The hole evaporates quickly, emitting a large amount of Hawking radiation as it does."
 	},
+	afterburner = {
+		title = "Afterburner",
+		fire_func = sweapons.afterburner,
+		description = "Injects extra fuel into the ship's jet engine to provide a speed boost."
+	},
 }
 
 -- List of selectable ships

@@ -528,4 +528,21 @@ function weapons.blackholegun(ship)
 	end
 end
 
+function weapons.afterburner(ship)
+	if ship:consume_ammo(0.1, 0.01) then
+		ship:impulse(Vec2_for_angle(-ship.angle, 50000))
+		for _ = 0, 3 do
+			game.effect("AddTerrainParticle", {
+				pos = ship.pos,
+				vel = ship.vel + Vec2_for_angle(-ship.angle + 180 + math.random(-10, 10), 500),
+				color = 0xffff0000,
+				ground_interaction = "ember",
+				lifetime = 4,
+			})
+		end
+		-- TODO engine noise
+		--sfx.weapon(sounds.afterburner(), 0.1)
+	end
+end
+
 return weapons

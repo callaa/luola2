@@ -49,6 +49,7 @@ pub struct TerrainParticle {
 pub enum GroundInteractionStyle {
     Decorative,    // simply disappears when touching ground
     Staining,      // changes the color of existing ground but doesn't add more
+    Ember,         // burning particle that can ignite burnable or explosive terrain
     Sand(Terrain), // turns to more ground (falling sand if enabled)
 }
 
@@ -62,6 +63,7 @@ impl mlua::FromLua for GroundInteractionStyle {
             mlua::Value::String(s) => match s.as_bytes().deref() {
                 b"decorative" => Ok(Self::Decorative),
                 b"staining" => Ok(Self::Staining),
+                b"ember" => Ok(Self::Ember),
                 b"ground" => Ok(Self::Sand(
                     terrain::TER_TYPE_GROUND | terrain::TER_BIT_DESTRUCTIBLE,
                 )),
@@ -95,8 +97,8 @@ impl mlua::FromLua for TerrainParticle {
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.6),
                     impulse: Vec2::ZERO,
                     terrain_collision_mode: match ground_interaction {
-                        GroundInteractionStyle::Staining => TerrainCollisionMode::Passthrough,
-                        _ => TerrainCollisionMode::Simple,
+                        GroundInteractionStyle::Sand(_) => TerrainCollisionMode::Simple,
+                        _ => TerrainCollisionMode::Passthrough,
                     },
                     antigrav: false,
                 },
@@ -162,6 +164,10 @@ impl TerrainParticle {
         &mut self.phys
     }
 
+    pub fn ground_interaction(&self) -> GroundInteractionStyle {
+        self.ground_interaction
+    }
+
     pub fn is_staining(&self) -> bool {
         matches!(self.ground_interaction, GroundInteractionStyle::Staining)
     }
@@ -174,7 +180,11 @@ impl TerrainParticle {
         }
     }
 
-    pub fn step_mut(&mut self, level: &Level, timestep: f32) -> Option<(Vec2, Terrain, Color)> {
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
+    pub fn step_mut(&mut self, level: &Level, timestep: f32) -> Option<Vec2> {
         if self.wind {
             let jitter = (-0.5 + fastrand::f32()) * 0.5;
             self.phys
@@ -194,14 +204,18 @@ impl TerrainParticle {
                     return None;
                 }
 
-                let t = self.terrain();
-                if terrain::is_water(ter) && !terrain::is_ice(t) {
+                if terrain::is_water(ter) && !terrain::is_ice(self.terrain()) {
                     // Only ice floats
                     return None;
                 }
 
-                return Some((self.pos(), t, self.color));
+                return Some(self.pos());
             }
+        } else if matches!(self.ground_interaction, GroundInteractionStyle::Ember) {
+            // animate color
+            //self.color = Color::from_hsv((30.0 - self.lifetime) * 2.0, 1.0, 1.0);
+            self.color = Color::from_hsv(fastrand::f32() * 60.0, 1.0, 1.0)
+                .with_alpha(self.lifetime.min(1.0));
         }
 
         self.lifetime -= timestep;

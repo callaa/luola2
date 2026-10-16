@@ -29,7 +29,8 @@ use crate::{
             terrain::{self, Terrain},
         },
         objects::{
-            Critter, FixedObject, GameObjectArray, HitscanProjectile, Pilot, TerrainParticle,
+            Critter, FixedObject, GameObjectArray, GroundInteractionStyle, HitscanProjectile,
+            Pilot, TerrainParticle,
         },
     },
     gfx::{AnimatedTexture, Color, RenderMode, RenderOptions, Renderer, TextureStore},
@@ -441,22 +442,40 @@ impl World {
         // Terrain particle simulation step
         for tp in self.terrainparticles.iter_mut() {
             let e = tp.step_mut(&level, timestep);
-            if let Some(e) = e {
-                if tp.is_staining() {
-                    self.scripting.add_effect(WorldEffect::ColorPixel(e.0, e.2));
-                } else {
-                    self.scripting
-                        .add_effect(WorldEffect::AddPixel(e.0, e.1, e.2));
-                    if !terrain::is_ice(e.1) {
-                        // snow is sticky and doesn't slide off
-                        self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
-                            e.0,
-                            DynamicTerrainCell::Sand {
-                                terrain: e.1 & terrain::TER_MASK_SOLID,
-                                solidify: 60,
-                                color: e.2.as_argb_u32(),
-                            },
-                        ));
+            if let Some(pos) = e {
+                match tp.ground_interaction() {
+                    GroundInteractionStyle::Decorative => {}
+                    GroundInteractionStyle::Staining => {
+                        self.scripting
+                            .add_effect(WorldEffect::ColorPixel(pos, tp.color()));
+                    }
+                    GroundInteractionStyle::Sand(t) => {
+                        self.scripting
+                            .add_effect(WorldEffect::AddPixel(pos, t, tp.color()));
+                        // For ice, the sticky effect from not using falling sand
+                        // looks better.
+                        if !terrain::is_ice(t) {
+                            self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
+                                pos,
+                                DynamicTerrainCell::Sand {
+                                    terrain: t & terrain::TER_MASK_SOLID,
+                                    solidify: 60,
+                                    color: tp.color().as_argb_u32(),
+                                },
+                            ));
+                        }
+                    }
+                    GroundInteractionStyle::Ember => {
+                        let ter = self.level.borrow().terrain_at(pos);
+                        if terrain::is_burnable(ter) {
+                            self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
+                                pos,
+                                DynamicTerrainCell::Fire {
+                                    counter: 60,
+                                    cinder: false,
+                                },
+                            ));
+                        }
                     }
                 }
             }
