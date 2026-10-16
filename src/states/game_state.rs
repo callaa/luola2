@@ -20,8 +20,7 @@ use std::{cell::RefCell, mem::take, rc::Rc};
 use crate::{
     demos::AnimatedStarfield,
     game::{
-        GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId,
-        level::PreloadingLevel,
+        GameControllerSet, GameInitConfig, MenuButton, Player, PlayerId, level::PreloadingLevel,
     },
     gfx::Renderer,
     states::{
@@ -110,11 +109,13 @@ impl GameState {
             // Level set, skip selector
             substate = GameSubState::SelectWeapons;
 
-            LevelState::Selected(assets
-                .levels
-                .iter()
-                .position(|l| l.name() == config.level)
-                .ok_or_else(|| anyhow!("Level {} not found!", config.level))?)
+            LevelState::Selected(
+                assets
+                    .levels
+                    .iter()
+                    .position(|l| l.name() == config.level)
+                    .ok_or_else(|| anyhow!("Level {} not found!", config.level))?,
+            )
         };
 
         let round_winners = config.winners;
@@ -220,7 +221,7 @@ impl StackableState for GameState {
                 let selection = match self.level {
                     LevelState::Unselected => fastrand::usize(0..self.assets.levels.len()),
                     LevelState::Selected(i) => i,
-                    LevelState::Preloaded(i, _) => i
+                    LevelState::Preloaded(i, _) => i,
                 };
 
                 StackableStateResult::Push(Box::new(
@@ -241,17 +242,21 @@ impl StackableState for GameState {
             }
             GameSubState::SelectWeapons => {
                 self.substate = GameSubState::SelectLevel;
-                let (level_idx, preload) = match std::mem::replace(&mut self.level, LevelState::Unselected) {
-                    LevelState::Unselected => {
-                        return StackableStateResult::Error(anyhow!(
-                            "Entered weapon selection state with no level set!"
-                        ));
-                    }
-                    LevelState::Selected(i) => {
-                        (i, Rc::new(RefCell::new(PreloadingLevel::start(self.assets.levels[i].clone()))))
-                    }
-                    LevelState::Preloaded(i, p) => (i, p),
-                };
+                let (level_idx, preload) =
+                    match std::mem::replace(&mut self.level, LevelState::Unselected) {
+                        LevelState::Unselected => {
+                            return StackableStateResult::Error(anyhow!(
+                                "Entered weapon selection state with no level set!"
+                            ));
+                        }
+                        LevelState::Selected(i) => (
+                            i,
+                            Rc::new(RefCell::new(PreloadingLevel::start(
+                                self.assets.levels[i].clone(),
+                            ))),
+                        ),
+                        LevelState::Preloaded(i, p) => (i, p),
+                    };
 
                 let preloading_level = Rc::clone(&preload);
                 self.level = LevelState::Preloaded(level_idx, preload);

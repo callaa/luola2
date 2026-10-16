@@ -97,7 +97,7 @@ function Spider.on_bullet_hit(critter, bullet)
 			color = 0x80c5be02,
 			imass = 1,
 			drag = 0.002,
-			stain = true,
+			ground_interaction = "staining",
 		})
 	end
 end

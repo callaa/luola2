@@ -73,7 +73,7 @@ local function on_bullet_hit(pilot, bullet, damage)
 			color = 0x80ff0000,
 			imass = 1,
 			drag = 0.002,
-			stain = true,
+			ground_interaction = "staining",
 		})
 	end
 	sfx.weapon(sfx.get("wilhelm"))

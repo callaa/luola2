@@ -16,22 +16,22 @@
 
 pub type Terrain = u8;
 
-pub(super) const TER_BIT_WATER: Terrain = 0b10000000;
-pub(super) const TER_BIT_DESTRUCTIBLE: Terrain = 0b01000000;
-pub(super) const TER_BIT_DYNAMIC: Terrain = 0b00100000;
+pub const TER_BIT_WATER: Terrain = 0b10000000;
+pub const TER_BIT_DESTRUCTIBLE: Terrain = 0b01000000;
+pub const TER_BIT_DYNAMIC: Terrain = 0b00100000;
 pub const TER_MASK_SOLID: Terrain = 0b00011111;
-pub(super) const TER_TYPE_GROUND: Terrain = 1;
-pub(super) const TER_TYPE_BURNABLE: Terrain = 2;
-pub(super) const TER_TYPE_CINDER: Terrain = 3;
-pub(super) const TER_TYPE_EXPLOSIVE: Terrain = 4;
-pub(super) const TER_TYPE_HIGH_EXPLOSIVE: Terrain = 5;
-pub(super) const TER_TYPE_ICE: Terrain = 6;
-pub(super) const TER_TYPE_BASE: Terrain = 7;
-pub(super) const TER_TYPE_NOREGENBASE: Terrain = 8; // base that does not regenerate
-pub(super) const TER_TYPE_BASESUPPORT: Terrain = 9; // ground that regenerates if base regeneration is enabled
-pub(super) const TER_TYPE_WALKWAY: Terrain = 10; // ground that walkers can walk through
-pub(super) const TER_TYPE_GREYGOO: Terrain = 11; // can infect a ship with grey goo
-pub(super) const TER_TYPE_DAMAGE: Terrain = 12; // damages things that touch it
+pub const TER_TYPE_GROUND: Terrain = 1;
+pub const TER_TYPE_BURNABLE: Terrain = 2;
+pub const TER_TYPE_CINDER: Terrain = 3;
+pub const TER_TYPE_EXPLOSIVE: Terrain = 4;
+pub const TER_TYPE_HIGH_EXPLOSIVE: Terrain = 5;
+pub const TER_TYPE_ICE: Terrain = 6;
+pub const TER_TYPE_BASE: Terrain = 7;
+pub const TER_TYPE_NOREGENBASE: Terrain = 8; // base that does not regenerate
+pub const TER_TYPE_BASESUPPORT: Terrain = 9; // ground that regenerates if base regeneration is enabled
+pub const TER_TYPE_WALKWAY: Terrain = 10; // ground that walkers can walk through
+pub const TER_TYPE_GREYGOO: Terrain = 11; // can infect a ship with grey goo
+pub const TER_TYPE_DAMAGE: Terrain = 12; // damages things that touch it
 
 pub(super) const TER_LEVELBOUND: Terrain = TER_MASK_SOLID; // special type indicating level boundary
 

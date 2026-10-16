@@ -113,7 +113,7 @@ function Bat.on_bullet_hit(critter, bullet)
 			vel = Vec2_for_angle(-hit_angle + math.random(-30, 30), 300.0),
 			imass = 1,
 			drag = 0.002,
-			stain = true,
+			ground_interaction = "staining",
 			color = 0x80ff0000,
 		})
 	end

@@ -1,5 +1,5 @@
 // This file is part of Luola2
-// Copyright (C) 2025 Calle Laakkonen
+// Copyright (C) 2025, 2026 Calle Laakkonen
 //
 // Luola2 is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@ use crate::{
     gfx::{Color, RenderDest, RenderOptions, Renderer, TextureId, TextureStore},
     math::{RectF, Vec2},
 };
+use anyhow::anyhow;
+use core::ops::Deref;
 
 /**
  * Dust, snow, or other type of atomized terrain that floats down.
@@ -38,16 +40,52 @@ pub struct TerrainParticle {
     texture: Option<TextureId>,
     color: Color,
     lifetime: f32,
-    wind: bool,       // does wind and jitter affect this particle
-    stain: bool,      // if true, recolor an existing pixel rather than creating a new one
-    terrain: Terrain, // if zero, this particle won't turn into real terrain (unused in stain mode)
+    wind: bool, // does wind and jitter affect this particle
+    ground_interaction: GroundInteractionStyle,
     destroyed: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum GroundInteractionStyle {
+    Decorative,    // simply disappears when touching ground
+    Staining,      // changes the color of existing ground but doesn't add more
+    Sand(Terrain), // turns to more ground (falling sand if enabled)
+}
+
+impl mlua::FromLua for GroundInteractionStyle {
+    fn from_lua(value: mlua::Value, _: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Nil => Ok(Self::Decorative),
+            mlua::Value::Integer(0) => Ok(Self::Decorative),
+            mlua::Value::Integer(i) if i > 0 && i < 256 => Ok(Self::Sand(i as u8)),
+            mlua::Value::Integer(_) => Err(anyhow!("value must be in range 0..255").into()),
+            mlua::Value::String(s) => match s.as_bytes().deref() {
+                b"decorative" => Ok(Self::Decorative),
+                b"staining" => Ok(Self::Staining),
+                b"ground" => Ok(Self::Sand(
+                    terrain::TER_TYPE_GROUND | terrain::TER_BIT_DESTRUCTIBLE,
+                )),
+                b"ice" => Ok(Self::Sand(
+                    terrain::TER_TYPE_ICE | terrain::TER_BIT_DESTRUCTIBLE,
+                )),
+                unknown => {
+                    //  TODO parse terrain name
+                    Err(anyhow!("Unknown mode: {}", str::from_utf8(unknown).unwrap()).into())
+                }
+            },
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "GroundInteractionStyle".to_owned(),
+                message: Some("expected GroundInteractionStyle".to_string()),
+            }),
+        }
+    }
 }
 
 impl mlua::FromLua for TerrainParticle {
     fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
         if let mlua::Value::Table(table) = value {
-            let stain = table.get::<Option<bool>>("stain")?.unwrap_or(false);
+            let ground_interaction = table.get::<GroundInteractionStyle>("ground_interaction")?;
             Ok(TerrainParticle {
                 phys: PhysicalObject {
                     pos: table.get("pos")?,
@@ -56,16 +94,14 @@ impl mlua::FromLua for TerrainParticle {
                     radius: LEVEL_SCALE / 2.0,
                     drag: table.get::<Option<f32>>("drag")?.unwrap_or(0.6),
                     impulse: Vec2::ZERO,
-                    terrain_collision_mode: if stain {
-                        TerrainCollisionMode::Passthrough
-                    } else {
-                        TerrainCollisionMode::Simple
+                    terrain_collision_mode: match ground_interaction {
+                        GroundInteractionStyle::Staining => TerrainCollisionMode::Passthrough,
+                        _ => TerrainCollisionMode::Simple,
                     },
                     antigrav: false,
                 },
                 texture: table.get("texture")?,
-                stain,
-                terrain: table.get::<Option<Terrain>>("terrain")?.unwrap_or(0),
+                ground_interaction,
                 color: Color::from_argb_u32(
                     table.get::<Option<u32>>("color")?.unwrap_or(0xffffffff),
                 ),
@@ -86,7 +122,7 @@ impl mlua::FromLua for TerrainParticle {
 impl TerrainParticle {
     pub fn new(
         pos: Vec2,
-        terrain: Terrain,
+        ground_interaction: GroundInteractionStyle,
         texture: Option<TextureId>,
         color: Color,
         zerogravity: bool,
@@ -111,9 +147,8 @@ impl TerrainParticle {
             },
             lifetime: 60.0,
             texture,
-            terrain,
             color,
-            stain: false,
+            ground_interaction,
             wind: !zerogravity,
             destroyed: false,
         }
@@ -128,7 +163,15 @@ impl TerrainParticle {
     }
 
     pub fn is_staining(&self) -> bool {
-        self.stain
+        matches!(self.ground_interaction, GroundInteractionStyle::Staining)
+    }
+
+    /// Get the terrain type of this particle, or 0 if it does not leave any terrain behind
+    pub fn terrain(&self) -> Terrain {
+        match self.ground_interaction {
+            GroundInteractionStyle::Sand(t) => t,
+            _ => 0,
+        }
     }
 
     pub fn step_mut(&mut self, level: &Level, timestep: f32) -> Option<(Vec2, Terrain, Color)> {
@@ -143,7 +186,7 @@ impl TerrainParticle {
         if !terrain::is_space(ter) {
             self.destroyed = true;
 
-            if self.terrain != 0 || self.stain {
+            if !matches!(self.ground_interaction, GroundInteractionStyle::Decorative) {
                 if terrain::is_level_boundary(ter) || terrain::is_effective_base(ter) {
                     // Don't accumulate on level boundaries or bases.
                     // Bases we don't want covered because it could make them easily unusable by
@@ -151,12 +194,13 @@ impl TerrainParticle {
                     return None;
                 }
 
-                if terrain::is_water(ter) && !terrain::is_ice(self.terrain) {
+                let t = self.terrain();
+                if terrain::is_water(ter) && !terrain::is_ice(t) {
                     // Only ice floats
                     return None;
                 }
 
-                return Some((self.pos(), self.terrain, self.color));
+                return Some((self.pos(), t, self.color));
             }
         }
 

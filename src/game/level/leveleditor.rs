@@ -29,7 +29,7 @@ use crate::{
                 TER_TYPE_ICE, Terrain,
             },
         },
-        objects::TerrainParticle,
+        objects::{GroundInteractionStyle, TerrainParticle},
         scripting::ScriptEnvironment,
         world::WorldEffect,
     },
@@ -175,7 +175,7 @@ impl<'a> LevelEditor<'a> {
                                 scripting.add_effect(WorldEffect::AddTerrainParticle(
                                     TerrainParticle::new(
                                         pos,
-                                        *ter,
+                                        GroundInteractionStyle::Sand(*ter),
                                         None,
                                         Color::from_argb_u32(*art),
                                         gravity < 0.01,

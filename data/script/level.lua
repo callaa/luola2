@@ -96,7 +96,7 @@ function Level.init_snowfall()
 			game.effect("AddTerrainParticle", {
 				pos = p,
 				vel = Vec2(0, 0),
-				terrain = 0x46,
+				ground_interaction = "ice",
 				color = game.snow_color,
 			})
 		end
