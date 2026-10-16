@@ -37,6 +37,18 @@ function impacts.make_firestarters(count, pos)
 	})
 end
 
+-- Create embers within the given circular area
+function impacts.make_embers(count, pos, radius)
+	for _ = 0, count do
+		game.effect("AddTerrainParticle", {
+			pos = pos + Vec2_for_angle(math.random(0, 360), radius),
+			vel = Vec2(0, 0),
+			ground_interaction = "ember",
+			lifetime = 8,
+		})
+	end
+end
+
 function impacts.firestarter(this, terrain, obj)
 	if Level.is_burnable(terrain) then
 		this:destroy()
@@ -142,7 +154,7 @@ function impacts.grenade(this, terrain, obj)
 			on_impact = impacts.bullet,
 		},
 	})
-	impacts.make_firestarters(8, this.pos)
+	impacts.make_embers(8, this.pos, 8)
 	sfx.explosion(sounds.small_explosion(), this.pos, 0.3)
 end
 
@@ -166,7 +178,7 @@ function impacts.megabomb(this, terrain, obj)
 		}
 	})
 
-	impacts.make_firestarters(8, this.pos)
+	impacts.make_embers(8, this.pos, 16)
 	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
@@ -189,7 +201,7 @@ function impacts.rocket(this, terrain, obj)
 			on_impact = impacts.grenade,
 		}
 	})
-	impacts.make_firestarters(8, this.pos)
+	impacts.make_embers(8, this.pos, 12)
 	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
@@ -213,7 +225,7 @@ function impacts.missile(this, terrain, obj)
 			on_impact = impacts.bullet,
 		}
 	})
-	impacts.make_firestarters(8, this.pos)
+	impacts.make_embers(4, this.pos, 8)
 	sfx.explosion(sounds.big_explosion(), this.pos, 0.3)
 end
 
@@ -231,7 +243,7 @@ function impacts.minimissile(this, terrain, obj)
 		texture = textures.get("bigboom"),
 	})
 
-	impacts.make_firestarters(3, this.pos)
+	impacts.make_embers(1, this.pos, 5)
 	sfx.explosion(sounds.small_explosion(), this.pos, 0.3)
 end
 
