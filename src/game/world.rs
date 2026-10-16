@@ -304,7 +304,7 @@ impl World {
                 WorldEffect::EndRound(winner) => self.winner = Some(winner),
             }
         }
-        level_editor.step_dynterrain();
+        level_editor.step_dynterrain(&mut self.scripting);
 
         if sort_particles {
             // Hitscan weapons (laser) add a large number of short lived particles.
@@ -467,7 +467,7 @@ impl World {
                     }
                     GroundInteractionStyle::Ember => {
                         let ter = self.level.borrow().terrain_at(pos);
-                        if terrain::is_burnable(ter) {
+                        if terrain::is_burnable(ter) || terrain::is_explosive(ter) {
                             self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
                                 pos,
                                 DynamicTerrainCell::Fire {

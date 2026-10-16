@@ -311,7 +311,7 @@ impl<'a> LevelEditor<'a> {
 
     /// Perform a dynamic terrain simulation step
     /// Note: this assumes a fixed timestep of 60FPS
-    pub fn step_dynterrain(&mut self) {
+    pub fn step_dynterrain(&mut self, scripting: &mut ScriptEnvironment) {
         let old_cells = self.level.dynterrain.take();
         if old_cells.is_empty() {
             return;
@@ -417,6 +417,34 @@ impl<'a> LevelEditor<'a> {
                                         cinder: terrain::is_cinder(ter_at_p),
                                     },
                                 );
+                            } else if terrain::is_explosive(ter_at_p) {
+                                // Add a cell here so we don't call the script multiple times
+                                // if it's neighbored by more than one live cell.
+                                new_cells.insert(
+                                    p,
+                                    DynamicTerrainCell::Fire {
+                                        counter: 0,
+                                        cinder: false,
+                                    },
+                                );
+
+                                match scripting.get_function("luola_explosive_terrain") {
+                                    Ok(f) => {
+                                        if let Err(err) = f.call::<()>((
+                                            p.as_world_coordinate(),
+                                            self.level.pixel_at_lc(p),
+                                        )) {
+                                            log::error!(
+                                                "Call to luola_explosive_terrain failed: {err}"
+                                            );
+                                        }
+                                    }
+                                    Err(err) => {
+                                        log::error!(
+                                            "Couldn't get luola_explosive_terrain function: {err}"
+                                        );
+                                    }
+                                }
                             }
                         });
                     }
