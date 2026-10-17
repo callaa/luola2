@@ -183,6 +183,9 @@ local function ship_bullet_hit(ship, bullet, damage)
 		low = 0.25,
 		duration = 0.1,
 	})
+	if ship.frozen > 0.0 then
+		ship.frozen = ship.frozen - damage * 2.0
+	end
 	sfx.explosion(sounds.hull_impact(), ship.pos, 0.3)
 end
 

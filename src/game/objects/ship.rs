@@ -95,8 +95,8 @@ pub struct Ship {
     /// Ghost mode active: terrain collisions disabled and special rendering mode used
     ghostmode: bool,
 
-    /// Ship is frozen. Special rendering mode is used and controls are locked
-    frozen: bool,
+    /// Ship is frozen for this many seconds. Special rendering mode is used and controls are locked
+    frozen: f32,
 
     /// Is the fire2 button being held down? Used to detect leading-edge input event
     /// for weapons that should fire only once per trigger pull.
@@ -153,8 +153,8 @@ impl UserData for Ship {
             Ok(())
         });
         fields.add_field_method_get("frozen", |_, this| Ok(this.frozen));
-        fields.add_field_method_set("frozen", |_, this, f: bool| {
-            this.frozen = f;
+        fields.add_field_method_set("frozen", |_, this, f: f32| {
+            this.frozen = f.max(0.0);
             Ok(())
         });
 
@@ -231,7 +231,7 @@ impl mlua::FromLua for Ship {
                 destroyed: false,
                 cloaked: false,
                 ghostmode: false,
-                frozen: false,
+                frozen: 0.0,
                 fire2_down: false,
                 timer: table.get("timer")?,
                 timer_accumulator: 0.0,
@@ -330,8 +330,17 @@ impl Ship {
     ) -> Ship {
         let mut ship = self.clone();
 
+        let is_not_frozen = {
+            if ship.frozen > 0.0 {
+                ship.frozen -= timestep;
+                false
+            } else {
+                true
+            }
+        };
+
         let engine_active = if !self.is_wrecked()
-            && !self.frozen
+            && is_not_frozen
             && let Some(controller) = controller
         {
             ship.angle += ship.turn_speed * controller.turn * timestep;
@@ -435,11 +444,11 @@ impl Ship {
                     ship.secondary_weapon_cooldown -= timestep;
                 }
 
-                if controller.fire1 && ship.primary_weapon_cooldown <= 0.0 {
+                if controller.fire1 && ship.primary_weapon_cooldown <= 0.0 && is_not_frozen {
                     call_state_method!(ship, lua, "on_fire_primary");
                 }
 
-                if controller.fire2 && ship.secondary_weapon_cooldown <= 0.0 {
+                if controller.fire2 && ship.secondary_weapon_cooldown <= 0.0 && is_not_frozen {
                     // second parameter is true on leading edge of trigger pull
                     call_state_method!(
                         ship,
@@ -482,10 +491,10 @@ impl Ship {
 
         tex.render(renderer, &renderopts);
 
-        if (self.damage_effect > 0.0 || self.frozen)
+        if (self.damage_effect > 0.0 || self.frozen > 0.0)
             && let Some(damage) = ts.get_texture_alt(self.texture, TexAlt::Damage)
         {
-            if self.frozen {
+            if self.frozen > 0.0 {
                 renderopts.color = Color::new_rgba(0.49, 0.886, 0.909, 0.7);
             }
             damage.render(renderer, &renderopts);

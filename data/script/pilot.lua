@@ -107,6 +107,10 @@ local function on_touch_ship(pilot, ship)
 	if ship.controller == 0 then
 		ship.controller = pilot.controller
 		ship.player = pilot.player
+		-- scrape off the ice when getting in a ship
+		-- this is the fastest way to unfreeze your ship if there are no
+		-- enemies around
+		ship.frozen = 0.0
 		pilot:destroy()
 	end
 end

@@ -286,10 +286,15 @@ function impacts.freezer(this, terrain, obj)
 	this:destroy()
 
 	if obj and obj.is_ship then
-		obj.frozen = true
-		Scheduler.add_to_object(obj, 5, function(ship)
-			ship.frozen = false
-		end)
+		obj.frozen = 30.0
+		game.player_effect("hud_overlay", obj.player, {
+				text = textures.font("menu", "Control surfaces frozen!\nGet out and scrape!"),
+				pos = Vec2(0.5, 0.1),
+				color = 0xff00aaff,
+				lifetime = 5,
+				fadeout = 0.5,
+		})
+
 	else
 		game.effect("AddDynamicTerrain", {
 			pos = this.pos,
