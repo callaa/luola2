@@ -8,6 +8,8 @@ use crate::{
     get_state_method,
     math::{LineF, Vec2},
 };
+use anyhow::anyhow;
+use core::ops::Deref;
 
 /**
  * A special projectile that lives for only one tick.
@@ -21,17 +23,48 @@ pub struct HitscanProjectile {
     /// If true, hitscan is limited by terrain (and terrain type is set)
     hit_terrain: bool,
 
-    /// If false, on_hit_object is called only for the closest object
-    hit_multiple: bool,
+    /// How many objects to hit
+    hit_objects: ObjectHitMode,
 
-    /// Nearest distance (squared) set when hit_multiple is false
-    nearest_dist: f32,
+    /// Distance^2 to nearest object. (Set when hit_objects is Single)
+    nearest_dist_squared: f32,
 
     /// Type of terrain that was hit
     terrain: Terrain,
 
     /// Scripting state
     state: Option<mlua::Table>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ObjectHitMode {
+    NoHit,    // don't hit objects at all
+    Single,   // hit only the closest object
+    Multiple, // hit all intersecting objects
+}
+
+impl mlua::FromLua for ObjectHitMode {
+    fn from_lua(
+        value: mlua::prelude::LuaValue,
+        _lua: &mlua::prelude::Lua,
+    ) -> mlua::prelude::LuaResult<Self> {
+        match value {
+            mlua::Value::Nil => Ok(ObjectHitMode::NoHit),
+            mlua::Value::String(s) => match s.as_bytes().deref() {
+                b"nohit" => Ok(ObjectHitMode::NoHit),
+                b"single" => Ok(ObjectHitMode::Single),
+                b"multiple" => Ok(ObjectHitMode::Multiple),
+                unknown => {
+                    Err(anyhow!("Unknown mode: {}", str::from_utf8(unknown).unwrap()).into())
+                }
+            },
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "ObjectHitMode".to_owned(),
+                message: Some("expected ObjectHitMode".to_string()),
+            }),
+        }
+    }
 }
 
 impl mlua::UserData for HitscanProjectile {
@@ -59,8 +92,8 @@ impl mlua::FromLua for HitscanProjectile {
                 owner: table.get::<Option<PlayerId>>("owner")?.unwrap_or(0),
                 terrain: 0,
                 hit_terrain: table.get::<Option<bool>>("hit_terrain")?.unwrap_or(true),
-                hit_multiple: table.get::<Option<bool>>("hit_multiple")?.unwrap_or(false),
-                nearest_dist: f32::MAX,
+                hit_objects: table.get::<ObjectHitMode>("hit_objects")?,
+                nearest_dist_squared: f32::MAX,
                 state: table.get("state")?,
             })
         } else {
@@ -92,6 +125,10 @@ impl HitscanProjectile {
 
     pub fn owner(&self) -> PlayerId {
         self.owner
+    }
+
+    pub fn hits_objects(&self) -> bool {
+        !matches!(self.hit_objects, ObjectHitMode::NoHit)
     }
 
     pub fn hit_level(&mut self, level: &Level) {
@@ -141,20 +178,24 @@ impl HitscanProjectile {
     }
 
     /// Check for a hit against this object and execute callback if hit_multiple is true
-    /// Returns true if this was the nearest object hit so far (only if hit_multiple is false)
+    /// Returns true if this was the nearest object hit so far (only if hit_objects is Single)
     pub fn do_hit_object<T>(&mut self, lua: &mlua::Lua, obj: &mut T) -> bool
     where
         T: GameObject + mlua::UserData + 'static,
     {
         if let Some(hitpos) = self.check_hit(obj) {
-            if self.hit_multiple {
-                self.on_hit_object(lua, obj);
-            } else {
-                let d = hitpos.dist_squared(self.start);
-                if d < self.nearest_dist {
-                    self.stop = hitpos;
-                    self.nearest_dist = d;
-                    return true;
+            match self.hit_objects {
+                ObjectHitMode::NoHit => {}
+                ObjectHitMode::Single => {
+                    let d = hitpos.dist_squared(self.start);
+                    if d < self.nearest_dist_squared {
+                        self.stop = hitpos;
+                        self.nearest_dist_squared = d;
+                        return true;
+                    }
+                }
+                ObjectHitMode::Multiple => {
+                    self.on_hit_object(lua, obj);
                 }
             }
         }

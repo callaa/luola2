@@ -1,6 +1,7 @@
 local Scheduler = require("utils.scheduler")
 local UniqID = require("utils.uniqid")
 local Forcefields = require("forcefields")
+local Level = require("level")
 local sounds = require("sounds")
 
 local Grav = {}
@@ -8,11 +9,16 @@ local Grav = {}
 function Grav.create_gravmine(pos)
 	game.effect("AddFixedObject", {
 		pos = pos,
-		texture = textures.get("dot8x8"), -- TODO nicer texture
+		texture = textures.get("gravmine"),
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new():add(1, Grav._activate_mine):add(15, Scheduler.destroy_this):add(0, Grav._play_mine_warble),
+			scheduler = Scheduler:new()
+				:add(1, Grav._activate_mine)
+				:add(1, Grav._gravmine_beams)
+				:add(1, Grav._play_mine_warble)
+				:add(15, Scheduler.destroy_this),
 			on_destroy = Grav.on_destroy,
+			radius = 700,
 		},
 		timer = 1,
 	})
@@ -21,31 +27,69 @@ end
 function Grav.create_moving_gravmine(pos, angle)
 	game.effect("AddFixedObject", {
 		pos = pos,
-		texture = textures.get("dot8x8"), -- TODO nicer texture
+		texture = textures.get("gravmine"),
 		id = UniqID.new(),
 		state = {
-			scheduler = Scheduler:new():add(0.3, Grav._move_mine):add(20, Scheduler.destroy_this):add(0, Grav._play_mine_warble),
+			scheduler = Scheduler:new()
+				:add(0.3, Grav._move_mine)
+				:add(0.3, Grav._gravmine_beams)
+				:add(0.3, Grav._play_mine_warble)
+				:add(20, Scheduler.destroy_this),
 			on_destroy = Grav.on_destroy,
 			angle = angle,
 			ff_id = UniqID.new(),
+			radius = 500,
 		},
 		timer = 1,
 	})
 end
 
+local function _gravmine_beam_impact(hs)
+	if Level.is_destructible(hs.terrain) then
+		game.effect("MakeBigHole", {
+			pos = hs.stop,
+			r = 1,
+			dust = 1
+		})
+	end
+end
+
+function Grav._gravmine_beams(obj)
+	-- Random hitscan beams that destroy landscape
+	-- This is mainly to create a visual effect where bits of terrain is pulled towards
+	-- the gravity well.
+	local v = Vec2_for_angle(math.random(0, 360), obj.state.radius)
+	local state = { on_done = _gravmine_beam_impact }
+
+	game.effect("AddHitscan", {
+		start = obj.pos,
+		stop = obj.pos + v,
+		state = state,
+	})
+	game.effect("AddHitscan", {
+		start = obj.pos,
+		stop = obj.pos - v,
+		state = state,
+	})
+
+	return 0.2
+end
+
 function Grav._activate_mine(obj)
+	local r = obj.state.radius
 	obj.state.forcefield = Forcefields.update({
-		bounds = { obj.pos.x - 700, obj.pos.y - 700, 1400, 1400 },
+		bounds = { obj.pos.x - r, obj.pos.y - r, r * 2, r * 2 },
 		point = 70,
 	})
 end
 
 function Grav._move_mine(obj)
 	local pos = obj.pos + Vec2_for_angle(obj.state.angle, 5)
+	local r = obj.state.radius
 	obj.pos = pos
 	obj.state.forcefield = Forcefields.update({
 		id = obj.state.ff_id,
-		bounds = { pos.x - 500, pos.y - 500, 1000, 1000 },
+		bounds = { pos.x - r, pos.y - r, r * 2, r * 2 },
 		point = 60,
 	})
 

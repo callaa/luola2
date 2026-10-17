@@ -20,6 +20,7 @@ function Hitscan.laser_to(start, stop, owner)
 		start = start,
 		stop = stop,
 		owner = owner,
+		hit_objects = "single",
 		state = {
 			is_laser = true,
 			on_hit_object = laser_hit_object,
@@ -76,7 +77,7 @@ function Hitscan.deathray_to(start, stop, owner)
 		start = start,
 		stop = stop,
 		owner = owner,
-		hit_multiple = true,
+		hit_objects = "multiple",
 		state = {
 			is_laser = true,
 			on_hit_object = laser_hit_object,

@@ -28,6 +28,10 @@ function Level.is_water(ter)
 	return ter & 0xbf == 0x80
 end
 
+function Level.is_destructible(ter)
+	return (ter & 0x40) == 0x40
+end
+
 function Level.is_indestructible(ter)
 	return (ter & 0x40) == 0
 end

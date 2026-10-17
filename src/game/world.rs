@@ -682,80 +682,82 @@ impl World {
         for hs in self.hitscans.iter_mut() {
             hs.hit_level(&level);
 
-            let left = hs.left();
-            let right = hs.right();
+            if hs.hits_objects() {
+                let left = hs.left();
+                let right = hs.right();
 
-            enum Nearest<'a> {
-                None,
-                Ship(&'a mut Ship),
-                Mine(&'a mut Projectile),
-                Critter(&'a mut Critter),
-                Pilot(&'a mut Pilot),
-                FixedObj(&'a mut FixedObject),
+                enum Nearest<'a> {
+                    None,
+                    Ship(&'a mut Ship),
+                    Mine(&'a mut Projectile),
+                    Critter(&'a mut Critter),
+                    Pilot(&'a mut Pilot),
+                    FixedObj(&'a mut FixedObject),
+                }
+                let mut nearest_object = Nearest::None;
+
+                let mut ships_work = self.ships_work.borrow_mut();
+                for ship in ships_work.range_slice_mut(left, right) {
+                    if (hs.owner() != ship.player_id())
+                        && hs.do_hit_object(self.scripting.lua(), ship)
+                    {
+                        nearest_object = Nearest::Ship(ship);
+                    }
+                }
+
+                let mut mines_work = self.mines.borrow_mut();
+                for mine in mines_work.range_slice_mut(left, right) {
+                    if (hs.owner() == 0 || hs.owner() != mine.owner())
+                        && hs.do_hit_object(self.scripting.lua(), mine)
+                    {
+                        nearest_object = Nearest::Mine(mine);
+                    }
+                }
+
+                let mut critters_work = self.critters_work.borrow_mut();
+                for critter in critters_work.range_slice_mut(left, right) {
+                    if (hs.owner() == 0 || hs.owner() != critter.owner())
+                        && hs.do_hit_object(self.scripting.lua(), critter)
+                    {
+                        nearest_object = Nearest::Critter(critter);
+                    }
+                }
+
+                let mut pilots_work = self.pilots.borrow_mut();
+                for pilot in pilots_work.range_slice_mut(left, right) {
+                    if (hs.owner() == 0 || hs.owner() != pilot.player_id())
+                        && hs.do_hit_object(self.scripting.lua(), pilot)
+                    {
+                        nearest_object = Nearest::Pilot(pilot);
+                    }
+                }
+
+                let mut fobjs_work = self.fixedobjects.borrow_mut();
+                for fobj in fobjs_work.range_slice_mut(left, right) {
+                    if hs.do_hit_object(self.scripting.lua(), fobj) {
+                        nearest_object = Nearest::FixedObj(fobj);
+                    }
+                }
+
+                match nearest_object {
+                    Nearest::None => {}
+                    Nearest::Ship(s) => {
+                        hs.on_hit_object(self.scripting.lua(), s);
+                    }
+                    Nearest::Mine(m) => {
+                        hs.on_hit_object(self.scripting.lua(), m);
+                    }
+                    Nearest::Critter(c) => {
+                        hs.on_hit_object(self.scripting.lua(), c);
+                    }
+                    Nearest::Pilot(p) => {
+                        hs.on_hit_object(self.scripting.lua(), p);
+                    }
+                    Nearest::FixedObj(o) => {
+                        hs.on_hit_object(self.scripting.lua(), o);
+                    }
+                }
             }
-            let mut nearest_object = Nearest::None;
-
-            let mut ships_work = self.ships_work.borrow_mut();
-            for ship in ships_work.range_slice_mut(left, right) {
-                if (hs.owner() != ship.player_id()) && hs.do_hit_object(self.scripting.lua(), ship)
-                {
-                    nearest_object = Nearest::Ship(ship);
-                }
-            }
-
-            let mut mines_work = self.mines.borrow_mut();
-            for mine in mines_work.range_slice_mut(left, right) {
-                if (hs.owner() == 0 || hs.owner() != mine.owner())
-                    && hs.do_hit_object(self.scripting.lua(), mine)
-                {
-                    nearest_object = Nearest::Mine(mine);
-                }
-            }
-
-            let mut critters_work = self.critters_work.borrow_mut();
-            for critter in critters_work.range_slice_mut(left, right) {
-                if (hs.owner() == 0 || hs.owner() != critter.owner())
-                    && hs.do_hit_object(self.scripting.lua(), critter)
-                {
-                    nearest_object = Nearest::Critter(critter);
-                }
-            }
-
-            let mut pilots_work = self.pilots.borrow_mut();
-            for pilot in pilots_work.range_slice_mut(left, right) {
-                if (hs.owner() == 0 || hs.owner() != pilot.player_id())
-                    && hs.do_hit_object(self.scripting.lua(), pilot)
-                {
-                    nearest_object = Nearest::Pilot(pilot);
-                }
-            }
-
-            let mut fobjs_work = self.fixedobjects.borrow_mut();
-            for fobj in fobjs_work.range_slice_mut(left, right) {
-                if hs.do_hit_object(self.scripting.lua(), fobj) {
-                    nearest_object = Nearest::FixedObj(fobj);
-                }
-            }
-
-            match nearest_object {
-                Nearest::None => {}
-                Nearest::Ship(s) => {
-                    hs.on_hit_object(self.scripting.lua(), s);
-                }
-                Nearest::Mine(m) => {
-                    hs.on_hit_object(self.scripting.lua(), m);
-                }
-                Nearest::Critter(c) => {
-                    hs.on_hit_object(self.scripting.lua(), c);
-                }
-                Nearest::Pilot(p) => {
-                    hs.on_hit_object(self.scripting.lua(), p);
-                }
-                Nearest::FixedObj(o) => {
-                    hs.on_hit_object(self.scripting.lua(), o);
-                }
-            }
-
             hs.on_done(self.scripting.lua());
         }
 
