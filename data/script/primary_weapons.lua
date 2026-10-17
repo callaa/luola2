@@ -5,6 +5,10 @@ local weapons = {}
 function weapons.cannon(ship)
 	ship.primary_weapon_cooldown = 0.15
 
+	if ship.state.forcefield ~= nil then
+		return
+	end
+
 	sfx.weapon(sounds.gunshot(), 1.0)
 	game.effect("AddBullet", {
 		pos = ship.pos,
@@ -21,6 +25,9 @@ end
 
 function weapons.delta_cannon(ship)
 	ship.primary_weapon_cooldown = 0.10
+	if ship.state.forcefield ~= nil then
+		return
+	end
 
 	local bullet = {
 		vel = ship.vel + Vec2_for_angle(-ship.angle, 1000.0),
@@ -49,6 +56,10 @@ end
 
 function weapons.harpoon(ship)
 	ship.primary_weapon_cooldown = 0.11
+
+	if ship.state.forcefield ~= nil then
+		return
+	end
 
 	sfx.weapon(sounds.gunshot(), 1.0)
 	game.effect("AddBullet", {
