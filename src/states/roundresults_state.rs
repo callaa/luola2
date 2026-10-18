@@ -100,7 +100,7 @@ impl RoundResultsState {
 impl StackableState for RoundResultsState {
     fn handle_menu_button(&mut self, button: MenuButton) -> StackableStateResult {
         match button {
-            MenuButton::Back | MenuButton::Start => {
+            MenuButton::Back | MenuButton::Start | MenuButton::Select(_) => {
                 return StackableStateResult::Pop;
             }
             _ => {}
