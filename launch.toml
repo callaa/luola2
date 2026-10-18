@@ -2,7 +2,7 @@
 # This is mainly used for testing and development
 # Typical usage: cargo r -- --launch launch.toml
 
-level = "demo"
+level = "demos/demo"
 rounds = 10
 
 #gameover = true # skip straight to game-over screen

@@ -36,7 +36,6 @@ use crate::{
 #[derive(Clone)]
 pub struct LevelInfo {
     root: PathBuf,
-    levelpack: String,
     name: String,
     title: String,
     artwork_file: String,
@@ -171,17 +170,21 @@ impl LevelInfo {
             })
             .collect();
 
+        let levelpack = path
+            .parent()
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let name = format!(
+            "{}/{}",
+            levelpack,
+            path.file_stem().unwrap().to_str().unwrap()
+        );
         Ok(LevelInfo {
             root,
-            levelpack: path
-                .parent()
-                .unwrap()
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_owned(),
-            name: path.file_stem().unwrap().to_str().unwrap().to_owned(),
+            name,
             title: info.title,
             artwork_file: info.artwork.unwrap_or(info.terrain.clone()),
             terrain_file: info.terrain,
@@ -221,7 +224,10 @@ impl LevelInfo {
     }
 
     pub fn levelpack(&self) -> &str {
-        &self.levelpack
+        self.name
+            .split('/')
+            .next()
+            .expect("level should be inside a levelpack")
     }
 
     pub fn name(&self) -> &str {

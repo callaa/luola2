@@ -1,4 +1,4 @@
-level = "demo3"
+level = "demos/demo3"
 rounds = 5
 
 [[player]]
