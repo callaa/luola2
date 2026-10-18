@@ -57,6 +57,16 @@ pub struct LevelInfo {
     music: Vec<String>,
     extra_music: Vec<String>,
     extra_sfx: Vec<String>,
+    billboards: Vec<BillboardToml>,
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct BillboardToml {
+    /// Position in level coordinates
+    pub pos: (i32, i32),
+
+    /// Name of the texture to use
+    pub texture: String,
 }
 
 type TerrainPalette = [u8; 256];
@@ -101,6 +111,9 @@ struct LevelInfoToml {
     extra_music: Option<Vec<String>>,
     extra_sfx: Option<Vec<String>>,
     textures: Option<HashMap<String, TextureConfigWithAlts>>,
+
+    #[serde(default, rename = "billboard")]
+    billboards: Vec<BillboardToml>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
@@ -188,6 +201,7 @@ impl LevelInfo {
             music: info.music.unwrap_or_default(),
             extra_music: info.extra_music.unwrap_or_default(),
             extra_sfx: info.extra_sfx.unwrap_or_default(),
+            billboards: info.billboards,
         })
     }
 
@@ -293,6 +307,10 @@ impl LevelInfo {
 
     pub fn extra_sfx(&self) -> &Vec<String> {
         &self.extra_sfx
+    }
+
+    pub fn billboards(&self) -> &Vec<BillboardToml> {
+        &self.billboards
     }
 
     // Convert the given pixel values into the internal format using the terrain palette map

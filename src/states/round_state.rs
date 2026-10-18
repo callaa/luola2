@@ -119,7 +119,8 @@ impl GameRoundState {
             )?;
         }
 
-        let (level, mut script_settings) = Level::load_level(&renderer.borrow(), preloaded_level)?;
+        let (level, mut script_settings) =
+            Level::load_level(&renderer.borrow(), preloaded_level, &textures)?;
 
         let world = World::new(
             &players,

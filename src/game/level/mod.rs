@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Luola2.  If not, see <https://www.gnu.org/licenses/>.
 
+mod billboard;
 mod dynter;
 mod level;
 mod leveleditor;
@@ -25,6 +26,7 @@ mod starfield;
 pub mod terrain;
 mod tileiterator;
 
+pub use billboard::*;
 pub use dynter::DynamicTerrainCell;
 pub use level::*;
 pub use leveleditor::*;

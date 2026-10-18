@@ -158,8 +158,6 @@ impl World {
         music: Rc<RefCell<MusicStore>>,
         textures: Rc<TextureStore>,
     ) -> Result<Self> {
-        let level = Rc::new(RefCell::new(level));
-
         let mut scripting = ScriptEnvironment::new(renderer.clone(), textures.clone())?;
 
         let players = Rc::new(RefCell::new(
@@ -170,6 +168,8 @@ impl World {
         let mines = Rc::new(RefCell::new(GameObjectArray::new()));
         let critters = Rc::new(RefCell::new(GameObjectArray::new()));
         let fixedobjects = Rc::new(RefCell::new(GameObjectArray::new()));
+
+        let level = Rc::new(RefCell::new(level));
 
         {
             let sfx = sfx.clone();

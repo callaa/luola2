@@ -17,7 +17,7 @@
 use std::{cell::Cell, ops::Add};
 
 use super::{
-    LevelInfo, PreloadedLevel,
+    Billboard, LevelInfo, PreloadedLevel,
     dynter::DynamicTerrainMap,
     terrain,
     terrain::TER_BIT_WATER,
@@ -26,7 +26,7 @@ use super::{
 use crate::{
     configfile::GAME_CONFIG,
     game::level::terrain::Terrain,
-    gfx::{Color, Image, Renderer, Texture, TextureScaleMode},
+    gfx::{Color, Image, Renderer, Texture, TextureScaleMode, TextureStore},
     math::{Line, LineF, Rect, RectF, Vec2},
 };
 
@@ -124,6 +124,7 @@ pub struct Level {
     artwork: Texture,         // updated from tiles when changed
     minimap: Option<Texture>, // generated on level load
     background: Option<Texture>,
+    billboards: Vec<Billboard>,
     pub(super) dynterrain: Cell<DynamicTerrainMap>,
     pub(super) regen: Vec<RegeneratingTerrain>,
     width: f32,       // width in world coordinates
@@ -175,6 +176,7 @@ impl Level {
     pub fn load_level(
         renderer: &Renderer,
         preloaded: PreloadedLevel,
+        textures: &TextureStore,
     ) -> Result<(Level, toml::Table)> {
         let info = preloaded.info;
 
@@ -203,6 +205,8 @@ impl Level {
         } else {
             None
         };
+
+        let billboards = Billboard::from_toml(info.billboards(), &textures);
 
         let mut tiles: Vec<TerrainTile> = Vec::with_capacity((tiles_wide * tiles_high) as usize);
 
@@ -329,6 +333,7 @@ impl Level {
                 artwork,
                 minimap,
                 background,
+                billboards,
                 dynterrain: Cell::default(),
                 regen,
                 windspeed: 0.0,
@@ -693,6 +698,12 @@ impl Level {
                 )),
                 None,
             );
+        }
+
+        // Number of billboards is generally so small that viewport culling is not worth the effort
+        for bb in &self.billboards {
+            bb.texture
+                .render_simple(renderer, None, Some(bb.bounds - camera.topleft()));
         }
 
         self.artwork.render_simple(renderer, Some(source), None);
