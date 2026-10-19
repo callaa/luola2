@@ -94,6 +94,14 @@ pub fn is_cinder(t: Terrain) -> bool {
     t & TER_MASK_SOLID == TER_TYPE_CINDER
 }
 
+pub fn burnable_to_ash(t: Terrain) -> Terrain {
+    if is_cinder(t) {
+        t & TER_BIT_DESTRUCTIBLE | TER_TYPE_GROUND
+    } else {
+        0
+    }
+}
+
 /// Is this ice/snow?
 /// Ships will slide on icy surfaces
 pub fn is_ice(t: Terrain) -> bool {

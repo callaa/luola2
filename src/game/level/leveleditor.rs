@@ -228,11 +228,9 @@ impl<'a> LevelEditor<'a> {
     // Replace a point with a solid or an empty space.
     // underwater bit is preserved.
     fn replace_point_lc(&mut self, pos: LevelCoordinate, solid: Terrain, color: u32) {
-        debug_assert!((solid & !(TER_MASK_SOLID | TER_BIT_DYNAMIC)) == 0);
-
         if let Some((tile, offset, tilepos)) = self.level.tile_at_lc_mut(pos) {
             if solid == 0 {
-                tile.terrain[offset] &= !(TER_BIT_DESTRUCTIBLE | TER_MASK_SOLID | TER_BIT_DYNAMIC);
+                tile.terrain[offset] &= TER_BIT_WATER;
                 if terrain::is_underwater(tile.terrain[offset]) {
                     tile.artwork[offset] = self.water_color;
                 } else {
@@ -250,8 +248,7 @@ impl<'a> LevelEditor<'a> {
                 } else {
                     tile.artwork[offset] = color;
                 }
-                tile.terrain[offset] =
-                    (tile.terrain[offset] & !TER_MASK_SOLID) | TER_BIT_DESTRUCTIBLE | solid;
+                tile.terrain[offset] = tile.terrain[offset] & TER_BIT_WATER | solid;
             };
             self.dirty_set.insert(tilepos);
         }
@@ -323,7 +320,7 @@ impl<'a> LevelEditor<'a> {
                 DynamicTerrainCell::Foam { limit } => {
                     self.replace_point_lc(
                         pos,
-                        TER_TYPE_GROUND,
+                        TER_TYPE_GROUND | TER_BIT_DESTRUCTIBLE,
                         Color::from_hsv(
                             37.0 - limit as f32 / 2.0,
                             0.372,
@@ -346,7 +343,7 @@ impl<'a> LevelEditor<'a> {
                     if counter > 0 {
                         self.replace_point_lc(
                             pos,
-                            TER_TYPE_GREYGOO,
+                            TER_TYPE_GREYGOO | TER_BIT_DESTRUCTIBLE,
                             Color::from_hsv(183.0, 1.0, counter as f32 / 6.0).as_argb_u32(),
                         );
                         new_cells.insert(
@@ -384,7 +381,11 @@ impl<'a> LevelEditor<'a> {
                             },
                         );
                     } else {
-                        self.replace_point_lc(pos, TER_TYPE_HIGH_EXPLOSIVE, 0xffff0000);
+                        self.replace_point_lc(
+                            pos,
+                            TER_TYPE_HIGH_EXPLOSIVE | TER_BIT_DESTRUCTIBLE,
+                            0xffff0000,
+                        );
                         if limit > 0 {
                             Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
                                 let ter_at_p = self.level.terrain_at_lc(p);
@@ -404,7 +405,7 @@ impl<'a> LevelEditor<'a> {
                         }
                     }
                 }
-                DynamicTerrainCell::Fire { counter, cinder } => {
+                DynamicTerrainCell::Fire { counter, ash } => {
                     if counter == 30 {
                         Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
                             let ter_at_p = self.level.terrain_at_lc(p);
@@ -413,19 +414,14 @@ impl<'a> LevelEditor<'a> {
                                     p,
                                     DynamicTerrainCell::Fire {
                                         counter: fastrand::i32(31..60),
-                                        cinder: terrain::is_cinder(ter_at_p),
+                                        ash: terrain::burnable_to_ash(ter_at_p),
                                     },
                                 );
                             } else if terrain::is_explosive(ter_at_p) {
                                 // Add a cell here so we don't call the script multiple times
                                 // if it's neighbored by more than one live cell.
-                                new_cells.insert(
-                                    p,
-                                    DynamicTerrainCell::Fire {
-                                        counter: 0,
-                                        cinder: false,
-                                    },
-                                );
+                                new_cells
+                                    .insert(p, DynamicTerrainCell::Fire { counter: 0, ash: 0 });
 
                                 match scripting.get_function("luola_explosive_terrain") {
                                     Ok(f) => {
@@ -451,14 +447,14 @@ impl<'a> LevelEditor<'a> {
                     if counter > 0 {
                         self.replace_point_lc(
                             pos,
-                            TER_TYPE_DAMAGE,
+                            TER_TYPE_DAMAGE | (ash & TER_BIT_DESTRUCTIBLE),
                             Color::from_hsv((60 - counter) as f32, 1.0, 1.0).as_argb_u32(),
                         );
                         new_cells.insert(
                             pos,
                             DynamicTerrainCell::Fire {
                                 counter: counter - 1,
-                                cinder,
+                                ash,
                             },
                         );
 
@@ -470,11 +466,11 @@ impl<'a> LevelEditor<'a> {
                                 TerrainParticle::ember(below.as_world_coordinate()),
                             ));
                         }
-                    } else if cinder {
+                    } else if ash != 0 {
                         let shade = fastrand::f32() * 0.1 + 0.2;
                         self.replace_point_lc(
                             pos,
-                            TER_TYPE_GROUND,
+                            ash,
                             Color::new(shade, shade, shade).as_argb_u32(),
                         );
                     } else {
@@ -483,7 +479,11 @@ impl<'a> LevelEditor<'a> {
                 }
                 DynamicTerrainCell::Freezer { limit } => {
                     if !terrain::is_solid(self.level.terrain_at_lc(pos)) {
-                        self.replace_point_lc(pos, TER_TYPE_ICE, self.snow_color);
+                        self.replace_point_lc(
+                            pos,
+                            TER_TYPE_ICE | TER_BIT_DESTRUCTIBLE,
+                            self.snow_color,
+                        );
                     }
                     if limit > 0 {
                         Self::neighbors(&NEIGHBORS_ROUNDISH, pos).for_each(|p| {
@@ -509,7 +509,7 @@ impl<'a> LevelEditor<'a> {
                                             if terrain::is_space(self.level.terrain_at_lc(icepos)) {
                                                 self.replace_point_lc(
                                                     icepos,
-                                                    TER_TYPE_ICE,
+                                                    TER_TYPE_ICE | TER_BIT_DESTRUCTIBLE,
                                                     self.snow_color,
                                                 );
                                             } else {
@@ -531,7 +531,7 @@ impl<'a> LevelEditor<'a> {
                     }
                 }
                 DynamicTerrainCell::Toxin { limit } => {
-                    self.replace_point_lc(pos, TER_TYPE_DAMAGE, 0x60ff2b80);
+                    self.replace_point_lc(pos, TER_TYPE_DAMAGE | TER_BIT_DESTRUCTIBLE, 0x60ff2b80);
                     if limit > 0 {
                         Self::neighbors(&NEIGHBORS4, pos).for_each(|p| {
                             let ter_at_p: u8 = self.level.terrain_at_lc(p);
@@ -555,7 +555,8 @@ impl<'a> LevelEditor<'a> {
                         new_cells.insert(
                             pos,
                             DynamicTerrainCell::Sand {
-                                terrain: terrain & (TER_MASK_SOLID | TER_BIT_DYNAMIC),
+                                terrain: terrain
+                                    & (TER_MASK_SOLID | TER_BIT_DYNAMIC | TER_BIT_DESTRUCTIBLE),
                                 solidify: 60 * 10,
                                 color: self.level.pixel_at_lc(pos),
                             },
@@ -579,7 +580,8 @@ impl<'a> LevelEditor<'a> {
                     color,
                 } => {
                     if solidify > 0
-                        && self.level.terrain_at_lc(pos) & (TER_MASK_SOLID | TER_BIT_DYNAMIC)
+                        && self.level.terrain_at_lc(pos)
+                            & (TER_MASK_SOLID | TER_BIT_DYNAMIC | TER_BIT_DESTRUCTIBLE)
                             == terrain
                     {
                         const FLOW: [LevelCoordinate; 5] = [

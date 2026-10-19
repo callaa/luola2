@@ -29,3 +29,8 @@ ice-uw = [82, 83]
 # Dynamic ground (sand-like)
 ground-dyn = [84,85]
 
+# Indestructible dynamic sand is dangerous since it can trap players
+# Note that indestructable sand requires at least one pixel of destructible
+# sand to activate.
+ground-dyn-i = [86,87]
+

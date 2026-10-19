@@ -458,7 +458,7 @@ impl World {
                             self.scripting.add_effect(WorldEffect::AddDynamicTerrain(
                                 pos,
                                 DynamicTerrainCell::Sand {
-                                    terrain: t & terrain::TER_MASK_SOLID,
+                                    terrain: t,
                                     solidify: 60,
                                     color: tp.color().as_argb_u32(),
                                 },
@@ -472,7 +472,7 @@ impl World {
                                 pos,
                                 DynamicTerrainCell::Fire {
                                     counter: 60,
-                                    cinder: false,
+                                    ash: terrain::burnable_to_ash(ter),
                                 },
                             ));
                         }

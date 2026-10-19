@@ -49,7 +49,7 @@ pub enum DynamicTerrainCell {
     // Cinder type terrain is turned into grey colored regular ground
     Fire {
         counter: i32,
-        cinder: bool,
+        ash: Terrain,
     },
 
     // Toxic material that absorbs into terrain surface
@@ -78,10 +78,8 @@ impl DynamicTerrainCell {
             } | DynamicTerrainCell::Nitro {
                 counter: _,
                 limit: _,
-            } | DynamicTerrainCell::Fire {
-                counter: _,
-                cinder: _,
-            } | DynamicTerrainCell::LooseningSand
+            } | DynamicTerrainCell::Fire { counter: _, ash: _ }
+                | DynamicTerrainCell::LooseningSand
                 | DynamicTerrainCell::Sand {
                     terrain: _,
                     solidify: _,
@@ -121,7 +119,7 @@ impl DynamicTerrainCell {
             }),
             b"Fire" => Ok(DynamicTerrainCell::Fire {
                 counter: table.get::<Option<i32>>("counter")?.unwrap_or(60),
-                cinder: false,
+                ash: 0,
             }),
             b"Toxin" => Ok(DynamicTerrainCell::Toxin {
                 limit: table.get::<Option<i32>>("limit")?.unwrap_or(5),
