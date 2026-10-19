@@ -394,6 +394,14 @@ function weapons.diggerbeam(ship)
 				timer=0.1
 			})
 		end
+
+		-- Make a big hole right in front of the ship.
+		-- This speeds up tunneling
+		game.effect("MakeBigHole", {
+			pos = ship.pos + Vec2_for_angle(-ship.angle, 16.0),
+			r = 8,
+		})
+
 		sfx.weapon(sounds.high_warble(), 0.1)
 	end
 end
