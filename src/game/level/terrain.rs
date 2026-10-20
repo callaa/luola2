@@ -86,7 +86,8 @@ pub fn is_high_explosive(t: Terrain) -> bool {
 
 /// Is this burnable terrain
 pub fn is_burnable(t: Terrain) -> bool {
-    t & TER_TYPE_CINDER >= TER_TYPE_BURNABLE
+    let s = t & TER_MASK_SOLID;
+    s == TER_TYPE_BURNABLE || s == TER_TYPE_CINDER
 }
 
 /// Is this burnable terrain that turns into cinder
