@@ -9,6 +9,7 @@ function Bird._timer_flock(critter)
 	local center = Vec2(0, 0)
 	local boid_count = 0
 	local avoid = Vec2(0, 0)
+	local avoid_dist = 90000
 	local vel_match = Vec2(0, 0)
 	game.critters_iter(critter.pos, 300, critter.id, function(other)
 		if not other.state.is_bird then
@@ -17,8 +18,9 @@ function Bird._timer_flock(critter)
 		boid_count = boid_count + 1
 		center = center + other.pos
 		local dd = critter.pos:dist_squared(other.pos)
-		if dd < 100 * 100 then
-			avoid = avoid + (critter.pos - other.pos)
+		if dd < 100 * 100 and dd < avoid_dist then
+			avoid_dist = dd
+			avoid = (critter.pos - other.pos)
 		end
 		vel_match = vel_match + other.vel
 	end)
@@ -30,7 +32,7 @@ function Bird._timer_flock(critter)
 		-- Rule 1: move towards the center of the flock
 		-- Rule 2: avoid getting too close
 		-- Rule 3: match velocities
-		critter.vel = critter.vel + ((center - critter.pos) * 0.2 + avoid * 0.2) + vel_match * 0.4
+		critter.vel = critter.vel + ((center - critter.pos) * critter.state.flocking_coefficient + avoid * critter.state.avoidance_coefficient) + vel_match * critter.state.velocity_matching_coefficient
 	end
 
 	-- Extra rule: avoid solid terrain
@@ -96,6 +98,9 @@ function Bird:new(pos)
 	local bird = {
 		is_bird = true,
 		scheduler = Scheduler:new():add(0, Bird._timer_flock),
+		avoidance_coefficient = math.random() * 0.6 + 0.1,
+		flocking_coefficient = math.random() * 0.3 + 0.1,
+		velocity_matching_coefficient = math.random() * 0.25 + 0.3,
 	}
 	setmetatable(bird, self)
 	self.__index = self
