@@ -314,6 +314,9 @@ impl Pilot {
                         } else {
                             rope.adjust(NINJAROPE_CLIMB_SPEED * timestep);
                         }
+                    } else if ctrl.jump {
+                        self.mode = MotionMode::Jetpacking;
+                        self.ninjarope = NinjaRope::Stowed;
                     }
                 }
             } else {
