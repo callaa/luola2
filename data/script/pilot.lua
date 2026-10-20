@@ -6,7 +6,7 @@ local Portals = require("portals")
 local Pilot = {}
 
 local function on_shoot(pilot)
-	pilot.weapon_cooldown = 0.4
+	pilot.weapon_cooldown = 0.15
 
 	game.effect("AddBullet", {
 		pos = pilot.pos + Vec2(0, -16),
@@ -14,9 +14,9 @@ local function on_shoot(pilot)
 		color = 0xffff6666,
 		radius = 5,
 		owner = pilot.player,
-		texture = textures.get("pewpew"),
+		texture = textures.get("harpoon"),
 		state = {
-			on_impact = Impacts.bullet,
+			on_impact = Impacts.small_bullet,
 		},
 	})
 end

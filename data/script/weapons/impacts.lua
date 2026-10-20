@@ -93,6 +93,33 @@ function impacts.bullet(this, terrain, obj)
 	end
 end
 
+-- Small bullet (pilot's gun)
+function impacts.small_bullet(this, terrain, obj)
+	if hit_object(this, obj, 1.8) then
+		return
+	end
+
+	this:destroy()
+
+	if terrain ~= Level.TER_LEVELBOUND then
+		game.effect("MakeBigHole", {
+			pos = this.pos,
+			r = 2
+		})
+		game.effect("AddParticle", {
+			pos = this.pos,
+			texture = textures.get("boom"),
+		})
+		if Level.is_solid(terrain) then
+			if Level.is_indestructible(terrain) then
+				sfx.explosion(sounds.click(), this.pos, 1.0)
+			else
+				sfx.explosion(sounds.thump(), this.pos, 1.0)
+			end
+		end
+	end
+end
+
 -- Harpoon still needs to make holes for the player to be able to dig themself out
 function impacts.harpoon(this, terrain, obj)
 	if hit_object(this, obj, 1.5) then
