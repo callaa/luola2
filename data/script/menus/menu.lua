@@ -153,11 +153,15 @@ function game_menu()
 			font = "caption",
 		}),
 		Spacer(32),
-		Link({
-			label = "Show minimap:",
-			value = Value.Toggle(SETTINGS.game.minimap),
-			action = function(item)
-				SETTINGS.game.minimap = item:toggle()
+		Selectable({
+			label = "Minimap:",
+			value = Value.Choice(SETTINGS.game.minimapmode, "Off", "Big", "Small", "Radar"),
+			left_action = function(item)
+				SETTINGS.game.minimapmode = item:choose(-1)
+				SETTINGS_CHANGED = true
+			end,
+			right_action = function(item)
+				SETTINGS.game.minimapmode = item:choose(1)
 				SETTINGS_CHANGED = true
 			end,
 		}),

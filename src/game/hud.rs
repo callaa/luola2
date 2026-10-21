@@ -270,6 +270,57 @@ pub fn draw_minimap(
     }
 }
 
+pub fn draw_radar(
+    renderer: &Renderer,
+    textures: &TextureStore,
+    center_on: Vec2,
+    pointers: &[(Color, Vec2)],
+) {
+    let radar_screen = textures.get_texture(
+        textures
+            .find_texture(b"radar")
+            .expect("\"radar\" texture should exist"),
+    );
+
+    let radius = radar_screen.width() / 2.0;
+
+    let center = Vec2(
+        renderer.width() as f32 - radius - 10.0,
+        renderer.height() as f32 - radius - 10.0,
+    );
+    radar_screen.render(
+        renderer,
+        &RenderOptions {
+            dest: RenderDest::Centered(center),
+            ..Default::default()
+        },
+    );
+
+    let tex = textures.get_texture(
+        textures
+            .find_texture(b"minimap_pointer")
+            .expect("minimap_pointer texture should exist"),
+    );
+
+    for (color, pointer) in pointers {
+        let relative = *pointer - center_on; // Note: pointer and center coordinates are normalized to 0..1 range
+        let mm = relative.magnitude_squared();
+        if mm < 0.0001 {
+            continue;
+        }
+        let blip = Vec2::for_angle(-relative.angle(), (0.3 + mm).min(0.9) * radius) + center;
+
+        tex.render(
+            renderer,
+            &RenderOptions {
+                dest: RenderDest::CenterScaled(blip, 2.0),
+                color: *color,
+                ..Default::default()
+            },
+        );
+    }
+}
+
 fn draw_ship_hud(
     renderer: &Renderer,
     ts: &TextureStore,

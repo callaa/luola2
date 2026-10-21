@@ -49,6 +49,7 @@ enum MenuItemValue {
     Toggle(bool, CachedText),
     KeyGrab(SDL_Keycode, CachedText),
     Integer(i32, CachedText),
+    Choice(usize, Vec<String>, CachedText),
 }
 
 enum MenuItemContent {
@@ -127,6 +128,18 @@ impl UserData for MenuItem {
                 let sum = (value + amount).clamp(min, max);
                 this.value = MenuItemValue::Integer(sum, RefCell::new(None));
                 Ok(sum)
+            } else {
+                Err(anyhow!("add called on non-Integer menu item!").into())
+            }
+        });
+
+        methods.add_method_mut("choose", |lua, this, dir: i32| {
+            if let MenuItemValue::Choice(value, choices, _) = &mut this.value {
+                let choices = std::mem::replace(choices, Vec::new());
+                let next = (*value as i32 + dir).rem_euclid(choices.len() as i32) as usize;
+                let next_value = lua.create_string(&choices[next])?;
+                this.value = MenuItemValue::Choice(next, choices, RefCell::new(None));
+                Ok(next_value)
             } else {
                 Err(anyhow!("add called on non-Integer menu item!").into())
             }
@@ -291,7 +304,7 @@ fn make_selectable(table: Table, renderer: &Renderer) -> mlua::Result<MenuItem> 
         center: false,
         value,
         rect,
-        action: None,
+        action: right_action.clone(),
         left_action,
         right_action,
     })
@@ -444,6 +457,25 @@ impl LuaMenu {
             "Integer",
             lua.create_function(|_lua, i: i32| Ok(MenuItemValue::Integer(i, RefCell::new(None))))?,
         )?;
+        itemvalues.set(
+            "Choice",
+            lua.create_function(
+                |_lua, (selection, choices): (Option<LuaString>, mlua::Variadic<String>)| {
+                    let idx = if let Some(selection) = selection {
+                        let sel = selection.to_str()?;
+                        choices.iter().position(|v| sel == v).unwrap_or(0)
+                    } else {
+                        0
+                    };
+
+                    Ok(MenuItemValue::Choice(
+                        idx,
+                        choices.into(),
+                        RefCell::new(None),
+                    ))
+                },
+            )?,
+        )?;
 
         lua.globals().set("Value", itemvalues)?;
 
@@ -553,11 +585,14 @@ impl LuaMenu {
                     let values = self.lua.create_table()?;
 
                     for item in &menu.items {
-                        values.push(match item.value {
+                        values.push(match &item.value {
                             MenuItemValue::None => Value::NULL,
-                            MenuItemValue::Toggle(v, _) => Value::Boolean(v),
+                            MenuItemValue::Toggle(v, _) => Value::Boolean(*v),
                             MenuItemValue::KeyGrab(v, _) => Value::Integer(v.0 as _),
-                            MenuItemValue::Integer(v, _) => Value::Integer(v as _),
+                            MenuItemValue::Integer(v, _) => Value::Integer(*v as _),
+                            MenuItemValue::Choice(v, choices, _) => {
+                                Value::String(self.lua.create_string(&choices[*v])?)
+                            }
                         })?;
                     }
                     on_exit.call::<()>(values)?;
@@ -860,6 +895,30 @@ impl MenuScreen {
                                         .create_text(renderer, &value.to_string())
                                         .unwrap()
                                         .with_color(if *value > 0 {
+                                            Color::new(0.0, 0.4, 0.8)
+                                        } else {
+                                            Color::new(0.8, 0.0, 0.0)
+                                        }),
+                                ));
+                            }
+
+                            text.borrow().as_ref().unwrap().render(&RenderTextOptions {
+                                dest: RenderTextDest::TopLeft(
+                                    item.rect.topright() + Vec2(10.0, 0.0) + self.animated_offset,
+                                ),
+                                alpha,
+                                ..Default::default()
+                            });
+                        }
+                        MenuItemValue::Choice(selection, choices, text) => {
+                            if text.borrow().is_none() {
+                                text.replace(Some(
+                                    renderer
+                                        .fontset()
+                                        .menu
+                                        .create_text(renderer, &choices[*selection])
+                                        .unwrap()
+                                        .with_color(if *selection > 0 {
                                             Color::new(0.0, 0.4, 0.8)
                                         } else {
                                             Color::new(0.8, 0.0, 0.0)

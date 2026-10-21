@@ -24,7 +24,7 @@ use super::{
     tileiterator::{MutableTileIterator, TileIterator},
 };
 use crate::{
-    configfile::GAME_CONFIG,
+    configfile::{GAME_CONFIG, MinimapMode},
     game::level::terrain::Terrain,
     gfx::{
         Color, Image, RenderDest, RenderOptions, Renderer, Texture, TextureScaleMode, TextureStore,
@@ -297,11 +297,17 @@ impl Level {
 
         // Create minimap texture
         // Though we could update this as the terrain gets modified, it's probably not worth the effort
-        let minimap = if GAME_CONFIG.read().unwrap().game.minimap {
+        let minimap_mode = GAME_CONFIG.read().unwrap().game.minimapmode;
+        let minimap = if matches!(minimap_mode, MinimapMode::Big | MinimapMode::Small) {
+            let scale = match minimap_mode {
+                MinimapMode::Big => 128,
+                _ => 64,
+            };
+
             Some(
                 preloaded
                     .artwork
-                    .scaled(64, 64, true)
+                    .scaled(scale, scale, true)
                     .and_then(|i| Texture::from_image(renderer, &Self::prettify_minimap(i)))?,
             )
         } else {

@@ -312,3 +312,6 @@ file = "keyboard-guide_pilot.png"
 
 [keyboard-guide-ship]
 file = "keyboard-guide_ship.png"
+
+[radar]
+file = "radar.png"

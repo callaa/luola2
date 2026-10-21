@@ -21,9 +21,10 @@ use log::error;
 use smallvec::SmallVec;
 
 use crate::{
+    configfile::{GAME_CONFIG, MinimapMode},
     game::{
         GameControllerSet, Player, PlayerId, PlayerState,
-        hud::{PlayerHud, draw_hud, draw_minimap},
+        hud::{PlayerHud, draw_hud, draw_minimap, draw_radar},
         level::{
             DynamicTerrainCell, LEVEL_SCALE, Starfield,
             terrain::{self, Terrain},
@@ -140,6 +141,9 @@ pub struct World {
 
     /// Debug helper
     debug_mode: DebugMode,
+
+    /// What style of minimap to draw (if any)
+    minimap_mode: MinimapMode,
 }
 
 enum DebugMode {
@@ -220,6 +224,7 @@ impl World {
             starfield,
             winner: None,
             debug_mode: DebugMode::None,
+            minimap_mode: GAME_CONFIG.read().unwrap().game.minimapmode,
         })
     }
 
@@ -876,7 +881,7 @@ impl World {
             // Player HUD
             draw_hud(renderer, ts, player.hud, &player.overlays, camera_pos);
 
-            if let Some(minimap) = self.level.borrow().minimap() {
+            if !matches!(self.minimap_mode, MinimapMode::Off) {
                 let mut markers = SmallVec::<[(Color, Vec2); 6]>::new();
                 let levelscale = self.level.borrow().size_scale();
                 for ship in self.ships.borrow().iter() {
@@ -895,8 +900,18 @@ impl World {
                     ));
                 }
 
-                draw_minimap(renderer, &self.textures, minimap, &markers);
+                if let Some(minimap) = self.level.borrow().minimap() {
+                    draw_minimap(renderer, &self.textures, minimap, &markers);
+                } else {
+                    draw_radar(
+                        renderer,
+                        &self.textures,
+                        player.camera_pos.element_wise_product(levelscale),
+                        &markers,
+                    );
+                }
             }
+        } else if matches!(self.minimap_mode, MinimapMode::Radar) {
         }
 
         if player.fadeout > 0.0 {

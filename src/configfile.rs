@@ -73,10 +73,19 @@ fn default_respawns() -> i32 {
     2
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
+pub enum MinimapMode {
+    #[default]
+    Off,
+    Big,
+    Small,
+    Radar,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GameOptions {
-    #[serde(default = "default_true")]
-    pub minimap: bool,
+    #[serde(default)]
+    pub minimapmode: MinimapMode,
     #[serde(default = "default_true")]
     pub baseregen: bool,
     #[serde(default = "default_rounds")]
