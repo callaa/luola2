@@ -249,12 +249,21 @@ impl StackableState for GameRoundState {
         let renderer = self.renderer.borrow();
 
         let level_size = self.world.level_size();
-        let (viewports, filler) = assign_viewports(
+        let (mut viewports, mut filler) = assign_viewports(
             Rect::new(0, 0, renderer.width(), renderer.height()),
             level_size.0 as i32,
             level_size.1 as i32,
             self.players.len(),
         );
+
+        if viewports.len() > 1 {
+            for vp in &mut viewports {
+                *vp = vp.adjusted(1, 1, -1, -1);
+            }
+            if let Some(vp) = &mut filler {
+                *vp = vp.adjusted(1.0, 1.0, -1.0, -1.0);
+            }
+        }
 
         for (viewport, player) in viewports.into_iter().zip(self.players.iter_mut()) {
             player.viewport = viewport;

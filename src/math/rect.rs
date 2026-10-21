@@ -162,6 +162,15 @@ impl RectF {
             && point.1 >= self.y()
             && point.1 < self.bottom()
     }
+
+    pub fn adjusted(&self, left: f32, top: f32, right: f32, bottom: f32) -> Self {
+        Self::new(
+            self.0.x + left,
+            self.0.y + top,
+            self.0.w - left + right,
+            self.0.h - top + bottom,
+        )
+    }
 }
 
 impl Add<Vec2> for RectF {
@@ -285,6 +294,15 @@ impl Rect {
 
     pub fn offset(&self, x: i32, y: i32) -> Self {
         Self::new(self.0.x + x, self.0.y + y, self.0.w, self.0.h)
+    }
+
+    pub fn adjusted(&self, left: i32, top: i32, right: i32, bottom: i32) -> Self {
+        Self::new(
+            self.0.x + left,
+            self.0.y + top,
+            self.0.w - left + right,
+            self.0.h - top + bottom,
+        )
     }
 }
 
