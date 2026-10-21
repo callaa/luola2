@@ -870,6 +870,9 @@ impl World {
                 critter.render(renderer, ts, camera_pos);
             }
 
+            // Level foreground (hidden when player is inside the element)
+            level.render_foreground(renderer, player.camera_pos, camera_rect);
+
             // Player HUD
             draw_hud(renderer, ts, player.hud, &player.overlays, camera_pos);
 

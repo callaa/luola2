@@ -26,7 +26,9 @@ use super::{
 use crate::{
     configfile::GAME_CONFIG,
     game::level::terrain::Terrain,
-    gfx::{Color, Image, Renderer, Texture, TextureScaleMode, TextureStore},
+    gfx::{
+        Color, Image, RenderDest, RenderOptions, Renderer, Texture, TextureScaleMode, TextureStore,
+    },
     math::{Line, LineF, Rect, RectF, Vec2},
 };
 
@@ -124,7 +126,8 @@ pub struct Level {
     artwork: Texture,         // updated from tiles when changed
     minimap: Option<Texture>, // generated on level load
     background: Option<Texture>,
-    billboards: Vec<Billboard>,
+    bg_billboards: Vec<Billboard>,
+    fg_billboards: Vec<Billboard>,
     pub(super) dynterrain: Cell<DynamicTerrainMap>,
     pub(super) regen: Vec<RegeneratingTerrain>,
     width: f32,       // width in world coordinates
@@ -206,7 +209,7 @@ impl Level {
             None
         };
 
-        let billboards = Billboard::from_toml(info.billboards(), &textures);
+        let (bg_billboards, fg_billboards) = Billboard::from_toml(info.billboards(), &textures);
 
         let mut tiles: Vec<TerrainTile> = Vec::with_capacity((tiles_wide * tiles_high) as usize);
 
@@ -333,7 +336,8 @@ impl Level {
                 artwork,
                 minimap,
                 background,
-                billboards,
+                bg_billboards,
+                fg_billboards,
                 dynterrain: Cell::default(),
                 regen,
                 windspeed: 0.0,
@@ -701,12 +705,36 @@ impl Level {
         }
 
         // Number of billboards is generally so small that viewport culling is not worth the effort
-        for bb in &self.billboards {
-            bb.texture
-                .render_simple(renderer, None, Some(bb.bounds - camera.topleft()));
+        for bb in &self.bg_billboards {
+            bb.texture.render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::Rect(bb.bounds - camera.topleft()),
+                    ..Default::default()
+                },
+            );
         }
 
         self.artwork.render_simple(renderer, Some(source), None);
+    }
+
+    pub fn render_foreground(&self, renderer: &Renderer, pos: Vec2, camera: RectF) {
+        for bb in &self.fg_billboards {
+            let a = if bb.bounds.contains(pos) {
+                let v = pos - bb.bounds.center();
+                v.magnitude() / bb.bounds.w().min(bb.bounds.h())
+            } else {
+                1.0
+            };
+            bb.texture.render(
+                renderer,
+                &RenderOptions {
+                    dest: RenderDest::Rect(bb.bounds - camera.topleft()),
+                    color: Color::WHITE.with_alpha(a.clamp(0.0, 1.0)),
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     pub fn debug_render_tilehints(&self, renderer: &Renderer, camera: RectF) {

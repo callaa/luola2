@@ -66,6 +66,10 @@ pub struct BillboardToml {
 
     /// Name of the texture to use
     pub texture: String,
+
+    /// Drawn over all other textures
+    #[serde(default)]
+    pub fg: bool,
 }
 
 type TerrainPalette = [u8; 256];

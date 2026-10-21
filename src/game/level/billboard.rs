@@ -13,8 +13,12 @@ pub struct Billboard {
 }
 
 impl Billboard {
-    pub fn from_toml(config: &[BillboardToml], ts: &TextureStore) -> Vec<Billboard> {
-        let mut billboards = Vec::with_capacity(config.len());
+    pub fn from_toml(
+        config: &[BillboardToml],
+        ts: &TextureStore,
+    ) -> (Vec<Billboard>, Vec<Billboard>) {
+        let mut bgs = Vec::new();
+        let mut fgs = Vec::new();
 
         for c in config {
             let tex_id = match ts.find_texture(&c.texture.as_bytes()) {
@@ -29,7 +33,7 @@ impl Billboard {
             // to pass TextureStore to the level render function.
             let texture = ts.get_texture(tex_id).clone();
 
-            billboards.push(Billboard {
+            let bb = Billboard {
                 bounds: RectF::new(
                     c.pos.0 as f32 * LEVEL_SCALE,
                     c.pos.1 as f32 * LEVEL_SCALE,
@@ -37,9 +41,14 @@ impl Billboard {
                     texture.height() * LEVEL_SCALE,
                 ),
                 texture,
-            })
-        }
+            };
 
-        billboards
+            if c.fg {
+                fgs.push(bb);
+            } else {
+                bgs.push(bb);
+            }
+        }
+        (bgs, fgs)
     }
 }
