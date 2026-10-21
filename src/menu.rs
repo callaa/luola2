@@ -847,7 +847,7 @@ impl MenuScreen {
                                     renderer
                                         .fontset()
                                         .menu
-                                        .create_text(renderer, if *value { "yes" } else { "no" })
+                                        .create_text(renderer, if *value { "On" } else { "Off" })
                                         .unwrap()
                                         .with_color(if *value {
                                             Color::new(0.0, 0.8, 0.0)
