@@ -31,10 +31,10 @@ function Grav.create_moving_gravmine(pos, angle)
 		id = UniqID.new(),
 		state = {
 			scheduler = Scheduler:new()
+				:add(20, Scheduler.destroy_this) -- note: must appear before _move_mine so on_destroyed is called after _move_mine
 				:add(0.3, Grav._move_mine)
 				:add(0.3, Grav._gravmine_beams)
-				:add(0.3, Grav._play_mine_warble)
-				:add(20, Scheduler.destroy_this),
+				:add(0.3, Grav._play_mine_warble),
 			on_destroy = Grav.on_destroy,
 			angle = angle,
 			ff_id = UniqID.new(),
