@@ -35,6 +35,14 @@ local function turret_hit_bullet(turret, bullet)
 	game.effect("MakeBigHole", { pos = turret.pos, r = 8 })
 end
 
+local function is_barrel_obstructed_at(turret_pos, angle)
+	local barrel_pos = turret_pos + Vec2_for_angle(-angle, 16)
+	if Level.mask_solid(game.terrain_at(barrel_pos)) ~= 0 then
+		return nil
+	end
+	return barrel_pos
+end
+
 local function gun_turret_target(turret)
 	local target = game.ships_nearest_pos(turret.pos, turret.state.range, 0)
 	local new_angle
@@ -50,16 +58,16 @@ local function gun_turret_target(turret)
 		new_angle = (turret.angle + turret.state.turn_dir) % 360
 	end
 
-	local barrel_pos = turret.pos + Vec2_for_angle(-new_angle, 16)
-	if Level.mask_solid(game.terrain_at(barrel_pos)) ~= 0 then
-		turret.state.turn_dir = -turret.state.turn_dir
-	else
+	local unobstructed_barrel_pos = is_barrel_obstructed_at(turret.pos, new_angle)
+	if unobstructed_barrel_pos ~= nil then
 		turret.angle = new_angle
+	else
+		turret.state.turn_dir = -turret.state.turn_dir
 	end
 
 	if fire_at_will then
 		game.effect("AddBullet", {
-			pos = barrel_pos,
+			pos = unobstructed_barrel_pos,
 			vel = Vec2_for_angle(-turret.angle, 1000.0),
 			color = 0xffff6666,
 			radius = 5,
@@ -90,7 +98,15 @@ function Turrets.add_deathray(pos, range)
 	})
 end
 
-function Turrets.add_gun(pos, range, initial_angle)
+function Turrets.add_gun(pos, range)
+	local initial_angle = 0
+	for i = 0,360,45 do
+		if is_barrel_obstructed_at(pos, i) ~= nil then
+			initial_angle = i
+			break
+		end
+	end
+
 	game.effect("AddFixedObject", {
 		pos = pos,
 		id = 0,
@@ -113,7 +129,7 @@ function Turrets.add_from_config(turrets)
 		if t.type == "deathray" then
 			Turrets.add_deathray(pos, t.range)
 		elseif t.type == "gun" then
-			Turrets.add_gun(pos, t.range, t.angle)
+			Turrets.add_gun(pos, t.range)
 		else
 			print("Unknown turret type", t.type)
 		end
